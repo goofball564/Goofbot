@@ -23,6 +23,7 @@ namespace Goofbot
         private PipeServerModule PipeServerModule;
         private BlueGuyModule BlueGuyModule;
         private CommandParsingModule CommandParsingModule;
+        private SpotifyModule SpotifyModule;
         private ColorDictionary ColorDictionary;
 
         // private Task WaitTask;
@@ -74,9 +75,14 @@ namespace Goofbot
             CommandParsingModule = new CommandParsingModule();
             PipeServerModule = new PipeServerModule();
             BlueGuyModule = new BlueGuyModule(ColorDictionary);
+            SpotifyModule = new SpotifyModule();
 
-            CommandParsingModule.GuyCommand += BlueGuyModule.OnGuyCommand;
+            CommandParsingModule.BlueGuyCommand.ExecuteCommand += BlueGuyModule.OnGuyCommand;
+            CommandParsingModule.QueueModeCommand.ExecuteCommand += SpotifyModule_OnQueueModeCommand;
+            CommandParsingModule.SongCommand.ExecuteCommand += SpotifyModule_OnSongCommand;
+
             CommandParsingModule.TimeoutNotElapsed += CommandParsingModule_OnTimeoutNotElapsed;
+            CommandParsingModule.NotBroadcaster += CommandParsingModule_OnNotBroadcaster;
 
             BlueGuyModule.ColorChange += BlueGuyModule_OnColorChange;
             BlueGuyModule.UnknownColor += BlueGuyModule_OnUnknownColor;
@@ -86,10 +92,27 @@ namespace Goofbot
 
             PipeServerModule.RunStart += PiperServerModule_OnRunStart;
             PipeServerModule.RunReset += PipeServerModule_OnRunReset;
-            // PipeServerModule.RunGold += PipeServerModule_OnRunGold;
+            PipeServerModule.RunSplit += PipeServerModule_OnRunSplit;
 
             PipeServerModule.Start();
-            Console.WriteLine("EVERYTHING HAS STARTED :)");
+            Client.SendMessage(Channel, "Goofbot is activated and at your service MrDestructoid");
+        }
+
+        private void SpotifyModule_OnSongCommand(object sender, string e)
+        {
+            SpotifyModule.RefreshCurrentlyPlaying();
+            string artists = string.Join(", ", SpotifyModule.CurrentlyPlayingArtistsNames);
+            string song = SpotifyModule.CurrentlyPlayingSongName;
+            if (song == "" || artists == "")
+            {
+                Console.WriteLine("song: " + song);
+                Console.WriteLine("artists: " + artists);
+                Client.SendMessage(Channel, "Ain't nothing playing.");
+            }
+            else
+            {
+                Client.SendMessage(Channel, song + " by " + artists);
+            }
         }
 
         private void Client_OnLog(object sender, OnLogArgs e)
@@ -99,12 +122,12 @@ namespace Goofbot
 
         private void Client_OnConnected(object sender, OnConnectedArgs e)
         {
-            // Console.WriteLine($"Connected to {e.AutoJoinChannel}");
+            Console.WriteLine($"Connected to {e.AutoJoinChannel}");
         }
 
         private void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
         {
-            Client.SendMessage(Channel, "Goofbot is activated and at your service MrDestructoid");
+            // Client.SendMessage(Channel, "Goofbot is activated and at your service MrDestructoid");
         }
 
         private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
@@ -117,32 +140,34 @@ namespace Goofbot
             Client.SendMessage(Channel, String.Format("Please wait {0} minutes and {1} seconds, then try again.", timeUntilTimeoutElapses.Minutes, timeUntilTimeoutElapses.Seconds));
         }
 
+        private void CommandParsingModule_OnNotBroadcaster(object sender, EventArgs e)
+        {
+            Client.SendMessage(Channel, "I don't answer to you, peasant! OhMyDog (this command is for Goof's use only)");
+        }
+
         private void PiperServerModule_OnRunStart(object sender, int runCount)
         {
-            Client.SendMessage(Channel, String.Format("Run {0}! dinkDonk Give it up for run {1}! dinkDonk", runCount, runCount));
+            // Client.SendMessage(Channel, String.Format("Run {0}! dinkDonk Give it up for run {1}! dinkDonk", runCount, runCount));
+            SpotifyModule.QueueMode = true;
         }
 
         private void PipeServerModule_OnRunReset(object sender, int runCount)
         {
-            
+            if (!SpotifyModule.FarmMode)
+                SpotifyModule.QueueMode = false;
         }
 
         private void PipeServerModule_OnRunSplit(object sender, RunSplitEventArgs e)
         {
-
+            if (e.CurrentSplitIndex < 5)
+            {
+                SpotifyModule.QueueMode = true;
+            }
+            else
+            {
+                SpotifyModule.QueueMode = false;
+            }
         }
-
-       /* private void PipeServerModule_OnRunGold(object sender, EventArgs e)
-        {
-            Console.WriteLine("Hooray?");
-            GoldMessage(10000);
-        }
-
-        private async void GoldMessage(int delay)
-        {
-            await Task.Delay(delay);
-            Client.SendMessage(Channel, "PurpleGuy");
-        }*/
 
         private void BlueGuyModule_OnColorChange(object sender, EventArgs e)
         {
@@ -167,6 +192,26 @@ namespace Goofbot
         private void BlueGuyModule_OnSameColor(object sender, EventArgs e)
         {
             Client.SendMessage(Channel, "The Guy is already that color Sussy");
+        }
+
+        private void SpotifyModule_OnQueueModeCommand(object sender, string args)
+        {
+            const string successResponse = "Aye Aye, Captain! FrankerZ 7";
+            args = args.ToLowerInvariant();
+            if (args == "on")
+            {
+                SpotifyModule.QueueMode = true;
+                Client.SendMessage(Channel, successResponse);
+            }
+            else if (args == "off")
+            {
+                SpotifyModule.QueueMode = false;
+                Client.SendMessage(Channel, successResponse);
+            }
+            else
+            {
+                Client.SendMessage(Channel, "?");
+            }
         }
     }
 }

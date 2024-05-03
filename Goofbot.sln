@@ -1,9 +1,9 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goofbot", "Goofbot\Goofbot.csproj", "{2B15CB87-A797-4796-81D0-4A267673F8AC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Goofbot", "Goofbot\Goofbot.csproj", "{2B15CB87-A797-4796-81D0-4A267673F8AC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

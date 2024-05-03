@@ -20,10 +20,6 @@ namespace Goofbot.Modules
         public event EventHandler<string> RandomColor;
         public event EventHandler SameColor;
 
-        private ColorDictionary ColorDictionary;
-        // private SaturdatedColorDictionary 
-        private string lastColorCode = "";
-
         private const string BlueGuyGrayscaleFile = "Stuff\\BlueGuyGrayscale.png";
         private const string BlueGuyColorFile = "Stuff\\BlueGuyColor.png";
         private const string BlueGuyEyesFile = "Stuff\\BlueGuyEyes.png";
@@ -37,8 +33,12 @@ namespace Goofbot.Modules
 
         private const string DefaultColorName = "BlueGuy";
         // private const string DefaultColor = "#1483a8";
-
         private const string SpeedGuy = "SpeedGuy";
+
+        private ColorDictionary ColorDictionary;
+        // private SaturdatedColorDictionary 
+        private string lastColorCode = "";
+
 
         public BlueGuyModule(ColorDictionary colorDictionary)
         {
@@ -132,7 +132,7 @@ namespace Goofbot.Modules
                         {
                             File.Copy(OtherOutputFile, Path.Combine(Program.guysFolder, colorFileName), false);
                         }
-                        catch (IOException e)
+                        catch (IOException)
                         {
 
                         }
@@ -168,7 +168,7 @@ namespace Goofbot.Modules
                         {
                             File.Copy(OtherOutputFile, Path.Combine(Program.guysFolder, colorFileName), false);
                         }
-                        catch (IOException e)
+                        catch (IOException)
                         {
 
                         }

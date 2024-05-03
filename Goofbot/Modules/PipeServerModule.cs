@@ -79,14 +79,12 @@ namespace Goofbot.Modules
             {
                 using (var namedPipeServer = new NamedPipeServerStream("Goofbot", PipeDirection.InOut, 1, PipeTransmissionMode.Message))
                 {
-                    Console.WriteLine("USING NAMED PIPE SERVER");
                     namedPipeServer.WaitForConnection();
                     string message = ProcessSingleIncomingMessage(namedPipeServer);
                     string[] words = message.Split(' ');
                     switch (words[0])
                     {
                         case "Start":
-                            Console.WriteLine("MESSAGE START RECEIVED");
                             if (words.Length >= 2 && Int32.TryParse(words[1], out int runCountStart))
                                 OnRunStart(runCountStart);
                             break;
