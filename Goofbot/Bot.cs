@@ -115,6 +115,26 @@ namespace Goofbot
             }
         }
 
+        private void SpotifyModule_OnQueueModeCommand(object sender, string args)
+        {
+            const string successResponse = "Aye Aye, Captain! FrankerZ 7";
+            args = args.ToLowerInvariant();
+            if (args == "on")
+            {
+                SpotifyModule.QueueMode = true;
+                Client.SendMessage(Channel, successResponse);
+            }
+            else if (args == "off")
+            {
+                SpotifyModule.QueueMode = false;
+                Client.SendMessage(Channel, successResponse);
+            }
+            else
+            {
+                Client.SendMessage(Channel, "?");
+            }
+        }
+
         private void Client_OnLog(object sender, OnLogArgs e)
         {
             Console.WriteLine($"{e.DateTime.ToString()}: {e.BotUsername} - {e.Data}");
@@ -192,26 +212,6 @@ namespace Goofbot
         private void BlueGuyModule_OnSameColor(object sender, EventArgs e)
         {
             Client.SendMessage(Channel, "The Guy is already that color Sussy");
-        }
-
-        private void SpotifyModule_OnQueueModeCommand(object sender, string args)
-        {
-            const string successResponse = "Aye Aye, Captain! FrankerZ 7";
-            args = args.ToLowerInvariant();
-            if (args == "on")
-            {
-                SpotifyModule.QueueMode = true;
-                Client.SendMessage(Channel, successResponse);
-            }
-            else if (args == "off")
-            {
-                SpotifyModule.QueueMode = false;
-                Client.SendMessage(Channel, successResponse);
-            }
-            else
-            {
-                Client.SendMessage(Channel, "?");
-            }
         }
     }
 }
