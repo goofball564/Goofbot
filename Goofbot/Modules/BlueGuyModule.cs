@@ -1,18 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using ImageMagick;
-using TwitchLib.Api.Helix.Models.Bits;
 
 namespace Goofbot.Modules
 {
-    internal class BlueGuyModule
+    internal partial class BlueGuyModule
     {
         public event EventHandler<EventArgs> ColorChange;
         public event EventHandler<string> UnknownColor;
@@ -25,24 +19,23 @@ namespace Goofbot.Modules
         private const string BlueGuyEyesFile = "Stuff\\BlueGuyEyes.png";
 
         private const string SpeedGuyColorFile = "Stuff\\SpeedGuyColor.png";
-        // private const string SpeedGuyFile = "Stuff\\SpeedGuy.png";
 
         private const string OutputFile = "R:\\temp.png";
         private const string OtherOutputFile = "R:\\temp-1.png";
         private const string ColorOutputFile = "R:\\color.png";
 
         private const string DefaultColorName = "BlueGuy";
-        // private const string DefaultColor = "#1483a8";
         private const string SpeedGuy = "SpeedGuy";
 
-        private ColorDictionary ColorDictionary;
-        // private SaturdatedColorDictionary 
+        private const string colorNamesFile = "Stuff\\color_names.json";
+
+        private readonly ColorDictionary ColorDictionary;
         private string lastColorCode = "";
 
 
-        public BlueGuyModule(ColorDictionary colorDictionary)
+        public BlueGuyModule()
         {
-            ColorDictionary = colorDictionary;
+            ColorDictionary = new ColorDictionary(colorNamesFile);
         }
 
         protected virtual void OnColorChange()
@@ -130,7 +123,7 @@ namespace Goofbot.Modules
                         string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLower()).Replace(" ", "") + "Guy.png";
                         try
                         {
-                            File.Copy(OtherOutputFile, Path.Combine(Program.guysFolder, colorFileName), false);
+                            File.Copy(OtherOutputFile, Path.Combine(Program.GuysFolder, colorFileName), false);
                         }
                         catch (IOException)
                         {
@@ -166,7 +159,7 @@ namespace Goofbot.Modules
                         string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args.ToLower()).Replace(" ", "") + "Guy.png";
                         try
                         {
-                            File.Copy(OtherOutputFile, Path.Combine(Program.guysFolder, colorFileName), false);
+                            File.Copy(OtherOutputFile, Path.Combine(Program.GuysFolder, colorFileName), false);
                         }
                         catch (IOException)
                         {
@@ -230,26 +223,6 @@ namespace Goofbot.Modules
 
         private static void RestoreDefaultBlueGuy()
         {
-            /*using (var images = new MagickImageCollection())
-            {
-                var first = new MagickImage(BlueGuyGrayscaleFile);
-                var second = new MagickImage(BlueGuyEyesFile);
-
-                var solidColor = first.Clone();
-                solidColor.Colorize(new MagickColor(DefaultColor), (Percentage)100.0);
-
-                images.Add(first);
-                images.Add(second);
-                images.Coalesce();
-
-                images.Write(OutputFile, MagickFormat.Png);
-                solidColor.Write(ColorOutputFile, MagickFormat.Png);
-
-                solidColor.Dispose();
-                images.Dispose();
-                first.Dispose();
-                second.Dispose();
-            }*/
             try
             {
                 // true means it is allowed to overwrite the file
@@ -261,10 +234,15 @@ namespace Goofbot.Modules
             }
         }
 
+        [GeneratedRegex("^#[0-9A-Fa-f]{6}$")]
+        private static partial Regex MyRegex();
+
         private static bool IsColorHexCode(string args)
         {
-            Match match = Regex.Match(args, "^#[0-9A-Fa-f]{6}$");
+            Match match = MyRegex().Match(args);
             return match.Success;
         }
+
+        
     }
 }

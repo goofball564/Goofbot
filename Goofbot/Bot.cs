@@ -1,36 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TwitchLib.Client;
-using TwitchLib.Client.Enums;
 using TwitchLib.Client.Events;
-using TwitchLib.Client.Extensions;
 using TwitchLib.Client.Models;
 using TwitchLib.Communication.Clients;
 using TwitchLib.Communication.Models;
 using Goofbot.Modules;
-using System.Threading;
 
 namespace Goofbot
 {
     internal class Bot
     {
-        private TwitchClient Client;
+        private readonly TwitchClient Client;
 
-        private ChatInteractionModule ChatInteractionModule;
-        private PipeServerModule PipeServerModule;
-        private BlueGuyModule BlueGuyModule;
-        private CommandParsingModule CommandParsingModule;
-        private SpotifyModule SpotifyModule;
-        private ColorDictionary ColorDictionary;
+        private readonly ChatInteractionModule ChatInteractionModule;
+        private readonly PipeServerModule PipeServerModule;
+        private readonly BlueGuyModule BlueGuyModule;
+        private readonly CommandParsingModule CommandParsingModule;
+        private readonly SpotifyModule SpotifyModule;
 
         // private Task WaitTask;
 
-        private string Channel;
-
-        private const string colorNamesFile = "Stuff\\color_names.json";
+        private readonly string Channel;
 
         // react to game or livesplit
         // track stats?
@@ -55,13 +45,14 @@ namespace Goofbot
         {
             Channel = channelToJoin;
 
-            ConnectionCredentials credentials = new ConnectionCredentials(botAccount, accessToken);
+            var credentials = new ConnectionCredentials(botAccount, accessToken);
             var clientOptions = new ClientOptions
             {
                 MessagesAllowedInPeriod = 100,
                 ThrottlingPeriod = TimeSpan.FromSeconds(30)
             };
             var customClient = new WebSocketClient(clientOptions);
+
             Client = new TwitchClient(customClient);
             Client.Initialize(credentials, channelToJoin);
             Client.OnLog += Client_OnLog;
@@ -70,16 +61,14 @@ namespace Goofbot
             Client.OnConnected += Client_OnConnected;
             Client.Connect();
 
-            ColorDictionary = new ColorDictionary(colorNamesFile);
-
             CommandParsingModule = new CommandParsingModule();
             PipeServerModule = new PipeServerModule();
-            BlueGuyModule = new BlueGuyModule(ColorDictionary);
+            BlueGuyModule = new BlueGuyModule();
             SpotifyModule = new SpotifyModule();
 
             CommandParsingModule.BlueGuyCommand.ExecuteCommand += BlueGuyModule.OnGuyCommand;
-            CommandParsingModule.QueueModeCommand.ExecuteCommand += SpotifyModule_OnQueueModeCommand;
-            CommandParsingModule.SongCommand.ExecuteCommand += SpotifyModule_OnSongCommand;
+            CommandParsingModule.QueueModeCommand.ExecuteCommand += CommandParsingModule_OnQueueModeCommand;
+            CommandParsingModule.SongCommand.ExecuteCommand += CommandParsingModule_OnSongCommand;
 
             CommandParsingModule.TimeoutNotElapsed += CommandParsingModule_OnTimeoutNotElapsed;
             CommandParsingModule.NotBroadcaster += CommandParsingModule_OnNotBroadcaster;
@@ -96,43 +85,6 @@ namespace Goofbot
 
             PipeServerModule.Start();
             Client.SendMessage(Channel, "Goofbot is activated and at your service MrDestructoid");
-        }
-
-        private void SpotifyModule_OnSongCommand(object sender, string e)
-        {
-            SpotifyModule.RefreshCurrentlyPlaying();
-            string artists = string.Join(", ", SpotifyModule.CurrentlyPlayingArtistsNames);
-            string song = SpotifyModule.CurrentlyPlayingSongName;
-            if (song == "" || artists == "")
-            {
-                Console.WriteLine("song: " + song);
-                Console.WriteLine("artists: " + artists);
-                Client.SendMessage(Channel, "Ain't nothing playing.");
-            }
-            else
-            {
-                Client.SendMessage(Channel, song + " by " + artists);
-            }
-        }
-
-        private void SpotifyModule_OnQueueModeCommand(object sender, string args)
-        {
-            const string successResponse = "Aye Aye, Captain! FrankerZ 7";
-            args = args.ToLowerInvariant();
-            if (args == "on")
-            {
-                SpotifyModule.QueueMode = true;
-                Client.SendMessage(Channel, successResponse);
-            }
-            else if (args == "off")
-            {
-                SpotifyModule.QueueMode = false;
-                Client.SendMessage(Channel, successResponse);
-            }
-            else
-            {
-                Client.SendMessage(Channel, "?");
-            }
         }
 
         private void Client_OnLog(object sender, OnLogArgs e)
@@ -153,6 +105,43 @@ namespace Goofbot
         private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
             CommandParsingModule.ParseMessageForCommand(e);
+        }
+
+        private void CommandParsingModule_OnSongCommand(object sender, string e)
+        {
+            SpotifyModule.RefreshCurrentlyPlaying();
+            string artists = string.Join(", ", SpotifyModule.CurrentlyPlayingArtistsNames);
+            string song = SpotifyModule.CurrentlyPlayingSongName;
+            if (song == "" || artists == "")
+            {
+                Console.WriteLine("song: " + song);
+                Console.WriteLine("artists: " + artists);
+                Client.SendMessage(Channel, "Ain't nothing playing.");
+            }
+            else
+            {
+                Client.SendMessage(Channel, song + " by " + artists);
+            }
+        }
+
+        private void CommandParsingModule_OnQueueModeCommand(object sender, string args)
+        {
+            const string successResponse = "Aye Aye, Captain! FrankerZ 7";
+            args = args.ToLowerInvariant();
+            if (args == "on")
+            {
+                SpotifyModule.QueueMode = true;
+                Client.SendMessage(Channel, successResponse);
+            }
+            else if (args == "off")
+            {
+                SpotifyModule.QueueMode = false;
+                Client.SendMessage(Channel, successResponse);
+            }
+            else
+            {
+                Client.SendMessage(Channel, "?");
+            }
         }
 
         private void CommandParsingModule_OnTimeoutNotElapsed(object sender, TimeSpan timeUntilTimeoutElapses)

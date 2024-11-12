@@ -1,22 +1,18 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Goofbot
 {
     internal class ColorDictionary
     {
-        private List<string> colorNameList = new List<string>();
-        private Dictionary<string, string> colorDictionary = new Dictionary<string, string>();
+        private readonly List<string> colorNameList = new List<string>();
+        private readonly Dictionary<string, string> colorDictionary = new Dictionary<string, string>();
 
-        private List<string> saturatedColorNameList = new List<string>();
-        private Dictionary<string, string> saturatedColorDictionary = new Dictionary<string, string>();
+        private readonly List<string> saturatedColorNameList = new List<string>();
+        private readonly Dictionary<string, string> saturatedColorDictionary = new Dictionary<string, string>();
 
-        private Random random = new Random();
+        private readonly Random random = new Random();
 
         public ColorDictionary(string colorNamesFile)
         {
@@ -40,7 +36,7 @@ namespace Goofbot
 
                 GetHSV(colorHex, out double h, out double s, out double v);
 
-                if (v >= 0.2 && GoodS(s, v) && !saturatedColorDictionary.ContainsKey(colorNameLower))
+                if (v >= 0.2 && GoodSaturation(s, v) && !saturatedColorDictionary.ContainsKey(colorNameLower))
                 {
                     saturatedColorDictionary.Add(colorNameLower, colorHex);
                     saturatedColorNameList.Add(colorName);
@@ -81,7 +77,7 @@ namespace Goofbot
             value = max / 255.0;
         }
 
-        private static bool GoodS(double saturation, double value)
+        private static bool GoodSaturation(double saturation, double value)
         {
             value *= 100;
             saturation *= 100;

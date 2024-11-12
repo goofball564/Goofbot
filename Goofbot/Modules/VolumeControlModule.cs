@@ -1,18 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using CoreAudio;
-using SpotifyAPI.Web;
 
 namespace Goofbot.Modules
 {
     internal class VolumeControlModule
     {
-        private AudioSessionVolumeControl darkSouls;
-        private AudioSessionVolumeControl spotify;
+        private readonly AudioSessionVolumeControl darkSouls;
+        private readonly AudioSessionVolumeControl spotify;
 
         public float SpotifyVolume
         {
@@ -37,7 +33,7 @@ namespace Goofbot.Modules
 
         private class AudioSessionVolumeControl
         {
-            private string[] processNames;
+            private readonly string[] processNames;
             private AudioSessionControl2? audioSessionControl;
 
             public float Volume

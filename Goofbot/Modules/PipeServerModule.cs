@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Pipes;
-using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using TwitchLib.Client;
 
 namespace Goofbot.Modules
 {
@@ -112,7 +107,7 @@ namespace Goofbot.Modules
             }
         }
 
-        private string ProcessSingleIncomingMessage(NamedPipeServerStream namedPipeServer)
+        private static string ProcessSingleIncomingMessage(NamedPipeServerStream namedPipeServer)
         {
             StringBuilder messageBuilder = new StringBuilder();
             byte[] messageBuffer = new byte[5];

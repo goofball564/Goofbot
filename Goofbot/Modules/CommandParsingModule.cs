@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 
 namespace Goofbot.Modules
@@ -65,7 +61,7 @@ namespace Goofbot.Modules
         public class Command
         {
             private DateTime timeOfLastInvocation = DateTime.MinValue;
-            private TimeSpan timeout;
+            private readonly TimeSpan timeout;
             public readonly bool GoofOnly;
             public event EventHandler<string> ExecuteCommand;
 
@@ -111,8 +107,6 @@ namespace Goofbot.Modules
             {
                 NotBroadcaster?.Invoke(this, new EventArgs());
             }
-
-
         }
     }
 }

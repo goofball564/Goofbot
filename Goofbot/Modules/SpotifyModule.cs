@@ -2,24 +2,22 @@
 using SpotifyAPI.Web.Auth;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Threading;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Goofbot.Modules
 {
     public class SpotifyModule
     {
-        private EmbedIOAuthServer server;
-        private SpotifyClient spotify;
-        private VolumeControlModule volumeControlModule;
-
         private const string spotifyIdsFile = "Stuff\\spotify_ids.json";
-        private const string playlistId = "3xtP334FUG7v3hE46Uavbi"; // Driving
         private const int mainLoopInterval = 12000;
         private const double queueModeSomething = 60;
+
+        private readonly dynamic spotifyIds = Program.ParseJsonFile(spotifyIdsFile);
+
+        private EmbedIOAuthServer server;
+        private SpotifyClient spotify;
+        private readonly VolumeControlModule volumeControlModule;
 
         private readonly TimeSpan callAgainTimeout = TimeSpan.FromSeconds(6);
 
@@ -37,17 +35,17 @@ namespace Goofbot.Modules
         private string currentlyPlayingId = "";
 
         private DateTime timeOfLastContextCall = DateTime.MinValue;
-        private object contextLock = new object();
+        private readonly object contextLock = new object();
         private volatile CurrentlyPlayingContext contextCached;
 
         private DateTime timeOfLastQueueCall = DateTime.MinValue;
-        private object queueLock = new object();
+        private readonly object queueLock = new object();
         private volatile QueueResponse queueCached;
 
-        private object songLock = new object();
+        private readonly object songLock = new object();
         private volatile string currentlyPlayingSongName = "";
 
-        private object artistLock = new object();
+        private readonly object artistLock = new object();
         private volatile List<SimpleArtist> currentlyPlayingArtistsNames;
 
         public bool QueueMode
@@ -119,9 +117,8 @@ namespace Goofbot.Modules
         public SpotifyModule()
         {
             volumeControlModule = new VolumeControlModule();
-            dynamic tokenOpts = Program.ParseJsonFile(spotifyIdsFile);
-            clientId = Convert.ToString(tokenOpts.client_id);
-            clientSecret = Convert.ToString(tokenOpts.client_secret);
+            clientId = Convert.ToString(spotifyIds.client_id);
+            clientSecret = Convert.ToString(spotifyIds.client_secret);
 
             Initialize();
         }
@@ -174,7 +171,7 @@ namespace Goofbot.Modules
 
                     if (remainingDuration != null && remainingDuration < queueModeSomething)
                     {
-                        var playlist = await spotify.Playlists.Get(playlistId);
+                        var playlist = await spotify.Playlists.Get(spotifyIds.playlist_id);
                         var firstInPlaylist = GetFirstInPlaylist(playlist);
 
                         string? firstInPlaylistId = firstInPlaylist?.Id;
@@ -185,7 +182,7 @@ namespace Goofbot.Modules
                             removedFromPlaylist = true;
                             IList<int>? indicesToRemove = new List<int> { 0, };
                             string? snapshotId = playlist.SnapshotId;
-                            spotify.Playlists.RemoveItems(playlistId, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
+                            spotify.Playlists.RemoveItems(spotifyIds.playlist_id, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
                         }
                         else if (QueueMode && !addedToQueue && nextInQueueId != null && firstInPlaylistUri != null && nextInQueueId != firstInPlaylistId)
                         {
@@ -271,7 +268,7 @@ namespace Goofbot.Modules
             }
         }
 
-        private double? GetRemainingDuration(QueueResponse? queue, CurrentlyPlayingContext? context)
+        private static double? GetRemainingDuration(QueueResponse? queue, CurrentlyPlayingContext? context)
         {
             if (queue == null || context == null)
             {
@@ -290,7 +287,7 @@ namespace Goofbot.Modules
             }
         }
 
-        private FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
+        private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
         {
             if (queue == null)
             {
@@ -307,7 +304,7 @@ namespace Goofbot.Modules
             }
         }
 
-        private FullTrack? GetNextInQueue(QueueResponse? queue)
+        private static FullTrack? GetNextInQueue(QueueResponse? queue)
         {
             if (queue == null)
             {
@@ -324,7 +321,7 @@ namespace Goofbot.Modules
             }
         }
 
-        private FullTrack? GetFirstInPlaylist(FullPlaylist? playlist)
+        private static FullTrack? GetFirstInPlaylist(FullPlaylist? playlist)
         {
             if (playlist == null || playlist.Tracks == null || playlist.Tracks.Items == null)
             {
