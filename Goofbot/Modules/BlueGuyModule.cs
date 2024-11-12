@@ -27,15 +27,13 @@ namespace Goofbot.Modules
         private const string DefaultColorName = "BlueGuy";
         private const string SpeedGuy = "SpeedGuy";
 
-        private const string colorNamesFile = "Stuff\\color_names.json";
-
         private readonly ColorDictionary ColorDictionary;
         private string lastColorCode = "";
 
 
         public BlueGuyModule()
         {
-            ColorDictionary = new ColorDictionary(colorNamesFile);
+            ColorDictionary = new ColorDictionary(Program.ColorNamesFile);
         }
 
         protected virtual void OnColorChange()
