@@ -45,7 +45,7 @@ namespace Goofbot
             Directory.CreateDirectory(GuysFolder);
 
             /*string colorNamesString = await RequestColorNames();
-            File.WriteAllText(colorNamesFile, colorNamesString);*/
+            File.WriteAllText(ColorNamesFile, colorNamesString);*/
 
             Bot bot = new Bot(BotAccount, ChannelToJoin, accessToken);
             while(true)

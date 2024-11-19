@@ -99,7 +99,7 @@ namespace Goofbot
 
         private void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
         {
-            // Client.SendMessage(Channel, "Goofbot is activated and at your service MrDestructoid");
+            
         }
 
         private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
@@ -107,15 +107,13 @@ namespace Goofbot
             CommandParsingModule.ParseMessageForCommand(e);
         }
 
-        private void CommandParsingModule_OnSongCommand(object sender, string e)
+        private async void CommandParsingModule_OnSongCommand(object sender, string e)
         {
-            SpotifyModule.RefreshCurrentlyPlaying();
+            await SpotifyModule.RefreshCurrentlyPlaying();
             string artists = string.Join(", ", SpotifyModule.CurrentlyPlayingArtistsNames);
             string song = SpotifyModule.CurrentlyPlayingSongName;
             if (song == "" || artists == "")
             {
-                Console.WriteLine("song: " + song);
-                Console.WriteLine("artists: " + artists);
                 Client.SendMessage(Channel, "Ain't nothing playing.");
             }
             else
