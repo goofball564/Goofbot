@@ -11,7 +11,7 @@ namespace Goofbot.Modules
     {
         private const string spotifyIdsFile = "Stuff\\spotify_ids.json";
         private const int queueModeLoopInterval = 12000;
-        private const double remainingDurationThresholdForQueueMode = 60;
+        private const double queueModeRemainingDurationThreshold = 60;
 
         private EmbedIOAuthServer server;
         private SpotifyClient spotify;
@@ -264,7 +264,7 @@ namespace Goofbot.Modules
                     string? nextInQueueId = nextInQueue?.Id;
 
                     // if a certain duration remains in the current song
-                    if (remainingDuration != null && remainingDuration < remainingDurationThresholdForQueueMode)
+                    if (remainingDuration != null && remainingDuration < queueModeRemainingDurationThreshold)
                     {
                         // get queue playlist
                         var playlist = await spotify.Playlists.Get(playlistId);
