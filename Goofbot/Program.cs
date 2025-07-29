@@ -24,7 +24,7 @@ namespace Goofbot
         private const string BotAccount = "goofbotthebot";
         private const string ChannelToJoin = "goofballthecat";
 
-        private static readonly List<string> s_scopes = new List<string> { "chat:read", "chat:edit" };
+        private static readonly List<string> s_scopes = new List<string> { "chat:read", "chat:edit", "channel:read:redemptions" };
         private static readonly dynamic s_clientInfo = ParseJsonFile(ClientInfoFile);
         private static readonly HttpClient s_httpClient = new HttpClient();
 
