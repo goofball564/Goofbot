@@ -17,6 +17,7 @@ namespace Goofbot
         private readonly BlueGuyModule BlueGuyModule;
         private readonly CommandParsingModule CommandParsingModule;
         private readonly SpotifyModule SpotifyModule;
+        private readonly SoundAlertModule SoundAlertModule;
 
         // private Task WaitTask;
 
@@ -46,12 +47,12 @@ namespace Goofbot
             Channel = channelToJoin;
 
             var credentials = new ConnectionCredentials(botAccount, accessToken);
-            var clientOptions = new ClientOptions
+            /*var clientOptions = new ClientOptions
             {
                 MessagesAllowedInPeriod = 100,
                 ThrottlingPeriod = TimeSpan.FromSeconds(30)
-            };
-            var customClient = new WebSocketClient(clientOptions);
+            };*/
+            var customClient = new WebSocketClient();//clientOptions);
 
             Client = new TwitchClient(customClient);
             Client.Initialize(credentials, channelToJoin);
