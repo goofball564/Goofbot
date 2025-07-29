@@ -17,14 +17,14 @@ namespace Goofbot.Modules
 {
     internal class SoundAlertModule
     {
-        private readonly ILogger<SoundAlertModule> _logger;
+        //private readonly ILogger<SoundAlertModule> _logger;
         private readonly EventSubWebsocketClient _eventSubWebsocketClient;
         private readonly TwitchAPI _twitchApi = new();
         private string _userId;
 
         public SoundAlertModule(ILogger<SoundAlertModule> logger, EventSubWebsocketClient eventSubWebsocketClient)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            //_logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             _eventSubWebsocketClient = eventSubWebsocketClient ?? throw new ArgumentNullException(nameof(eventSubWebsocketClient));
             _eventSubWebsocketClient.WebsocketConnected += OnWebsocketConnected;
@@ -32,13 +32,15 @@ namespace Goofbot.Modules
             _eventSubWebsocketClient.WebsocketReconnected += OnWebsocketReconnected;
             _eventSubWebsocketClient.ErrorOccurred += OnErrorOccurred;
 
-            _eventSubWebsocketClient.ChannelFollow += OnChannelFollow;
+            dynamic client = Program.ParseJsonFile(Program.ClientInfoFile);
+
+            //_eventSubWebsocketClient.ChannelFollow += OnChannelFollow;
             // Get ClientId and ClientSecret by register an Application here: https://dev.twitch.tv/console/apps
             // https://dev.twitch.tv/docs/authentication/register-app/
-            _twitchApi.Settings.ClientId = "YOUR_APP_CLIENT_ID";
+            _twitchApi.Settings.ClientId = client.client_id.ToString();
             // Get Application Token with Client credentials grant flow.
             // https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#client-credentials-grant-flow
-            _twitchApi.Settings.AccessToken = "YOUR_APPLICATION_ACCESS_TOKEN";
+            _twitchApi.Settings.AccessToken = client.client_secret.ToString();
 
             // You need the UserID for the User/Channel you want to get Events from.
             // You can use await _api.Helix.Users.GetUsersAsync() for that.
@@ -57,7 +59,7 @@ namespace Goofbot.Modules
 
         private async Task OnWebsocketConnected(object sender, WebsocketConnectedArgs e)
         {
-            _logger.LogInformation($"Websocket {_eventSubWebsocketClient.SessionId} connected!");
+            Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} connected!");
 
             if (!e.IsRequestedReconnect)
             {
@@ -67,7 +69,7 @@ namespace Goofbot.Modules
                 var condition = new Dictionary<string, string> { { "broadcaster_user_id", _userId }, { "moderator_user_id", _userId } };
                 // Create and send EventSubscription
                 await _twitchApi.Helix.EventSub.CreateEventSubSubscriptionAsync("channel.channel_points_custom_reward_redemption.add", "1", condition, EventSubTransportMethod.Websocket,
-                _eventSubWebsocketClient.SessionId, accessToken: "BROADCASTER_ACCESS_TOKEN_WITH_SCOPES");
+                _eventSubWebsocketClient.SessionId);
                 // If you want to get Events for special Events you need to additionally add the AccessToken of the ChannelOwner to the request.
                 // https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/
             }
@@ -75,30 +77,30 @@ namespace Goofbot.Modules
 
         private async Task OnWebsocketDisconnected(object sender, EventArgs e)
         {
-            _logger.LogError($"Websocket {_eventSubWebsocketClient.SessionId} disconnected!");
+            Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} disconnected!");
 
             // Don't do this in production. You should implement a better reconnect strategy with exponential backoff
             while (!await _eventSubWebsocketClient.ReconnectAsync())
             {
-                _logger.LogError("Websocket reconnect failed!");
+                Console.WriteLine("Websocket reconnect failed!");
                 await Task.Delay(1000);
             }
         }
 
         private async Task OnWebsocketReconnected(object sender, EventArgs e)
         {
-            _logger.LogWarning($"Websocket {_eventSubWebsocketClient.SessionId} reconnected");
+            Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} reconnected");
         }
 
         private async Task OnErrorOccurred(object sender, ErrorOccuredArgs e)
         {
-            _logger.LogError($"Websocket {_eventSubWebsocketClient.SessionId} - Error occurred!");
+            Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} - Error occurred!");
         }
 
-        private async Task OnChannelFollow(object sender, ChannelFollowArgs e)
+        /*private async Task OnChannelFollow(object sender, ChannelFollowArgs e)
         {
             var eventData = e.Notification.Payload.Event;
             _logger.LogInformation($"{eventData.UserName} followed {eventData.BroadcasterUserName} at {eventData.FollowedAt}");
-        }
+        }*/
     }
 }

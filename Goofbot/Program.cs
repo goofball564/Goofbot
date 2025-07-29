@@ -13,6 +13,7 @@ namespace Goofbot
     {
         public const string ColorNamesFile = "Stuff\\color_names.json";
         public const string GuysFolder = "Stuff\\Guys";
+        public const string ClientInfoFile = "Stuff\\client_info.json";
 
         private const string TokenRequestUrl = "https://id.twitch.tv/oauth2/token";
         private const string RedirectUrl = "http://localhost:3000/";
@@ -20,7 +21,7 @@ namespace Goofbot
         private const string ColorNamesRequestUrl = "https://api.color.pizza/v1/";
         
         private const string TokensFile = "Stuff\\tokens.json";
-        private const string ClientInfoFile = "Stuff\\client_info.json";
+        // private const string ClientInfoFile = "Stuff\\client_info.json";
         private const string BotAccount = "goofbotthebot";
         private const string ChannelToJoin = "goofballthecat";
 
