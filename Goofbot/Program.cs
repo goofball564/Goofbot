@@ -6,7 +6,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using ImageMagick;
 using System.Diagnostics;
-using System.Reflection.Metadata.Ecma335;
 
 namespace Goofbot
 {
@@ -15,7 +14,7 @@ namespace Goofbot
         private static string clientId;
         public static string ClientId { get { return clientId; } }
 
-        private static string accessToken = s_clientInfo.client_id;
+        private static string accessToken;
         public static string AccessToken { get { return accessToken; } }
 
         public const string GuysFolder = "Stuff\\Guys";
@@ -37,7 +36,8 @@ namespace Goofbot
 
         public static async Task Main(string[] args)
         {
-            string code = await GetTwitchAuthorizationCode(s_scopes);
+            clientId = s_clientInfo.client_id;
+            string code = await RequestTwitchAuthorizationCode();
             
             string tokensString = await RequestTwitchTokens(code);
             dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
@@ -56,10 +56,10 @@ namespace Goofbot
             }
         }
 
-        public static async Task<string> GetTwitchAuthorizationCode(List<string> scopes)
+        public static async Task<string> RequestTwitchAuthorizationCode()
         {
             var server = new WebServer(RedirectUrl);
-            string url = GetTwitchAuthorizationCodeRequestUrl(RedirectUrl, scopes);
+            string url = GetTwitchAuthorizationCodeRequestUrl();
             Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
             return await server.Listen();
         }
@@ -108,15 +108,13 @@ namespace Goofbot
             return await response.Content.ReadAsStringAsync();
         }
 
-        public static string GetTwitchAuthorizationCodeRequestUrl(string redirectUri, List<string> scopes)
+        public static string GetTwitchAuthorizationCodeRequestUrl()
         {
-            var scopesStr = String.Join('+', scopes);
-
             return $"{AuthorizationCodeRequestUrlBase}?" +
                    $"client_id={clientId}&" +
-                   $"redirect_uri={System.Web.HttpUtility.UrlEncode(redirectUri)}&" +
+                   $"redirect_uri={System.Web.HttpUtility.UrlEncode(RedirectUrl)}&" +
                    "response_type=code&" +
-                   $"scope={scopesStr}";
+                   $"scope={String.Join('+', s_scopes)}";
         }
     }
 }
