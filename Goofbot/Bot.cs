@@ -47,12 +47,8 @@ namespace Goofbot
             Channel = channelToJoin;
 
             var credentials = new ConnectionCredentials(botAccount, accessToken);
-            /*var clientOptions = new ClientOptions
-            {
-                MessagesAllowedInPeriod = 100,
-                ThrottlingPeriod = TimeSpan.FromSeconds(30)
-            };*/
-            var customClient = new WebSocketClient();//clientOptions);
+            var clientOptions = new ClientOptions();
+            var customClient = new WebSocketClient(clientOptions);
 
             Client = new TwitchClient(customClient);
             Client.Initialize(credentials, channelToJoin);
@@ -66,6 +62,7 @@ namespace Goofbot
             PipeServerModule = new PipeServerModule();
             BlueGuyModule = new BlueGuyModule();
             SpotifyModule = new SpotifyModule();
+            SoundAlertModule = new SoundAlertModule();
 
             CommandParsingModule.BlueGuyCommand.ExecuteCommand += BlueGuyModule.OnGuyCommand;
             CommandParsingModule.QueueModeCommand.ExecuteCommand += CommandParsingModule_OnQueueModeCommand;
@@ -85,7 +82,7 @@ namespace Goofbot
             PipeServerModule.RunSplit += PipeServerModule_OnRunSplit;
 
             PipeServerModule.Start();
-            Client.SendMessage(Channel, "Goofbot is activated and at your service MrDestructoid");
+            // Client.SendMessage(Channel, "Goofbot is activated and at your service MrDestructoid");
         }
 
         private void Client_OnLog(object sender, OnLogArgs e)

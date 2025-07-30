@@ -12,95 +12,98 @@ using TwitchLib.Api.Interfaces;
 using TwitchLib.EventSub.Websockets;
 using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using TwitchLib.EventSub.Websockets.Extensions;
 
 namespace Goofbot.Modules
 {
     internal class SoundAlertModule
     {
-        //private readonly ILogger<SoundAlertModule> _logger;
-        private readonly EventSubWebsocketClient _eventSubWebsocketClient;
-        private readonly TwitchAPI _twitchApi = new();
-        private string _userId;
-
-        public SoundAlertModule(ILogger<SoundAlertModule> logger, EventSubWebsocketClient eventSubWebsocketClient)
+        public SoundAlertModule()
         {
-            //_logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-            _eventSubWebsocketClient = eventSubWebsocketClient ?? throw new ArgumentNullException(nameof(eventSubWebsocketClient));
-            _eventSubWebsocketClient.WebsocketConnected += OnWebsocketConnected;
-            _eventSubWebsocketClient.WebsocketDisconnected += OnWebsocketDisconnected;
-            _eventSubWebsocketClient.WebsocketReconnected += OnWebsocketReconnected;
-            _eventSubWebsocketClient.ErrorOccurred += OnErrorOccurred;
-
-            dynamic client = Program.ParseJsonFile(Program.ClientInfoFile);
-
-            //_eventSubWebsocketClient.ChannelFollow += OnChannelFollow;
-            // Get ClientId and ClientSecret by register an Application here: https://dev.twitch.tv/console/apps
-            // https://dev.twitch.tv/docs/authentication/register-app/
-            _twitchApi.Settings.ClientId = client.client_id.ToString();
-            // Get Application Token with Client credentials grant flow.
-            // https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#client-credentials-grant-flow
-            _twitchApi.Settings.AccessToken = client.client_secret.ToString();
-
-            // You need the UserID for the User/Channel you want to get Events from.
-            // You can use await _api.Helix.Users.GetUsersAsync() for that.
-            _userId = "600829895";
+            var builder = Host.CreateApplicationBuilder();
+            builder.Services.AddTwitchLibEventSubWebsockets();
+            builder.Services.AddHostedService<SoundAlertModuleService>();
+            var app = builder.Build();
+            app.Run();
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken)
+        private class SoundAlertModuleService : IHostedService
         {
-            await _eventSubWebsocketClient.ConnectAsync();
-        }
+            private readonly EventSubWebsocketClient _eventSubWebsocketClient = new();
+            private readonly TwitchAPI _twitchApi = new();
+            private string _userId;
 
-        public async Task StopAsync(CancellationToken cancellationToken)
-        {
-            await _eventSubWebsocketClient.DisconnectAsync();
-        }
-
-        private async Task OnWebsocketConnected(object sender, WebsocketConnectedArgs e)
-        {
-            Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} connected!");
-
-            if (!e.IsRequestedReconnect)
+            public SoundAlertModuleService()
             {
-                // subscribe to topics
-                // create condition Dictionary
-                // You need BOTH broadcaster and moderator values or EventSub returns an Error!
-                var condition = new Dictionary<string, string> { { "broadcaster_user_id", _userId }, { "moderator_user_id", _userId } };
-                // Create and send EventSubscription
-                await _twitchApi.Helix.EventSub.CreateEventSubSubscriptionAsync("channel.channel_points_custom_reward_redemption.add", "1", condition, EventSubTransportMethod.Websocket,
-                _eventSubWebsocketClient.SessionId);
-                // If you want to get Events for special Events you need to additionally add the AccessToken of the ChannelOwner to the request.
-                // https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/
+                _twitchApi.Settings.ClientId = Program.ClientId;
+                _twitchApi.Settings.AccessToken = Program.AccessToken;
+
+                _eventSubWebsocketClient.WebsocketConnected += OnWebsocketConnected;
+                _eventSubWebsocketClient.WebsocketDisconnected += OnWebsocketDisconnected;
+                _eventSubWebsocketClient.WebsocketReconnected += OnWebsocketReconnected;
+                _eventSubWebsocketClient.ErrorOccurred += OnErrorOccurred;
+
+                // You need the UserID for the User/Channel you want to get Events from.
+                // You can use await _api.Helix.Users.GetUsersAsync() for that.
+                _userId = "600829895";
+
+                _eventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += OnChannelPointsCustomRewardRedemptionAdd;
             }
-        }
 
-        private async Task OnWebsocketDisconnected(object sender, EventArgs e)
-        {
-            Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} disconnected!");
-
-            // Don't do this in production. You should implement a better reconnect strategy with exponential backoff
-            while (!await _eventSubWebsocketClient.ReconnectAsync())
+            public async Task StartAsync(CancellationToken cancellationToken)
             {
-                Console.WriteLine("Websocket reconnect failed!");
-                await Task.Delay(1000);
+                await _eventSubWebsocketClient.ConnectAsync();
             }
+
+            public async Task StopAsync(CancellationToken cancellationToken)
+            {
+                await _eventSubWebsocketClient.DisconnectAsync();
+            }
+
+            private async Task OnWebsocketConnected(object sender, WebsocketConnectedArgs e)
+            {
+                Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} connected!");
+
+                if (!e.IsRequestedReconnect)
+                {
+                    // subscribe to topics
+                    var condition = new Dictionary<string, string> { { "broadcaster_user_id", _userId } };
+                    await _twitchApi.Helix.EventSub.CreateEventSubSubscriptionAsync("channel.channel_points_custom_reward_redemption.add", "1", condition, EventSubTransportMethod.Websocket, _eventSubWebsocketClient.SessionId);
+                }
+            }
+
+            private async Task OnWebsocketDisconnected(object sender, EventArgs e)
+            {
+                Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} disconnected!");
+
+                // Don't do this in production. You should implement a better reconnect strategy with exponential backoff
+                while (!await _eventSubWebsocketClient.ReconnectAsync())
+                {
+                    Console.WriteLine("Websocket reconnect failed!");
+                    await Task.Delay(1000);
+                }
+            }
+
+            private async Task OnWebsocketReconnected(object sender, EventArgs e)
+            {
+                Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} reconnected");
+            }
+
+            private async Task OnErrorOccurred(object sender, ErrorOccuredArgs e)
+            {
+                Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} - Error occurred!");
+            }
+
+            private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)
+            {
+                var reward = e.Notification.Payload.Event.Reward.Title;
+                Console.WriteLine($"REWARD REDEEMED: {reward}");
+            }
+
         }
 
-        private async Task OnWebsocketReconnected(object sender, EventArgs e)
-        {
-            Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} reconnected");
-        }
-
-        private async Task OnErrorOccurred(object sender, ErrorOccuredArgs e)
-        {
-            Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} - Error occurred!");
-        }
-
-        /*private async Task OnChannelFollow(object sender, ChannelFollowArgs e)
-        {
-            var eventData = e.Notification.Payload.Event;
-            _logger.LogInformation($"{eventData.UserName} followed {eventData.BroadcasterUserName} at {eventData.FollowedAt}");
-        }*/
+        
     }
 }

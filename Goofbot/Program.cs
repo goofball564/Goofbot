@@ -6,41 +6,42 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using ImageMagick;
 using System.Diagnostics;
+using System.Reflection.Metadata.Ecma335;
 
 namespace Goofbot
 {
     class Program
     {
-        public const string ColorNamesFile = "Stuff\\color_names.json";
+        private static string clientId;
+        public static string ClientId { get { return clientId; } }
+
+        private static string accessToken = s_clientInfo.client_id;
+        public static string AccessToken { get { return accessToken; } }
+
         public const string GuysFolder = "Stuff\\Guys";
+        public const string ColorNamesFile = "Stuff\\color_names.json";
         public const string ClientInfoFile = "Stuff\\client_info.json";
 
-        private const string TokenRequestUrl = "https://id.twitch.tv/oauth2/token";
-        private const string RedirectUrl = "http://localhost:3000/";
+        public const string RedirectUrl = "http://localhost:3000/";
+        public const string AuthorizationCodeRequestUrlBase = "https://id.twitch.tv/oauth2/authorize";
+        public const string TokenRequestUrl = "https://id.twitch.tv/oauth2/token";
 
-        private const string ColorNamesRequestUrl = "https://api.color.pizza/v1/";
+        public const string ColorNamesRequestUrl = "https://api.color.pizza/v1/";
         
-        private const string TokensFile = "Stuff\\tokens.json";
-        // private const string ClientInfoFile = "Stuff\\client_info.json";
         private const string BotAccount = "goofbotthebot";
         private const string ChannelToJoin = "goofballthecat";
 
         private static readonly List<string> s_scopes = new List<string> { "chat:read", "chat:edit", "channel:read:redemptions" };
         private static readonly dynamic s_clientInfo = ParseJsonFile(ClientInfoFile);
-        private static readonly HttpClient s_httpClient = new HttpClient();
+        private static readonly HttpClient s_httpClient = new();
 
-        static async Task Main(string[] args)
+        public static async Task Main(string[] args)
         {
-            string clientId = s_clientInfo.client_id;
-            var server = new WebServer(RedirectUrl);
-            string url = getAuthorizationCodeUrl(clientId, RedirectUrl, s_scopes);
-            Process.Start("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", url); // me-specific hack
-            string code = await server.Listen();
+            string code = await GetTwitchAuthorizationCode(s_scopes);
             
-            string tokensString = await RequestTokensWithAuthorizationCode(code);
-            File.WriteAllText(TokensFile, tokensString);
+            string tokensString = await RequestTwitchTokens(code);
             dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
-            string accessToken = Convert.ToString(tokensObject.access_token);
+            accessToken = Convert.ToString(tokensObject.access_token);
 
             MagickNET.Initialize();
             Directory.CreateDirectory(GuysFolder);
@@ -55,24 +56,27 @@ namespace Goofbot
             }
         }
 
-        private static string getAuthorizationCodeUrl(string clientId, string redirectUri, List<string> scopes)
+        public static async Task<string> GetTwitchAuthorizationCode(List<string> scopes)
         {
-            var scopesStr = String.Join('+', scopes);
-
-            return "https://id.twitch.tv/oauth2/authorize?" +
-                   $"client_id={clientId}&" +
-                   $"redirect_uri={System.Web.HttpUtility.UrlEncode(redirectUri)}&" +
-                   "response_type=code&" +
-                   $"scope={scopesStr}";
+            var server = new WebServer(RedirectUrl);
+            string url = GetTwitchAuthorizationCodeRequestUrl(RedirectUrl, scopes);
+            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+            return await server.Listen();
         }
 
-        static async Task<string> RequestColorNames()
+        public static dynamic ParseJsonFile(string filename)
+        {
+            string jsonString = File.ReadAllText(filename);
+            return JsonConvert.DeserializeObject(jsonString);
+        }
+
+        public static async Task<string> RequestColorNames()
         {
             var response = await s_httpClient.GetAsync(ColorNamesRequestUrl);
             return await response.Content.ReadAsStringAsync();
         }
 
-        static async Task<string> RequestTokensWithRefreshToken()
+        /*private static async Task<string> RequestTokensWithRefreshToken()
         {
             dynamic client = ParseJsonFile(ClientInfoFile);
             dynamic tokens = ParseJsonFile(TokensFile);
@@ -87,30 +91,32 @@ namespace Goofbot
             var content = new FormUrlEncodedContent(values);
             var response = await Program.s_httpClient.PostAsync(TokenRequestUrl, content);
             return await response.Content.ReadAsStringAsync();
-        }
+        }*/
 
-        static async Task<string> RequestTokensWithAuthorizationCode(string code)
+        public static async Task<string> RequestTwitchTokens(string twitchAuthorizationCode)
         {
-            dynamic client = ParseJsonFile(ClientInfoFile);
-            dynamic tokens = ParseJsonFile(TokensFile);
-
             var values = new Dictionary<string, string>
             {
-                { "code", code },
-                { "client_id", Convert.ToString(client.client_id) },
-                { "client_secret", Convert.ToString(client.client_secret) },
+                { "code", twitchAuthorizationCode },
+                { "client_id", Convert.ToString(s_clientInfo.client_id) },
+                { "client_secret", Convert.ToString(s_clientInfo.client_secret) },
                 { "grant_type", "authorization_code" },
                 { "redirect_uri", RedirectUrl }
             };
             var content = new FormUrlEncodedContent(values);
-            var response = await Program.s_httpClient.PostAsync(TokenRequestUrl, content);
+            var response = await s_httpClient.PostAsync(TokenRequestUrl, content);
             return await response.Content.ReadAsStringAsync();
         }
 
-        public static dynamic ParseJsonFile(string filename)
+        public static string GetTwitchAuthorizationCodeRequestUrl(string redirectUri, List<string> scopes)
         {
-            string jsonString = File.ReadAllText(filename);
-            return JsonConvert.DeserializeObject(jsonString);
+            var scopesStr = String.Join('+', scopes);
+
+            return $"{AuthorizationCodeRequestUrlBase}?" +
+                   $"client_id={clientId}&" +
+                   $"redirect_uri={System.Web.HttpUtility.UrlEncode(redirectUri)}&" +
+                   "response_type=code&" +
+                   $"scope={scopesStr}";
         }
     }
 }
