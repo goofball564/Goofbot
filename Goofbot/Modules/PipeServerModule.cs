@@ -12,8 +12,8 @@ namespace Goofbot.Modules
         public event EventHandler<RunSplitEventArgs> RunSplit;
         public event EventHandler RunGold;
 
-        private Thread ListenerThread;
-        private CancellationTokenSource ListenerCancellationSource;
+        private Thread _listenerThread;
+        private CancellationTokenSource _listenerCancellationSource;
 
         protected virtual void OnRunStart(int runCount)
         {
@@ -47,25 +47,40 @@ namespace Goofbot.Modules
 
         public void Start()
         {
-            if (ListenerThread == null)
+            if (_listenerThread == null)
             {
-                ListenerCancellationSource = new CancellationTokenSource();
-                var threadStart = new ThreadStart(() => Listen(ListenerCancellationSource.Token));
-                ListenerThread = new Thread(threadStart);
-                ListenerThread.IsBackground = true;
-                ListenerThread.Start();
+                _listenerCancellationSource = new CancellationTokenSource();
+                var threadStart = new ThreadStart(() => Listen(_listenerCancellationSource.Token));
+                _listenerThread = new Thread(threadStart);
+                _listenerThread.IsBackground = true;
+                _listenerThread.Start();
             }
         }
 
         public void Stop()
         {
-            if (ListenerThread != null)
+            if (_listenerThread != null)
             {
-                ListenerCancellationSource.Cancel();
-                ListenerThread = null;
-                ListenerCancellationSource.Dispose();
-                ListenerCancellationSource = null;
+                _listenerCancellationSource.Cancel();
+                _listenerThread = null;
+                _listenerCancellationSource.Dispose();
+                _listenerCancellationSource = null;
             }
+        }
+
+        private static string ProcessSingleIncomingMessage(NamedPipeServerStream namedPipeServer)
+        {
+            StringBuilder messageBuilder = new StringBuilder();
+            byte[] messageBuffer = new byte[5];
+            do
+            {
+                namedPipeServer.Read(messageBuffer, 0, messageBuffer.Length);
+                string messageChunk = Encoding.UTF8.GetString(messageBuffer).Trim('\0');
+                messageBuilder.Append(messageChunk);
+                messageBuffer = new byte[messageBuffer.Length];
+            }
+            while (!namedPipeServer.IsMessageComplete);
+            return messageBuilder.ToString();
         }
 
         private void Listen(CancellationToken token)
@@ -106,23 +121,7 @@ namespace Goofbot.Modules
                 }
             }
         }
-
-        private static string ProcessSingleIncomingMessage(NamedPipeServerStream namedPipeServer)
-        {
-            StringBuilder messageBuilder = new StringBuilder();
-            byte[] messageBuffer = new byte[5];
-            do
-            {
-                namedPipeServer.Read(messageBuffer, 0, messageBuffer.Length);
-                string messageChunk = Encoding.UTF8.GetString(messageBuffer).Trim('\0');
-                messageBuilder.Append(messageChunk);
-                messageBuffer = new byte[messageBuffer.Length];
-            }
-            while (!namedPipeServer.IsMessageComplete);
-            return messageBuilder.ToString();
-        }
     }
-
 }
 
 internal class RunSplitEventArgs : EventArgs

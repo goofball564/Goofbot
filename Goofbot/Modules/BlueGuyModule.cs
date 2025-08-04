@@ -8,12 +8,6 @@ namespace Goofbot.Modules
 {
     internal partial class BlueGuyModule
     {
-        public event EventHandler<EventArgs> ColorChange;
-        public event EventHandler<string> UnknownColor;
-        public event EventHandler<EventArgs> NoArgument;
-        public event EventHandler<string> RandomColor;
-        public event EventHandler SameColor;
-
         private const string BlueGuyGrayscaleFile = "Stuff\\BlueGuyGrayscale.png";
         private const string BlueGuyColorFile = "Stuff\\BlueGuyColor.png";
         private const string BlueGuyEyesFile = "Stuff\\BlueGuyEyes.png";
@@ -27,13 +21,18 @@ namespace Goofbot.Modules
         private const string DefaultColorName = "BlueGuy";
         private const string SpeedGuy = "SpeedGuy";
 
-        private readonly ColorDictionary ColorDictionary;
-        private string lastColorCode = "";
+        private readonly ColorDictionary _colorDictionary;
+        private string _lastColorCode = "";
 
+        public event EventHandler<EventArgs> ColorChange;
+        public event EventHandler<string> UnknownColor;
+        public event EventHandler<EventArgs> NoArgument;
+        public event EventHandler<string> RandomColor;
+        public event EventHandler SameColor;
 
         public BlueGuyModule()
         {
-            ColorDictionary = new ColorDictionary(Program.ColorNamesFile);
+            _colorDictionary = new ColorDictionary(Program.ColorNamesFile);
         }
 
         protected virtual void OnColorChange()
@@ -66,9 +65,9 @@ namespace Goofbot.Modules
             if (IsColorHexCode(args))
             {
                 args = args.ToLowerInvariant();
-                if (args != lastColorCode)
+                if (args != _lastColorCode)
                 {
-                    lastColorCode = args;
+                    _lastColorCode = args;
                     CreateBlueGuyImage(args);
                     OnColorChange();
                 }
@@ -79,9 +78,9 @@ namespace Goofbot.Modules
             }
             else if (args.ToLowerInvariant() == "default" || args == DefaultColorName)
             {
-                if (lastColorCode != DefaultColorName)
+                if (_lastColorCode != DefaultColorName)
                 {
-                    lastColorCode = DefaultColorName;
+                    _lastColorCode = DefaultColorName;
                     RestoreDefaultBlueGuy();
                     OnColorChange();
                 }
@@ -93,9 +92,9 @@ namespace Goofbot.Modules
             }
             else if (args == SpeedGuy)
             {
-                if (lastColorCode != SpeedGuy)
+                if (_lastColorCode != SpeedGuy)
                 {
-                    lastColorCode = SpeedGuy;
+                    _lastColorCode = SpeedGuy;
                     CreateBlueGuyImage(SpeedGuy);
                     OnColorChange();
                 }
@@ -107,14 +106,14 @@ namespace Goofbot.Modules
             }
             else if (args.ToLower() == "random")
             {
-                string colorName = ColorDictionary.GetRandomSaturatedName();
-                string hexColorCode = ColorDictionary.GetHex(colorName.ToLowerInvariant());
+                string colorName = _colorDictionary.GetRandomSaturatedName();
+                string hexColorCode = _colorDictionary.GetHex(colorName.ToLowerInvariant());
                 if (hexColorCode != null)
                 {
                     hexColorCode = hexColorCode.ToLowerInvariant();
-                    if (hexColorCode != lastColorCode)
+                    if (hexColorCode != _lastColorCode)
                     {
-                        lastColorCode = hexColorCode;
+                        _lastColorCode = hexColorCode;
                         CreateBlueGuyImage(hexColorCode);
                         OnRandomColor(colorName);
 
@@ -144,13 +143,13 @@ namespace Goofbot.Modules
             }
             else
             {
-                string hexColorCode = ColorDictionary.GetHex(args.ToLower());
+                string hexColorCode = _colorDictionary.GetHex(args.ToLower());
                 if (hexColorCode != null)
                 {
                     hexColorCode = hexColorCode.ToLowerInvariant();
-                    if (hexColorCode != lastColorCode)
+                    if (hexColorCode != _lastColorCode)
                     {
-                        lastColorCode = hexColorCode;
+                        _lastColorCode = hexColorCode;
                         CreateBlueGuyImage(hexColorCode);
                         OnColorChange();
 

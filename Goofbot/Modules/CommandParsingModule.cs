@@ -40,6 +40,7 @@ namespace Goofbot.Modules
 
             command = command.ToLowerInvariant();
             commandArgs = commandArgs.Trim();
+
             switch (command)
             {
                 case "!guy":
@@ -60,30 +61,30 @@ namespace Goofbot.Modules
 
         public class Command
         {
-            private DateTime timeOfLastInvocation = DateTime.MinValue;
-            private readonly TimeSpan timeout;
-            public readonly bool GoofOnly;
+            private DateTime _timeOfLastInvocation = DateTime.MinValue;
+            private readonly TimeSpan _timeout;
+            public readonly bool goofOnly;
             public event EventHandler<string> ExecuteCommand;
 
             public Command(int timeoutSeconds, bool goofOnly = false)
             {
-                timeout = TimeSpan.FromSeconds(timeoutSeconds);
-                GoofOnly = goofOnly;
+                _timeout = TimeSpan.FromSeconds(timeoutSeconds);
+                this.goofOnly = goofOnly;
             }
 
             public void IssueCommand(string commandArgs, OnMessageReceivedArgs messageArgs)
             {
-                if (GoofOnly && !messageArgs.ChatMessage.IsBroadcaster)
+                if (goofOnly && !messageArgs.ChatMessage.IsBroadcaster)
                 {
                     OnNotBroadcaster();
                     return;
                 }
 
                 DateTime invocationTime = DateTime.UtcNow;
-                DateTime timeoutTime = timeOfLastInvocation.Add(timeout);
+                DateTime timeoutTime = _timeOfLastInvocation.Add(_timeout);
                 if (timeoutTime.CompareTo(invocationTime) < 0)
                 {
-                    timeOfLastInvocation = invocationTime;
+                    _timeOfLastInvocation = invocationTime;
                     OnExecuteCommand(commandArgs);
                 }
                 else

@@ -9,116 +9,51 @@ namespace Goofbot.Modules
 {
     public class SpotifyModule
     {
-        private const string spotifyIdsFile = "Stuff\\spotify_ids.json";
-        private const int queueModeLoopInterval = 12000;
-        private const double queueModeRemainingDurationThreshold = 60;
+        private const string SpotifyIdsFile = "Stuff\\spotify_ids.json";
+        private const int QueueModeLoopInterval = 12000;
+        private const double QueueModeRemainingDurationThreshold = 60;
 
-        private EmbedIOAuthServer server;
-        private SpotifyClient spotify;
-        private readonly VolumeControlModule volumeControlModule;
-        private readonly CachedApiResponses cachedApiResponses;
+        private readonly dynamic _spotifyIds = Program.ParseJsonFile(SpotifyIdsFile);
+        private readonly string _clientId;
+        private readonly string _clientSecret;
+        private readonly string _playlistId;
 
-        private readonly dynamic spotifyIds = Program.ParseJsonFile(spotifyIdsFile);
-        private readonly string clientId;
-        private readonly string clientSecret;
-        private readonly string playlistId;
+        private EmbedIOAuthServer _server;
+        private SpotifyClient _spotify;
+        private readonly VolumeControlModule _volumeControlModule;
+        private readonly CachedApiResponses _cachedApiResponses;
 
-        private volatile bool queueMode = false;
-        private volatile bool farmMode = true;
+        private readonly ThreadSafeObject<string> _currentlyPlayingId = new();
+        private readonly ThreadSafeObject<string> _currentlyPlayingSongName = new();
+        private readonly ThreadSafeObject<List<SimpleArtist>> _currentlyPlayingArtistsNames = new();
 
-        private bool removedFromPlaylist = false;
-        private bool addedToQueue = false;
+        private volatile bool _queueMode = false;
+        private volatile bool _farmMode = true;
 
-        private readonly ThreadSafeObject<string> currentlyPlayingId = new();
-        private readonly ThreadSafeObject<string> currentlyPlayingSongName = new();
-        private readonly ThreadSafeObject<List<SimpleArtist>> currentlyPlayingArtistsNames = new();
-
-        public class ThreadSafeObject<T>
-        {
-            private readonly object lockObject = new();
-            private T value;
-
-            public T Value
-            {
-                get
-                {
-                    lock (lockObject)
-                    {
-                        return value;
-                    }
-                }
-                set
-                {
-                    lock (lockObject)
-                    {
-                        this.value = value;
-                    }
-                }
-            }
-        }
-
-        private class CachedApiResponses
-        {
-            public CurrentlyPlayingContext Context
-            {
-                get
-                {
-                    return contextCached.Value;
-                }
-            }
-
-            public QueueResponse Queue
-            {
-                get
-                {
-                    return queueCached.Value;
-                }
-            }
-
-            private readonly TimeSpan callAgainTimeout = TimeSpan.FromSeconds(6);
-            private DateTime timeOfLastCall = DateTime.MinValue;
-
-            private ThreadSafeObject<CurrentlyPlayingContext> contextCached = new();
-            private ThreadSafeObject<QueueResponse> queueCached = new();
-
-            public async Task<bool> RefreshCachedApiResponses(SpotifyClient spotify)
-            {
-                DateTime now = DateTime.UtcNow;
-                DateTime timeoutTime = timeOfLastCall.Add(callAgainTimeout);
-                if (timeoutTime.CompareTo(now) < 0)
-                {
-                    timeOfLastCall = now;
-                    var context = spotify.Player.GetCurrentPlayback();
-                    var queue = spotify.Player.GetQueue();
-
-                    contextCached.Value = await context;
-                    queueCached.Value = await queue;
-                }
-                return true;
-            }
-        }
+        private bool _removedFromPlaylist = false;
+        private bool _addedToQueue = false;
 
         public bool QueueMode
         {
             get
             {
-                return queueMode;
+                return _queueMode;
             }
             set
             {
                 if (value == true)
                 {
-                    volumeControlModule.SpotifyVolume = 0.07f;
-                    volumeControlModule.DarkSoulsVolume = 0.22f;
+                    _volumeControlModule.SpotifyVolume = 0.07f;
+                    _volumeControlModule.DarkSoulsVolume = 0.22f;
                 }
                     
                 else
                 {
-                    volumeControlModule.SpotifyVolume = 0.05f;
-                    volumeControlModule.DarkSoulsVolume = 0.27f;
+                    _volumeControlModule.SpotifyVolume = 0.05f;
+                    _volumeControlModule.DarkSoulsVolume = 0.27f;
                 }
                     
-                queueMode = value;
+                _queueMode = value;
             }
         }
 
@@ -126,11 +61,11 @@ namespace Goofbot.Modules
         {
             get
             {
-                return farmMode;
+                return _farmMode;
             }
             set
             {
-                farmMode = value;
+                _farmMode = value;
             }
         }
 
@@ -138,7 +73,7 @@ namespace Goofbot.Modules
         {
             get
             {
-                return currentlyPlayingId.Value;
+                return _currentlyPlayingId.Value;
             }
         }
 
@@ -146,7 +81,7 @@ namespace Goofbot.Modules
         {
             get
             {
-                return currentlyPlayingSongName.Value;   
+                return _currentlyPlayingSongName.Value;   
             }
         }
 
@@ -155,7 +90,7 @@ namespace Goofbot.Modules
             get
             {
                 var artistsNamesAsString = new List<string>();
-                var artistsAsSimpleArtist = currentlyPlayingArtistsNames.Value;
+                var artistsAsSimpleArtist = _currentlyPlayingArtistsNames.Value;
                 if (artistsAsSimpleArtist != null)
                 {
                     foreach (var artist in artistsAsSimpleArtist)
@@ -169,12 +104,12 @@ namespace Goofbot.Modules
 
         public SpotifyModule()
         {
-            volumeControlModule = new VolumeControlModule();
-            cachedApiResponses = new CachedApiResponses();
+            _volumeControlModule = new VolumeControlModule();
+            _cachedApiResponses = new CachedApiResponses();
 
-            clientId = Convert.ToString(spotifyIds.client_id);
-            clientSecret = Convert.ToString(spotifyIds.client_secret);
-            playlistId = Convert.ToString(spotifyIds.playlist_id);
+            _clientId = Convert.ToString(_spotifyIds.client_id);
+            _clientSecret = Convert.ToString(_spotifyIds.client_secret);
+            _playlistId = Convert.ToString(_spotifyIds.playlist_id);
 
             Initialize();
         }
@@ -182,32 +117,53 @@ namespace Goofbot.Modules
         public async Task Initialize()
         {
             // Make sure "http://localhost:5543/callback" is in your spotify application as redirect uri!
-            server = new EmbedIOAuthServer(new Uri("http://localhost:5543/callback"), 5543);
-            await server.Start();
+            _server = new EmbedIOAuthServer(new Uri("http://localhost:5543/callback"), 5543);
+            await _server.Start();
 
-            server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
-            server.ErrorReceived += OnErrorReceived;
+            _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
+            _server.ErrorReceived += OnErrorReceived;
 
-            var request = new LoginRequest(server.BaseUri, clientId, LoginRequest.ResponseType.Code)
+            var request = new LoginRequest(_server.BaseUri, _clientId, LoginRequest.ResponseType.Code)
             {
                 Scope = new List<string> { Scopes.UserModifyPlaybackState, Scopes.UserReadPlaybackState, Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPrivate }
             };
             BrowserUtil.Open(request.ToUri());
         }
 
+        public async Task<bool> RefreshCurrentlyPlaying()
+        {
+            await _cachedApiResponses.RefreshCachedApiResponses(_spotify);
+            var context = _cachedApiResponses.Context;
+            var queue = _cachedApiResponses.Queue;
+
+            if (context != null && context.IsPlaying)
+            {
+                var currentlyPlaying = GetCurrentlyPlaying(queue);
+                _currentlyPlayingId.Value = currentlyPlaying?.Id;
+                _currentlyPlayingSongName.Value = currentlyPlaying?.Name;
+                _currentlyPlayingArtistsNames.Value = currentlyPlaying?.Artists;
+            }
+            else
+            {
+                _currentlyPlayingId.Value = "";
+                _currentlyPlayingSongName.Value = "";
+                _currentlyPlayingArtistsNames.Value = [];
+            }
+            return true;
+        }
+
         private async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
         {
-            await server.Stop();
+            await _server.Stop();
 
             var tokenResponse = await new OAuthClient().RequestToken(
               new AuthorizationCodeTokenRequest(
-                  clientId, clientSecret, response.Code, new Uri("http://localhost:5543/callback")
+                  _clientId, _clientSecret, response.Code, new Uri("http://localhost:5543/callback")
               )
             );
 
-
-            var config = SpotifyClientConfig.CreateDefault().WithAuthenticator(new AuthorizationCodeAuthenticator(clientId, clientSecret, tokenResponse));
-            spotify = new SpotifyClient(config);
+            var config = SpotifyClientConfig.CreateDefault().WithAuthenticator(new AuthorizationCodeAuthenticator(_clientId, _clientSecret, tokenResponse));
+            _spotify = new SpotifyClient(config);
 
             QueueModeLoop();
         }
@@ -215,7 +171,7 @@ namespace Goofbot.Modules
         private async Task OnErrorReceived(object sender, string error, string state)
         {
             Console.WriteLine($"Aborting authorization, error received: {error}");
-            await server.Stop();
+            await _server.Stop();
         }
 
         // ADDED HELLA COMMENTS CUZ THIS CODE IS BAD
@@ -230,11 +186,11 @@ namespace Goofbot.Modules
             {
                 // every 12 seconds
                 // call spotify API to refresh currently known data
-                Thread.Sleep(queueModeLoopInterval);
+                Thread.Sleep(QueueModeLoopInterval);
 
-                await cachedApiResponses.RefreshCachedApiResponses(spotify);
-                var context = cachedApiResponses.Context;
-                var queue = cachedApiResponses.Queue;
+                await _cachedApiResponses.RefreshCachedApiResponses(_spotify);
+                var context = _cachedApiResponses.Context;
+                var queue = _cachedApiResponses.Queue;
 
                 // if spotify is playing
                 if (context != null && context.IsPlaying)
@@ -247,15 +203,15 @@ namespace Goofbot.Modules
                     {
                         // IF now playing a different song than before...
                         // set currently playing song info
-                        this.currentlyPlayingId.Value = currentlyPlayingId;
-                        this.currentlyPlayingSongName.Value = currentlyPlaying?.Name;
-                        this.currentlyPlayingArtistsNames.Value = currentlyPlaying?.Artists;
+                        this._currentlyPlayingId.Value = currentlyPlayingId;
+                        this._currentlyPlayingSongName.Value = currentlyPlaying?.Name;
+                        this._currentlyPlayingArtistsNames.Value = currentlyPlaying?.Artists;
 
                         // set these to false, meaning these actions are
                         // queued to happen (will be set to true when the action is taken
                         // so the action only happens once)
-                        addedToQueue = false;
-                        removedFromPlaylist = false;
+                        _addedToQueue = false;
+                        _removedFromPlaylist = false;
                     }
 
                     // get remaining duration of current song, next song in queue
@@ -264,10 +220,10 @@ namespace Goofbot.Modules
                     string? nextInQueueId = nextInQueue?.Id;
 
                     // if a certain duration remains in the current song
-                    if (remainingDuration != null && remainingDuration < queueModeRemainingDurationThreshold)
+                    if (remainingDuration != null && remainingDuration < QueueModeRemainingDurationThreshold)
                     {
                         // get queue playlist
-                        var playlist = await spotify.Playlists.Get(playlistId);
+                        var playlist = await _spotify.Playlists.Get(_playlistId);
 
                         // get first song in queue playlist
                         var firstInPlaylist = GetFirstInPlaylist(playlist);
@@ -276,50 +232,28 @@ namespace Goofbot.Modules
 
                         // if first song in queue playlist is currently playing, remove it from head of playlist
                         // (do this only once until currently playing song changes)
-                        if (!removedFromPlaylist && currentlyPlayingId != null && currentlyPlayingId == firstInPlaylistId)
+                        if (!_removedFromPlaylist && currentlyPlayingId != null && currentlyPlayingId == firstInPlaylistId)
                         {
-                            removedFromPlaylist = true;
-                            RemoveFirstSongFromPlaylist(playlist, playlistId);
+                            _removedFromPlaylist = true;
+                            RemoveFirstSongFromPlaylist(playlist, _playlistId);
                         }
                         // if first song in queue playlist is NOT currently playing, add first song in queue playlist to queue
                         // (do this only once until currently playing song changes)
-                        else if (QueueMode && !addedToQueue && nextInQueueId != null && firstInPlaylistUri != null && nextInQueueId != firstInPlaylistId)
+                        else if (QueueMode && !_addedToQueue && nextInQueueId != null && firstInPlaylistUri != null && nextInQueueId != firstInPlaylistId)
                         {
-                            addedToQueue = true;
-                            spotify.Player.AddToQueue(new PlayerAddToQueueRequest(firstInPlaylistUri));
+                            _addedToQueue = true;
+                            _spotify.Player.AddToQueue(new PlayerAddToQueueRequest(firstInPlaylistUri));
                         }
                     }
                 }
             }
         }
 
-        public async Task<bool> RefreshCurrentlyPlaying()
-        {
-            await cachedApiResponses.RefreshCachedApiResponses(spotify);
-            var context = cachedApiResponses.Context;
-            var queue = cachedApiResponses.Queue;
-
-            if (context != null && context.IsPlaying)
-            {
-                var currentlyPlaying = GetCurrentlyPlaying(queue);
-                currentlyPlayingId.Value = currentlyPlaying?.Id;
-                currentlyPlayingSongName.Value = currentlyPlaying?.Name;
-                currentlyPlayingArtistsNames.Value = currentlyPlaying?.Artists;
-            }
-            else
-            {
-                currentlyPlayingId.Value = "";
-                currentlyPlayingSongName.Value = "";
-                currentlyPlayingArtistsNames.Value = [];
-            }
-            return true;
-        }
-
         private async Task RemoveFirstSongFromPlaylist(FullPlaylist playlist, string playlistId)
         {
             IList<int>? indicesToRemove = new List<int> { 0, };
             string? snapshotId = playlist.SnapshotId;
-            spotify.Playlists.RemoveItems(playlistId, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
+            _spotify.Playlists.RemoveItems(playlistId, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
         }
 
         private static double? GetRemainingDuration(QueueResponse? queue, CurrentlyPlayingContext? context)
@@ -390,6 +324,71 @@ namespace Goofbot.Modules
             else
             {
                 return null;
+            }
+        }
+
+        public class ThreadSafeObject<T>
+        {
+            private readonly object _lockObject = new();
+            private T _value;
+
+            public T Value
+            {
+                get
+                {
+                    lock (_lockObject)
+                    {
+                        return _value;
+                    }
+                }
+                set
+                {
+                    lock (_lockObject)
+                    {
+                        this._value = value;
+                    }
+                }
+            }
+        }
+
+        private class CachedApiResponses
+        {
+            public CurrentlyPlayingContext Context
+            {
+                get
+                {
+                    return _contextCached.Value;
+                }
+            }
+
+            public QueueResponse Queue
+            {
+                get
+                {
+                    return _queueCached.Value;
+                }
+            }
+
+            private readonly TimeSpan _callAgainTimeout = TimeSpan.FromSeconds(6);
+            private DateTime _timeOfLastCall = DateTime.MinValue;
+
+            private ThreadSafeObject<CurrentlyPlayingContext> _contextCached = new();
+            private ThreadSafeObject<QueueResponse> _queueCached = new();
+
+            public async Task<bool> RefreshCachedApiResponses(SpotifyClient spotify)
+            {
+                DateTime now = DateTime.UtcNow;
+                DateTime timeoutTime = _timeOfLastCall.Add(_callAgainTimeout);
+                if (timeoutTime.CompareTo(now) < 0)
+                {
+                    _timeOfLastCall = now;
+                    var context = spotify.Player.GetCurrentPlayback();
+                    var queue = spotify.Player.GetQueue();
+
+                    _contextCached.Value = await context;
+                    _queueCached.Value = await queue;
+                }
+                return true;
             }
         }
     }

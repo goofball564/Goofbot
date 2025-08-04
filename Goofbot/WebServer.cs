@@ -8,25 +8,31 @@ namespace Goofbot
 {
     public class WebServer
     {
-        private HttpListener listener;
+        private HttpListener _listener;
 
         public WebServer(string uri)
         {
-            listener = new HttpListener();
-            listener.Prefixes.Add(uri);
+            _listener = new HttpListener();
+            _listener.Prefixes.Add(uri);
+        }
+
+        public void Stop()
+        {
+            _listener.Stop();
+            _listener.Close();
         }
 
         public async Task<String> Listen()
         {
-            listener.Start();
-            return await onRequest();
+            _listener.Start();
+            return await OnRequest();
         }
 
-        private async Task<String> onRequest()
+        private async Task<String> OnRequest()
         {
-            while (listener.IsListening)
+            while (_listener.IsListening)
             {
-                var ctx = await listener.GetContextAsync();
+                var ctx = await _listener.GetContextAsync();
                 var req = ctx.Request;
                 var resp = ctx.Response;
 

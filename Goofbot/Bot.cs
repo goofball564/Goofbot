@@ -10,18 +10,18 @@ namespace Goofbot
 {
     internal class Bot
     {
-        private readonly TwitchClient Client;
+        private readonly TwitchClient _client;
 
-        private readonly ChatInteractionModule ChatInteractionModule;
-        private readonly PipeServerModule PipeServerModule;
-        private readonly BlueGuyModule BlueGuyModule;
-        private readonly CommandParsingModule CommandParsingModule;
-        private readonly SpotifyModule SpotifyModule;
-        private readonly SoundAlertModule SoundAlertModule;
+        // private readonly ChatInteractionModule ChatInteractionModule;
+        // private readonly PipeServerModule PipeServerModule;
+        private readonly BlueGuyModule _blueGuyModule;
+        private readonly CommandParsingModule _commandParsingModule;
+        private readonly SpotifyModule _spotifyModule;
+        private readonly SoundAlertModule _soundAlertModule;
 
         // private Task WaitTask;
 
-        private readonly string Channel;
+        private readonly string _channel;
 
         // react to game or livesplit
         // track stats?
@@ -44,45 +44,45 @@ namespace Goofbot
 
         public Bot(string botAccount, string channelToJoin, string accessToken)
         {
-            Channel = channelToJoin;
+            _channel = channelToJoin;
 
             var credentials = new ConnectionCredentials(botAccount, accessToken);
             var clientOptions = new ClientOptions();
             var customClient = new WebSocketClient(clientOptions);
 
-            Client = new TwitchClient(customClient);
-            Client.Initialize(credentials, channelToJoin);
-            Client.OnLog += Client_OnLog;
-            Client.OnJoinedChannel += Client_OnJoinedChannel;
-            Client.OnMessageReceived += Client_OnMessageReceived;
-            Client.OnConnected += Client_OnConnected;
-            Client.Connect();
+            _client = new TwitchClient(customClient);
+            _client.Initialize(credentials, channelToJoin);
+            _client.OnLog += Client_OnLog;
+            _client.OnJoinedChannel += Client_OnJoinedChannel;
+            _client.OnMessageReceived += Client_OnMessageReceived;
+            _client.OnConnected += Client_OnConnected;
+            _client.Connect();
 
-            CommandParsingModule = new CommandParsingModule();
-            PipeServerModule = new PipeServerModule();
-            BlueGuyModule = new BlueGuyModule();
-            SpotifyModule = new SpotifyModule();
-            SoundAlertModule = new SoundAlertModule();
+            _commandParsingModule = new CommandParsingModule();
+            // PipeServerModule = new PipeServerModule();
+            _blueGuyModule = new BlueGuyModule();
+            _spotifyModule = new SpotifyModule();
+            _soundAlertModule = new SoundAlertModule();
 
-            CommandParsingModule.BlueGuyCommand.ExecuteCommand += BlueGuyModule.OnGuyCommand;
-            CommandParsingModule.QueueModeCommand.ExecuteCommand += CommandParsingModule_OnQueueModeCommand;
-            CommandParsingModule.SongCommand.ExecuteCommand += CommandParsingModule_OnSongCommand;
+            _commandParsingModule.BlueGuyCommand.ExecuteCommand += _blueGuyModule.OnGuyCommand;
+            // CommandParsingModule.QueueModeCommand.ExecuteCommand += CommandParsingModule_OnQueueModeCommand;
+            _commandParsingModule.SongCommand.ExecuteCommand += CommandParsingModule_OnSongCommand;
 
             CommandParsingModule.TimeoutNotElapsed += CommandParsingModule_OnTimeoutNotElapsed;
             CommandParsingModule.NotBroadcaster += CommandParsingModule_OnNotBroadcaster;
 
-            BlueGuyModule.ColorChange += BlueGuyModule_OnColorChange;
-            BlueGuyModule.UnknownColor += BlueGuyModule_OnUnknownColor;
-            BlueGuyModule.NoArgument += BlueGuyModule_OnNoArgument;
-            BlueGuyModule.RandomColor += BlueGuyModule_OnRandomColor;
-            BlueGuyModule.SameColor += BlueGuyModule_OnSameColor;
+            _blueGuyModule.ColorChange += BlueGuyModule_OnColorChange;
+            _blueGuyModule.UnknownColor += BlueGuyModule_OnUnknownColor;
+            _blueGuyModule.NoArgument += BlueGuyModule_OnNoArgument;
+            _blueGuyModule.RandomColor += BlueGuyModule_OnRandomColor;
+            _blueGuyModule.SameColor += BlueGuyModule_OnSameColor;
 
-            PipeServerModule.RunStart += PiperServerModule_OnRunStart;
+            /*PipeServerModule.RunStart += PiperServerModule_OnRunStart;
             PipeServerModule.RunReset += PipeServerModule_OnRunReset;
-            PipeServerModule.RunSplit += PipeServerModule_OnRunSplit;
+            PipeServerModule.RunSplit += PipeServerModule_OnRunSplit;*/
 
-            PipeServerModule.Start();
-            // Client.SendMessage(Channel, "Goofbot is activated and at your service MrDestructoid");
+            // PipeServerModule.Start();
+            _client.SendMessage(_channel, "Goofbot is activated and at your service MrDestructoid");
         }
 
         private void Client_OnLog(object sender, OnLogArgs e)
@@ -102,25 +102,25 @@ namespace Goofbot
 
         private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
-            CommandParsingModule.ParseMessageForCommand(e);
+            _commandParsingModule.ParseMessageForCommand(e);
         }
 
         private async void CommandParsingModule_OnSongCommand(object sender, string e)
         {
-            await SpotifyModule.RefreshCurrentlyPlaying();
-            string artists = string.Join(", ", SpotifyModule.CurrentlyPlayingArtistsNames);
-            string song = SpotifyModule.CurrentlyPlayingSongName;
+            await _spotifyModule.RefreshCurrentlyPlaying();
+            string artists = string.Join(", ", _spotifyModule.CurrentlyPlayingArtistsNames);
+            string song = _spotifyModule.CurrentlyPlayingSongName;
             if (song == "" || artists == "")
             {
-                Client.SendMessage(Channel, "Ain't nothing playing.");
+                _client.SendMessage(_channel, "Ain't nothing playing.");
             }
             else
             {
-                Client.SendMessage(Channel, song + " by " + artists);
+                _client.SendMessage(_channel, song + " by " + artists);
             }
         }
 
-        private void CommandParsingModule_OnQueueModeCommand(object sender, string args)
+        /*private void CommandParsingModule_OnQueueModeCommand(object sender, string args)
         {
             const string successResponse = "Aye Aye, Captain! FrankerZ 7";
             args = args.ToLowerInvariant();
@@ -138,31 +138,31 @@ namespace Goofbot
             {
                 Client.SendMessage(Channel, "?");
             }
-        }
+        }*/
 
         private void CommandParsingModule_OnTimeoutNotElapsed(object sender, TimeSpan timeUntilTimeoutElapses)
         {
-            Client.SendMessage(Channel, String.Format("Please wait {0} minutes and {1} seconds, then try again.", timeUntilTimeoutElapses.Minutes, timeUntilTimeoutElapses.Seconds));
+            _client.SendMessage(_channel, String.Format("Please wait {0} minutes and {1} seconds, then try again.", timeUntilTimeoutElapses.Minutes, timeUntilTimeoutElapses.Seconds));
         }
 
         private void CommandParsingModule_OnNotBroadcaster(object sender, EventArgs e)
         {
-            Client.SendMessage(Channel, "I don't answer to you, peasant! OhMyDog (this command is for Goof's use only)");
+            _client.SendMessage(_channel, "I don't answer to you, peasant! OhMyDog (this command is for Goof's use only)");
         }
 
-        private void PiperServerModule_OnRunStart(object sender, int runCount)
+        /*private void PiperServerModule_OnRunStart(object sender, int runCount)
         {
             // Client.SendMessage(Channel, String.Format("Run {0}! dinkDonk Give it up for run {1}! dinkDonk", runCount, runCount));
             SpotifyModule.QueueMode = true;
-        }
+        }*/
 
-        private void PipeServerModule_OnRunReset(object sender, int runCount)
+        /*private void PipeServerModule_OnRunReset(object sender, int runCount)
         {
             if (!SpotifyModule.FarmMode)
                 SpotifyModule.QueueMode = false;
-        }
+        }*/
 
-        private void PipeServerModule_OnRunSplit(object sender, RunSplitEventArgs e)
+        /*private void PipeServerModule_OnRunSplit(object sender, RunSplitEventArgs e)
         {
             if (e.CurrentSplitIndex < 5)
             {
@@ -172,31 +172,31 @@ namespace Goofbot
             {
                 SpotifyModule.QueueMode = false;
             }
-        }
+        }*/
 
         private void BlueGuyModule_OnColorChange(object sender, EventArgs e)
         {
-            Client.SendMessage(Channel, "Oooooh... pretty! OhISee");
+            _client.SendMessage(_channel, "Oooooh... pretty! OhISee");
         }
 
         private void BlueGuyModule_OnUnknownColor(object sender, string unknownColor)
         {
-            Client.SendMessage(Channel, String.Format("I'm not familiar with this color birbAnalysis", unknownColor));
+            _client.SendMessage(_channel, String.Format("I'm not familiar with this color birbAnalysis", unknownColor));
         }
 
         private void BlueGuyModule_OnNoArgument(object sender, EventArgs e)
         {
-            Client.SendMessage(Channel, "To change the Guy's color, try \"!guy purple\", \"!guy random\", or \"!guy #ff0000\"");
+            _client.SendMessage(_channel, "To change the Guy's color, try \"!guy purple\", \"!guy random\", or \"!guy #ff0000\"");
         }
 
         private void BlueGuyModule_OnRandomColor(object sender, string colorName)
         {
-            Client.SendMessage(Channel, String.Format("Let's try {0} LilAnalysis", colorName));
+            _client.SendMessage(_channel, String.Format("Let's try {0} LilAnalysis", colorName));
         }
 
         private void BlueGuyModule_OnSameColor(object sender, EventArgs e)
         {
-            Client.SendMessage(Channel, "The Guy is already that color Sussy");
+            _client.SendMessage(_channel, "The Guy is already that color Sussy");
         }
     }
 }

@@ -4,10 +4,10 @@ namespace Goofbot.Modules
 {
     internal class ChatInteractionModule
     {   
-        private TwitchClient Client;
-        private string Channel;
+        private TwitchClient _client;
+        private string _channel;
 
-        public ChatInteractionModule(TwitchClient Client, string channel)
+        public ChatInteractionModule(TwitchClient client, string channel)
         {
 
         }

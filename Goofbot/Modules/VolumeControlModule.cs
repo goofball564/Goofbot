@@ -7,14 +7,14 @@ namespace Goofbot.Modules
 {
     internal class VolumeControlModule
     {
-        private readonly AudioSessionVolumeControl darkSouls;
-        private readonly AudioSessionVolumeControl spotify;
+        private readonly AudioSessionVolumeControl _darkSouls;
+        private readonly AudioSessionVolumeControl _spotify;
 
         public float SpotifyVolume
         {
             set
             {
-                spotify.Volume = value;
+                _spotify.Volume = value;
             }
         }
 
@@ -22,25 +22,25 @@ namespace Goofbot.Modules
         {
             set
             {
-                darkSouls.Volume = value;
+                _darkSouls.Volume = value;
             }
         }
         public VolumeControlModule()
         {
-            darkSouls = new AudioSessionVolumeControl(["DarkSoulsRemastered", "DARKSOULS"]);
-            spotify = new AudioSessionVolumeControl("Spotify");
+            _darkSouls = new AudioSessionVolumeControl(["DarkSoulsRemastered", "DARKSOULS"]);
+            _spotify = new AudioSessionVolumeControl("Spotify");
         }
 
         private class AudioSessionVolumeControl
         {
-            private readonly string[] processNames;
-            private AudioSessionControl2? audioSessionControl;
+            private readonly string[] _processNames;
+            private AudioSessionControl2? _audioSessionControl;
 
             public float Volume
             {
                 set
                 {
-                    if (audioSessionControl == null || audioSessionControl.State == AudioSessionState.AudioSessionStateExpired)
+                    if (_audioSessionControl == null || _audioSessionControl.State == AudioSessionState.AudioSessionStateExpired)
                     {
                         RefreshSession();
                     }
@@ -51,9 +51,9 @@ namespace Goofbot.Modules
                         value = 0.0f;
                     try
                     {
-                        if (audioSessionControl != null)
+                        if (_audioSessionControl != null)
                         {
-                            audioSessionControl.SimpleAudioVolume.MasterVolume = value;
+                            _audioSessionControl.SimpleAudioVolume.MasterVolume = value;
                         }
                     }
                     catch (Exception)
@@ -65,12 +65,12 @@ namespace Goofbot.Modules
 
             public AudioSessionVolumeControl(string processName)
             {
-                this.processNames = [processName];
+                this._processNames = [processName];
             }
 
             public AudioSessionVolumeControl(string[] processNames)
             {
-                this.processNames = processNames;
+                this._processNames = processNames;
             }
 
             public void RefreshSession()
@@ -84,9 +84,9 @@ namespace Goofbot.Modules
                         if (session.State == AudioSessionState.AudioSessionStateActive)
                         {
                             Process p = Process.GetProcessById((int)session.ProcessID);
-                            if (processNames.Contains(p.ProcessName))
+                            if (_processNames.Contains(p.ProcessName))
                             {
-                                audioSessionControl = session;
+                                _audioSessionControl = session;
                                 return;
                             }
                         }

@@ -12,6 +12,7 @@
   <ItemGroup>
     <PackageReference Include="CoreAudio" Version="1.40.0" />
     <PackageReference Include="CSCore" Version="1.2.1.2" />
+    <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="EmbedIO" Version="3.5.2" />
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.7.0" />
     <PackageReference Include="Magick.NET.Core" Version="14.7.0" />
