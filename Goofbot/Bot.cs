@@ -58,13 +58,13 @@ namespace Goofbot
             _client.Connect();
 
             _commandParsingModule = new CommandParsingModule();
-            _blueGuyModule = new BlueGuyModule();
-            _spotifyModule = new SpotifyModule();
-            _soundAlertModule = new SoundAlertModule();
+            _blueGuyModule = new BlueGuyModule("BlueGuyModule");
+            _spotifyModule = new SpotifyModule("SpotifyModule");
+            _soundAlertModule = new SoundAlertModule("SoundAlertModule");
 
             _commandParsingModule.BlueGuyCommand.ExecuteCommand += _blueGuyModule.OnGuyCommand;
-            // CommandParsingModule.QueueModeCommand.ExecuteCommand += CommandParsingModule_OnQueueModeCommand;
             _commandParsingModule.SongCommand.ExecuteCommand += CommandParsingModule_OnSongCommand;
+            // CommandParsingModule.QueueModeCommand.ExecuteCommand += CommandParsingModule_OnQueueModeCommand;
 
             CommandParsingModule.TimeoutNotElapsed += CommandParsingModule_OnTimeoutNotElapsed;
             CommandParsingModule.NotBroadcaster += CommandParsingModule_OnNotBroadcaster;

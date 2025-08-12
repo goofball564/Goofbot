@@ -4,16 +4,16 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
+using System.IO;
 
 namespace Goofbot.Modules
 {
-    public class SpotifyModule
+    internal class SpotifyModule : GoofbotModule
     {
-        private const string SpotifyIdsFile = "Stuff\\spotify_ids.json";
         private const int QueueModeLoopInterval = 12000;
         private const double QueueModeRemainingDurationThreshold = 60;
 
-        private readonly dynamic _spotifyIds = Program.ParseJsonFile(SpotifyIdsFile);
+        private readonly string _spotifyCredentialsFile;
         private readonly string _clientId;
         private readonly string _clientSecret;
         private readonly string _playlistId;
@@ -102,14 +102,17 @@ namespace Goofbot.Modules
             }
         }
 
-        public SpotifyModule()
+        public SpotifyModule(string moduleDataFolder) : base(moduleDataFolder)
         {
+            _spotifyCredentialsFile = Path.Combine(_moduleDataFolder, "spotify_credentials.json");
+            dynamic spotifyCredentials = Program.ParseJsonFile(_spotifyCredentialsFile);
+
             _volumeControlModule = new VolumeControlModule();
             _cachedApiResponses = new CachedApiResponses();
 
-            _clientId = Convert.ToString(_spotifyIds.client_id);
-            _clientSecret = Convert.ToString(_spotifyIds.client_secret);
-            _playlistId = Convert.ToString(_spotifyIds.playlist_id);
+            _clientId = Convert.ToString(spotifyCredentials.client_id);
+            _clientSecret = Convert.ToString(spotifyCredentials.client_secret);
+            // _playlistId = Convert.ToString(spotifyCredentials.playlist_id);
 
             Initialize();
         }

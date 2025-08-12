@@ -6,13 +6,13 @@ using ImageMagick;
 
 namespace Goofbot.Modules
 {
-    internal partial class BlueGuyModule
+    internal partial class BlueGuyModule : GoofbotModule
     {
-        private const string BlueGuyGrayscaleFile = "Stuff\\BlueGuyGrayscale.png";
-        private const string BlueGuyColorFile = "Stuff\\BlueGuyColor.png";
-        private const string BlueGuyEyesFile = "Stuff\\BlueGuyEyes.png";
-
-        private const string SpeedGuyColorFile = "Stuff\\SpeedGuyColor.png";
+        private readonly string _blueGuyGrayscaleFile;
+        private readonly string _blueGuyColorFile;
+        private readonly string _blueGuyEyesFile;
+        private readonly string _speedGuyColorFile;
+        private readonly string _guysFolder;
 
         private const string OutputFile = "R:\\temp.png";
         private const string OtherOutputFile = "R:\\temp-1.png";
@@ -21,7 +21,6 @@ namespace Goofbot.Modules
         private const string DefaultColorName = "BlueGuy";
         private const string SpeedGuy = "SpeedGuy";
 
-        private readonly ColorDictionary _colorDictionary;
         private string _lastColorCode = "";
 
         public event EventHandler<EventArgs> ColorChange;
@@ -30,9 +29,15 @@ namespace Goofbot.Modules
         public event EventHandler<string> RandomColor;
         public event EventHandler SameColor;
 
-        public BlueGuyModule()
+        public BlueGuyModule(string moduleDataFolder) : base(moduleDataFolder)
         {
-            _colorDictionary = new ColorDictionary(Program.ColorNamesFile);
+            _blueGuyGrayscaleFile = Path.Combine(_moduleDataFolder, "BlueGuyGrayscale.png");
+            _blueGuyColorFile = Path.Combine(_moduleDataFolder, "BlueGuyColor.png");
+            _blueGuyEyesFile = Path.Combine(_moduleDataFolder, "BlueGuyEyes.png");
+            _speedGuyColorFile = Path.Combine(_moduleDataFolder, "SpeedGuyColor.png");
+
+            _guysFolder = Path.Combine(_moduleDataFolder, "Guys");
+            Directory.CreateDirectory(_guysFolder);
         }
 
         protected virtual void OnColorChange()
@@ -106,8 +111,8 @@ namespace Goofbot.Modules
             }
             else if (args.ToLower() == "random")
             {
-                string colorName = _colorDictionary.GetRandomSaturatedName();
-                string hexColorCode = _colorDictionary.GetHex(colorName.ToLowerInvariant());
+                string colorName = Program.ColorDictionary.GetRandomSaturatedName();
+                string hexColorCode = Program.ColorDictionary.GetHex(colorName.ToLowerInvariant());
                 if (hexColorCode != null)
                 {
                     hexColorCode = hexColorCode.ToLowerInvariant();
@@ -120,7 +125,7 @@ namespace Goofbot.Modules
                         string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLower()).Replace(" ", "") + "Guy.png";
                         try
                         {
-                            File.Copy(OtherOutputFile, Path.Combine(Program.GuysFolder, colorFileName), false);
+                            File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
                         }
                         catch (IOException)
                         {
@@ -143,7 +148,7 @@ namespace Goofbot.Modules
             }
             else
             {
-                string hexColorCode = _colorDictionary.GetHex(args.ToLower());
+                string hexColorCode = Program.ColorDictionary.GetHex(args.ToLower());
                 if (hexColorCode != null)
                 {
                     hexColorCode = hexColorCode.ToLowerInvariant();
@@ -156,7 +161,7 @@ namespace Goofbot.Modules
                         string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args.ToLower()).Replace(" ", "") + "Guy.png";
                         try
                         {
-                            File.Copy(OtherOutputFile, Path.Combine(Program.GuysFolder, colorFileName), false);
+                            File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
                         }
                         catch (IOException)
                         {
@@ -176,15 +181,15 @@ namespace Goofbot.Modules
             }
         }
 
-        private static void CreateBlueGuyImage(string hexColorCode)
+        private void CreateBlueGuyImage(string hexColorCode)
         {
             using (var images = new MagickImageCollection())
             {
-                var first = new MagickImage(BlueGuyGrayscaleFile);
+                var first = new MagickImage(_blueGuyGrayscaleFile);
 
                 if (hexColorCode == SpeedGuy)
                 {
-                    var speedBackground = new MagickImage(SpeedGuyColorFile);
+                    var speedBackground = new MagickImage(_speedGuyColorFile);
 
                     var croppedFlag = first.Clone();
                     croppedFlag.Composite(speedBackground, CompositeOperator.Atop);
@@ -204,7 +209,7 @@ namespace Goofbot.Modules
                 }
                 
 
-                var second = new MagickImage(BlueGuyEyesFile);
+                var second = new MagickImage(_blueGuyEyesFile);
 
                 images.Add(first);
                 images.Add(second);
@@ -218,12 +223,12 @@ namespace Goofbot.Modules
             }
         }
 
-        private static void RestoreDefaultBlueGuy()
+        private void RestoreDefaultBlueGuy()
         {
             try
             {
                 // true means it is allowed to overwrite the file
-                File.Copy(BlueGuyColorFile, OtherOutputFile, true);
+                File.Copy(_blueGuyColorFile, OtherOutputFile, true);
             }
             catch (Exception e)
             {

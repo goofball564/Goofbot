@@ -6,19 +6,13 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using ImageMagick;
 using System.Diagnostics;
-using SpotifyAPI.Web;
+using TwitchLib.Api;
 
 namespace Goofbot
 {
     class Program
     {
         public const string StuffFolder = "Stuff";
-        public static readonly string TwitchAppCredentialsFile = Path.Combine(StuffFolder, "client_info.json");
-
-        public const string GuysFolder = "Stuff\\Guys";
-        public const string ColorNamesFile = "Stuff\\color_names.json";
-
-        
 
         public const string TwitchAppRedirectUrl = "http://localhost:3000/";
         public const string TwitchAuthorizationCodeRequestUrlBase = "https://id.twitch.tv/oauth2/authorize";
@@ -29,6 +23,9 @@ namespace Goofbot
         private const string TwitchBotUsername = "goofbotthebot";
         private const string TwitchChannelUsername = "goofballthecat";
 
+        public static readonly string s_colorNamesFile = Path.Combine(StuffFolder, "color_names.json");
+
+        private static readonly string s_twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
         private static readonly List<string> s_botScopes = new List<string> { "user:read:chat", "user:write:chat", "user:bot", "chat:read", "chat:edit" };
         private static readonly List<string> s_channelScopes = new List<string> { "channel:bot", "channel:read:redemptions" };
         private static readonly HttpClient s_httpClient = new();
@@ -36,14 +33,18 @@ namespace Goofbot
         private static dynamic s_twitchAppCredentials;
         private static string s_twitchChannelAccessToken;
         private static string s_twitchBotAccessToken;
+        private static ColorDictionary s_colorDictionary;
+        private static TwitchAPI s_twitchAPI = new();
 
         public static string TwitchClientId { get { return s_twitchAppCredentials.client_id; } }
         public static string TwitchChannelAccessToken { get { return s_twitchChannelAccessToken; } }
         public static string TwitchBotAccessToken { get { return s_twitchBotAccessToken; } }
+        public static ColorDictionary ColorDictionary {  get { return s_colorDictionary; } }
+        public static TwitchAPI TwitchAPI { get { return s_twitchAPI; } }
 
         public static async Task Main(string[] args)
         {
-            s_twitchAppCredentials = ParseJsonFile(TwitchAppCredentialsFile);
+            s_twitchAppCredentials = ParseJsonFile(s_twitchAppCredentialsFile);
 
             string code = await RequestTwitchAuthorizationCodeDefaultBrowser();
             string tokensString = await RequestTwitchTokens(code);
@@ -56,10 +57,14 @@ namespace Goofbot
             s_twitchBotAccessToken = Convert.ToString(tokensObject2.access_token);
 
             MagickNET.Initialize();
-            Directory.CreateDirectory(GuysFolder);
+
+            s_twitchAPI.Settings.ClientId = Program.TwitchClientId;
+            s_twitchAPI.Settings.AccessToken = Program.TwitchChannelAccessToken;
 
             /*string colorNamesString = await RequestColorNames();
             File.WriteAllText(ColorNamesFile, colorNamesString);*/
+
+            s_colorDictionary = new ColorDictionary(s_colorNamesFile);
 
             Bot bot = new Bot(TwitchBotUsername, TwitchChannelUsername, s_twitchBotAccessToken);
             while(true)

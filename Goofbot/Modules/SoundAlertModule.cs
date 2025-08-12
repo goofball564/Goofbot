@@ -16,9 +16,9 @@ using System.Linq;
 
 namespace Goofbot.Modules
 {
-    internal class SoundAlertModule
+    internal class SoundAlertModule : GoofbotModule
     {
-        public SoundAlertModule()
+        public SoundAlertModule(string moduleDataFolder) : base(moduleDataFolder)
         {
             var builder = Host.CreateApplicationBuilder();
             builder.Services.AddTwitchLibEventSubWebsockets();
@@ -29,26 +29,22 @@ namespace Goofbot.Modules
 
         private class SoundAlertModuleService : IHostedService
         {
-            public const string SoundAlertFolderPath = "Stuff\\Sounds";
+            public const string SoundAlertFolderPath = "Stuff\\SoundAlertModule";
 
             // You need the UserID for the User/Channel you want to get Events from.
             // You can use await _api.Helix.Users.GetUsersAsync() for that.
             private const string UserId = "600829895";
-            private const string SoundAlertsCSVFileName = "SoundAlerts.csv";
+            private readonly string _soundAlertsCSVFilePath = Path.Join(SoundAlertFolderPath, "SoundAlerts.csv");
 
             private readonly EventSubWebsocketClient _eventSubWebsocketClient = new();
-            private readonly TwitchAPI _twitchApi = new();
             
-            private readonly string _soundAlertsCSVFilePath = Path.Join(SoundAlertFolderPath, SoundAlertsCSVFileName);
+            
 
             private SoundAlertDictionary _soundAlertDictionary;
 
             public SoundAlertModuleService()
             {
                 _soundAlertDictionary = new SoundAlertDictionary(_soundAlertsCSVFilePath);
-
-                _twitchApi.Settings.ClientId = Program.TwitchClientId;
-                _twitchApi.Settings.AccessToken = Program.TwitchChannelAccessToken;
 
                 _eventSubWebsocketClient.WebsocketConnected += OnWebsocketConnected;
                 _eventSubWebsocketClient.WebsocketDisconnected += OnWebsocketDisconnected;
@@ -76,7 +72,7 @@ namespace Goofbot.Modules
                 {
                     // subscribe to topics
                     var condition = new Dictionary<string, string> { { "broadcaster_user_id", UserId } };
-                    await _twitchApi.Helix.EventSub.CreateEventSubSubscriptionAsync("channel.channel_points_custom_reward_redemption.add", "1", condition, EventSubTransportMethod.Websocket, _eventSubWebsocketClient.SessionId);
+                    await Program.TwitchAPI.Helix.EventSub.CreateEventSubSubscriptionAsync("channel.channel_points_custom_reward_redemption.add", "1", condition, EventSubTransportMethod.Websocket, _eventSubWebsocketClient.SessionId);
                 }
             }
 
@@ -106,10 +102,7 @@ namespace Goofbot.Modules
             private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)
             {
                 string reward = e.Notification.Payload.Event.Reward.Title.ToLowerInvariant();
-                Console.WriteLine($"REWARD REDEEMED: {reward}");
-
                 string sound = _soundAlertDictionary.TryGetRandomFromList(reward);
-                Console.WriteLine("SOUND: " + sound);
 
                 await Task.Delay(2000);
                 await Task.Run(() => { new SoundPlayer(sound).Play(); });
