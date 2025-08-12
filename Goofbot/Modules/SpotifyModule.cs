@@ -165,7 +165,7 @@ namespace Goofbot.Modules
             var config = SpotifyClientConfig.CreateDefault().WithAuthenticator(new AuthorizationCodeAuthenticator(_clientId, _clientSecret, tokenResponse));
             _spotify = new SpotifyClient(config);
 
-            QueueModeLoop();
+            // QueueModeLoop();
         }
 
         private async Task OnErrorReceived(object sender, string error, string state)
@@ -186,7 +186,7 @@ namespace Goofbot.Modules
             {
                 // every 12 seconds
                 // call spotify API to refresh currently known data
-                Thread.Sleep(QueueModeLoopInterval);
+                await Task.Delay(QueueModeLoopInterval);
 
                 await _cachedApiResponses.RefreshCachedApiResponses(_spotify);
                 var context = _cachedApiResponses.Context;
@@ -235,14 +235,14 @@ namespace Goofbot.Modules
                         if (!_removedFromPlaylist && currentlyPlayingId != null && currentlyPlayingId == firstInPlaylistId)
                         {
                             _removedFromPlaylist = true;
-                            RemoveFirstSongFromPlaylist(playlist, _playlistId);
+                            await RemoveFirstSongFromPlaylist(playlist, _playlistId);
                         }
                         // if first song in queue playlist is NOT currently playing, add first song in queue playlist to queue
                         // (do this only once until currently playing song changes)
                         else if (QueueMode && !_addedToQueue && nextInQueueId != null && firstInPlaylistUri != null && nextInQueueId != firstInPlaylistId)
                         {
                             _addedToQueue = true;
-                            _spotify.Player.AddToQueue(new PlayerAddToQueueRequest(firstInPlaylistUri));
+                            await _spotify.Player.AddToQueue(new PlayerAddToQueueRequest(firstInPlaylistUri));
                         }
                     }
                 }
@@ -253,7 +253,7 @@ namespace Goofbot.Modules
         {
             IList<int>? indicesToRemove = new List<int> { 0, };
             string? snapshotId = playlist.SnapshotId;
-            _spotify.Playlists.RemoveItems(playlistId, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
+            await _spotify.Playlists.RemoveItems(playlistId, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
         }
 
         private static double? GetRemainingDuration(QueueResponse? queue, CurrentlyPlayingContext? context)

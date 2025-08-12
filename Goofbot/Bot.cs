@@ -11,6 +11,7 @@ namespace Goofbot
     internal class Bot
     {
         private readonly TwitchClient _client;
+        private readonly string _channel;
 
         // private readonly ChatInteractionModule ChatInteractionModule;
         // private readonly PipeServerModule PipeServerModule;
@@ -18,10 +19,6 @@ namespace Goofbot
         private readonly CommandParsingModule _commandParsingModule;
         private readonly SpotifyModule _spotifyModule;
         private readonly SoundAlertModule _soundAlertModule;
-
-        // private Task WaitTask;
-
-        private readonly string _channel;
 
         // react to game or livesplit
         // track stats?
@@ -42,24 +39,25 @@ namespace Goofbot
         // 
 
 
-        public Bot(string botAccount, string channelToJoin, string accessToken)
+        public Bot(string botUsername, string channelUsername, string botAccessToken)
         {
-            _channel = channelToJoin;
+            _channel = channelUsername;
 
-            var credentials = new ConnectionCredentials(botAccount, accessToken);
+            var credentials = new ConnectionCredentials(botUsername, botAccessToken);
+            
             var clientOptions = new ClientOptions();
             var customClient = new WebSocketClient(clientOptions);
 
             _client = new TwitchClient(customClient);
-            _client.Initialize(credentials, channelToJoin);
+            _client.Initialize(credentials, channelUsername);
             _client.OnLog += Client_OnLog;
             _client.OnJoinedChannel += Client_OnJoinedChannel;
             _client.OnMessageReceived += Client_OnMessageReceived;
             _client.OnConnected += Client_OnConnected;
+            _client.OnIncorrectLogin += Client_OnIncorrectLogin;
             _client.Connect();
 
             _commandParsingModule = new CommandParsingModule();
-            // PipeServerModule = new PipeServerModule();
             _blueGuyModule = new BlueGuyModule();
             _spotifyModule = new SpotifyModule();
             _soundAlertModule = new SoundAlertModule();
@@ -77,11 +75,11 @@ namespace Goofbot
             _blueGuyModule.RandomColor += BlueGuyModule_OnRandomColor;
             _blueGuyModule.SameColor += BlueGuyModule_OnSameColor;
 
-            /*PipeServerModule.RunStart += PiperServerModule_OnRunStart;
-            PipeServerModule.RunReset += PipeServerModule_OnRunReset;
-            PipeServerModule.RunSplit += PipeServerModule_OnRunSplit;*/
-
+            // PipeServerModule.RunStart += PiperServerModule_OnRunStart;
+            // PipeServerModule.RunReset += PipeServerModule_OnRunReset;
+            // PipeServerModule.RunSplit += PipeServerModule_OnRunSplit;*/
             // PipeServerModule.Start();
+
             _client.SendMessage(_channel, "Goofbot is activated and at your service MrDestructoid");
         }
 
@@ -103,6 +101,11 @@ namespace Goofbot
         private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
             _commandParsingModule.ParseMessageForCommand(e);
+        }
+
+        private void Client_OnIncorrectLogin(object sender, OnIncorrectLoginArgs e)
+        {
+
         }
 
         private async void CommandParsingModule_OnSongCommand(object sender, string e)

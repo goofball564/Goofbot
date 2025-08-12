@@ -68,11 +68,6 @@ namespace Goofbot.Modules
                 await _eventSubWebsocketClient.DisconnectAsync();
             }
 
-            /*private void DoTheThing()
-            {
-                
-            }*/
-
             private async Task OnWebsocketConnected(object sender, WebsocketConnectedArgs e)
             {
                 Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} connected!");
@@ -89,11 +84,12 @@ namespace Goofbot.Modules
             {
                 Console.WriteLine($"Websocket {_eventSubWebsocketClient.SessionId} disconnected!");
 
-                // Don't do this in production. You should implement a better reconnect strategy with exponential backoff
+                int delay = 1000;
                 while (!await _eventSubWebsocketClient.ReconnectAsync())
                 {
                     Console.WriteLine("Websocket reconnect failed!");
-                    await Task.Delay(1000);
+                    await Task.Delay(delay);
+                    delay *= 2;
                 }
             }
 
@@ -115,20 +111,23 @@ namespace Goofbot.Modules
                 string sound = _soundAlertDictionary.TryGetRandomFromList(reward);
                 Console.WriteLine("SOUND: " + sound);
 
-                Task.Run(() => { new SoundPlayer(sound).Play(); });
+                await Task.Delay(2000);
+                await Task.Run(() => { new SoundPlayer(sound).Play(); });
             }
         }
 
         private class SoundAlertDictionary
         {
             private Dictionary<string, string[]> _soundAlertDictionary = new();
-            private Random _random = new();
+            private readonly Random _random = new();
 
             public SoundAlertDictionary(string soundAlertCSVFilename)
             {
                 foreach (string line in File.ReadLines(soundAlertCSVFilename))
                 {
                     string[] csv = line.Split(",");
+
+                    // If csv[2] contains . it is a file name.
                     if (csv[2].Contains("."))
                     {
                         string redemption = csv[0];
@@ -137,6 +136,7 @@ namespace Goofbot.Modules
                         string[] sounds = [sound];
                         _soundAlertDictionary.TryAdd(redemption.ToLowerInvariant(), sounds);
                     }
+                    // Otherwise, it is a folder name.
                     else
                     {
                         string redemption = csv[0];
@@ -144,7 +144,6 @@ namespace Goofbot.Modules
                         folder = Path.Join(SoundAlertModuleService.SoundAlertFolderPath, folder);
                         string[] sounds = Directory.GetFiles(folder);
                         _soundAlertDictionary.TryAdd(redemption.ToLowerInvariant(), sounds);
-                        // not yet implemented
                     }
 
                 }

@@ -12,9 +12,13 @@ namespace Goofbot
 {
     class Program
     {
+        public const string StuffFolder = "Stuff";
+        public static readonly string TwitchAppCredentialsFile = Path.Combine(StuffFolder, "client_info.json");
+
         public const string GuysFolder = "Stuff\\Guys";
         public const string ColorNamesFile = "Stuff\\color_names.json";
-        public const string AppCredentialsFile = "Stuff\\client_info.json";
+
+        
 
         public const string TwitchAppRedirectUrl = "http://localhost:3000/";
         public const string TwitchAuthorizationCodeRequestUrlBase = "https://id.twitch.tv/oauth2/authorize";
@@ -27,20 +31,19 @@ namespace Goofbot
 
         private static readonly List<string> s_botScopes = new List<string> { "user:read:chat", "user:write:chat", "user:bot", "chat:read", "chat:edit" };
         private static readonly List<string> s_channelScopes = new List<string> { "channel:bot", "channel:read:redemptions" };
-        private static readonly dynamic s_appCredentials = ParseJsonFile(AppCredentialsFile);
         private static readonly HttpClient s_httpClient = new();
 
-        private static string s_twitchClientId;
+        private static dynamic s_twitchAppCredentials;
         private static string s_twitchChannelAccessToken;
         private static string s_twitchBotAccessToken;
 
-        public static string TwitchClientId { get { return s_twitchClientId; } }
+        public static string TwitchClientId { get { return s_twitchAppCredentials.client_id; } }
         public static string TwitchChannelAccessToken { get { return s_twitchChannelAccessToken; } }
         public static string TwitchBotAccessToken { get { return s_twitchBotAccessToken; } }
 
         public static async Task Main(string[] args)
         {
-            s_twitchClientId = s_appCredentials.client_id;
+            s_twitchAppCredentials = ParseJsonFile(TwitchAppCredentialsFile);
 
             string code = await RequestTwitchAuthorizationCodeDefaultBrowser();
             string tokensString = await RequestTwitchTokens(code);
@@ -117,8 +120,8 @@ namespace Goofbot
             var values = new Dictionary<string, string>
             {
                 { "code", twitchAuthorizationCode },
-                { "client_id", Convert.ToString(s_appCredentials.client_id) },
-                { "client_secret", Convert.ToString(s_appCredentials.client_secret) },
+                { "client_id", Convert.ToString(s_twitchAppCredentials.client_id) },
+                { "client_secret", Convert.ToString(s_twitchAppCredentials.client_secret) },
                 { "grant_type", "authorization_code" },
                 { "redirect_uri", TwitchAppRedirectUrl }
             };
@@ -130,7 +133,7 @@ namespace Goofbot
         public static string GetTwitchAuthorizationCodeRequestUrl(List<string> scopes)
         {
             return $"{TwitchAuthorizationCodeRequestUrlBase}?" +
-                   $"client_id={s_twitchClientId}&" +
+                   $"client_id={s_twitchAppCredentials.client_id}&" +
                    $"redirect_uri={System.Web.HttpUtility.UrlEncode(TwitchAppRedirectUrl)}&" +
                    "response_type=code&" +
                    $"scope={String.Join('+', scopes)}";
