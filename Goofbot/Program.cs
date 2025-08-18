@@ -14,8 +14,6 @@ namespace Goofbot
 {
     class Program
     {
-        
-
         public const string TwitchAppRedirectUrl = "http://localhost:3000/";
         public const string TwitchAuthorizationCodeRequestUrlBase = "https://id.twitch.tv/oauth2/authorize";
         public const string TwitchTokenRequestUrl = "https://id.twitch.tv/oauth2/token";
@@ -78,30 +76,6 @@ namespace Goofbot
             }
         }
 
-        private static async Task<string> RequestTwitchAuthorizationCode(bool useChrome)
-        {
-            await _semaphore.WaitAsync();
-            string code;
-            try
-            {
-                if (useChrome)
-                {
-                    Process.Start("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", GetTwitchAuthorizationCodeRequestUrl(s_botScopes));
-                }
-                else
-                {
-                    Process.Start(new ProcessStartInfo { FileName = GetTwitchAuthorizationCodeRequestUrl(s_channelScopes), UseShellExecute = true });
-                }
-                code = await s_server.Listen();
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-            
-            return code;
-        }
-
         public static async Task RefreshTwitchAccessToken(bool botToken)
         {
             string code = await RequestTwitchAuthorizationCode(botToken);
@@ -150,7 +124,7 @@ namespace Goofbot
             return await response.Content.ReadAsStringAsync();
         }*/
 
-        public static async Task<string> RequestTwitchTokens(string twitchAuthorizationCode)
+        private static async Task<string> RequestTwitchTokens(string twitchAuthorizationCode)
         {
             var values = new Dictionary<string, string>
             {
@@ -165,13 +139,37 @@ namespace Goofbot
             return await response.Content.ReadAsStringAsync();
         }
 
-        public static string GetTwitchAuthorizationCodeRequestUrl(List<string> scopes)
+        private static string GetTwitchAuthorizationCodeRequestUrl(List<string> scopes)
         {
             return $"{TwitchAuthorizationCodeRequestUrlBase}?" +
                    $"client_id={s_twitchAppCredentials.client_id}&" +
                    $"redirect_uri={System.Web.HttpUtility.UrlEncode(TwitchAppRedirectUrl)}&" +
                    "response_type=code&" +
                    $"scope={String.Join('+', scopes)}";
+        }
+
+        private static async Task<string> RequestTwitchAuthorizationCode(bool useChrome)
+        {
+            await _semaphore.WaitAsync();
+            string code;
+            try
+            {
+                if (useChrome)
+                {
+                    Process.Start("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", GetTwitchAuthorizationCodeRequestUrl(s_botScopes));
+                }
+                else
+                {
+                    Process.Start(new ProcessStartInfo { FileName = GetTwitchAuthorizationCodeRequestUrl(s_channelScopes), UseShellExecute = true });
+                }
+                code = await s_server.Listen();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+
+            return code;
         }
     }
 }
