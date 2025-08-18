@@ -16,9 +16,9 @@ using System.Linq;
 
 namespace Goofbot.Modules
 {
-    internal class SoundAlertModule : GoofbotModule
+    internal class SoundAlertModule
     {
-        public SoundAlertModule(string moduleDataFolder) : base(moduleDataFolder)
+        public SoundAlertModule()
         {
             var builder = Host.CreateApplicationBuilder();
             builder.Services.AddTwitchLibEventSubWebsockets();
@@ -37,8 +37,6 @@ namespace Goofbot.Modules
             private readonly string _soundAlertsCSVFilePath = Path.Join(SoundAlertFolderPath, "SoundAlerts.csv");
 
             private readonly EventSubWebsocketClient _eventSubWebsocketClient = new();
-            
-            
 
             private SoundAlertDictionary _soundAlertDictionary;
 
@@ -104,7 +102,7 @@ namespace Goofbot.Modules
                 string reward = e.Notification.Payload.Event.Reward.Title.ToLowerInvariant();
                 string sound = _soundAlertDictionary.TryGetRandomFromList(reward);
 
-                await Task.Delay(2000);
+                await Task.Delay(1000);
                 await Task.Run(() => { new SoundPlayer(sound).Play(); });
             }
         }

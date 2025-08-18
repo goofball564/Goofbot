@@ -60,7 +60,7 @@ namespace Goofbot
             _commandParsingModule = new CommandParsingModule();
             _blueGuyModule = new BlueGuyModule("BlueGuyModule");
             _spotifyModule = new SpotifyModule("SpotifyModule");
-            _soundAlertModule = new SoundAlertModule("SoundAlertModule");
+            _soundAlertModule = new SoundAlertModule();
 
             _commandParsingModule.BlueGuyCommand.ExecuteCommand += _blueGuyModule.OnGuyCommand;
             _commandParsingModule.SongCommand.ExecuteCommand += CommandParsingModule_OnSongCommand;
