@@ -37,8 +37,6 @@ namespace Goofbot
         public static TwitchAPI TwitchAPI { get; private set; }
         public static string StuffFolder { get; private set; }
 
-        
-
         public static async Task Main(string[] args)
         {
             string localAppDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
