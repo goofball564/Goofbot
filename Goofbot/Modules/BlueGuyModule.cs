@@ -67,9 +67,9 @@ namespace Goofbot.Modules
 
         public void OnGuyCommand(object sender, string args)
         {
+            args = args.ToLowerInvariant();
             if (IsColorHexCode(args))
             {
-                args = args.ToLowerInvariant();
                 if (args != _lastColorCode)
                 {
                     _lastColorCode = args;
@@ -109,20 +109,18 @@ namespace Goofbot.Modules
                 }
 
             }
-            else if (args.ToLower() == "random")
+            else if (args.ToLowerInvariant() == "random")
             {
-                string colorName = Program.ColorDictionary.GetRandomSaturatedName();
-                string hexColorCode = Program.ColorDictionary.GetHex(colorName.ToLowerInvariant());
+                string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
                 if (hexColorCode != null)
                 {
-                    hexColorCode = hexColorCode.ToLowerInvariant();
                     if (hexColorCode != _lastColorCode)
                     {
                         _lastColorCode = hexColorCode;
                         CreateBlueGuyImage(hexColorCode);
                         OnRandomColor(colorName);
 
-                        string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLower()).Replace(" ", "") + "Guy.png";
+                        string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", "") + "Guy.png";
                         try
                         {
                             File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
@@ -148,17 +146,16 @@ namespace Goofbot.Modules
             }
             else
             {
-                string hexColorCode = Program.ColorDictionary.GetHex(args.ToLower());
+                string hexColorCode = Program.ColorDictionary.GetHex(args);
                 if (hexColorCode != null)
                 {
-                    hexColorCode = hexColorCode.ToLowerInvariant();
                     if (hexColorCode != _lastColorCode)
                     {
                         _lastColorCode = hexColorCode;
                         CreateBlueGuyImage(hexColorCode);
                         OnColorChange();
 
-                        string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args.ToLower()).Replace(" ", "") + "Guy.png";
+                        string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args).Replace(" ", "") + "Guy.png";
                         try
                         {
                             File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
@@ -207,7 +204,6 @@ namespace Goofbot.Modules
                     solidColor.Write(ColorOutputFile, MagickFormat.Png);
                     solidColor.Dispose();
                 }
-                
 
                 var second = new MagickImage(_blueGuyEyesFile);
 

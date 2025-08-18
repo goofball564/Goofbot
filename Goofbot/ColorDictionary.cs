@@ -48,7 +48,7 @@ namespace Goofbot
 
         public string GetHex(string colorName)
         {
-            _colorDictionary.TryGetValue(colorName, out string hex);
+            _colorDictionary.TryGetValue(colorName.ToLowerInvariant(), out string hex);
             return hex;
         }
 
@@ -58,9 +58,11 @@ namespace Goofbot
             return _colorNameList[randomIndex];
         }
 
-        public string GetRandomSaturatedName()
+        public string GetRandomSaturatedName(out string hex)
         {
             int randomIndex = _random.Next(0, _saturatedColorNameList.Count);
+            string colorName = _saturatedColorNameList[randomIndex];
+            hex = GetHex(colorName);
             return _saturatedColorNameList[randomIndex];
         }
 
