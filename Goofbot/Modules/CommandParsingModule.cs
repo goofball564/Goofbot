@@ -91,11 +91,11 @@ namespace Goofbot.Modules
                     _timeOfLastInvocation = invocationTime;
                     OnExecuteCommand(commandArgs);
                 }
-                else
+/*                else
                 {
                     TimeSpan timeUntilTimeoutElapses = timeoutTime.Subtract(invocationTime);
                     OnTimeoutNotElapsed(timeUntilTimeoutElapses);
-                }
+                }*/
             }
 
             protected virtual void OnExecuteCommand(string commandArgs)
@@ -103,10 +103,10 @@ namespace Goofbot.Modules
                 ExecuteCommand?.Invoke(this, commandArgs);
             }
 
-            protected virtual void OnTimeoutNotElapsed(TimeSpan timeUntilTimeoutElapses)
+            /*protected virtual void OnTimeoutNotElapsed(TimeSpan timeUntilTimeoutElapses)
             {
                 TimeoutNotElapsed?.Invoke(this, timeUntilTimeoutElapses);
-            }
+            }*/
 
             protected virtual void OnNotBroadcaster()
             {

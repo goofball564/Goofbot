@@ -68,7 +68,7 @@ namespace Goofbot
             _commandParsingModule.RefreshColorsCommand.ExecuteCommand += CommandParsingModule_OnRefreshColorsCommand;
             // CommandParsingModule.QueueModeCommand.ExecuteCommand += CommandParsingModule_OnQueueModeCommand;
 
-            CommandParsingModule.TimeoutNotElapsed += CommandParsingModule_OnTimeoutNotElapsed;
+            // CommandParsingModule.TimeoutNotElapsed += CommandParsingModule_OnTimeoutNotElapsed;
             CommandParsingModule.NotBroadcaster += CommandParsingModule_OnNotBroadcaster;
 
             _blueGuyModule.ColorChange += BlueGuyModule_OnColorChange;
@@ -150,10 +150,10 @@ namespace Goofbot
             }
         }*/
 
-        private void CommandParsingModule_OnTimeoutNotElapsed(object sender, TimeSpan timeUntilTimeoutElapses)
+        /*private void CommandParsingModule_OnTimeoutNotElapsed(object sender, TimeSpan timeUntilTimeoutElapses)
         {
             _client.SendMessage(_channel, String.Format("Please wait {0} minutes and {1} seconds, then try again.", timeUntilTimeoutElapses.Minutes, timeUntilTimeoutElapses.Seconds));
-        }
+        }*/
 
         private void CommandParsingModule_OnNotBroadcaster(object sender, EventArgs e)
         {
