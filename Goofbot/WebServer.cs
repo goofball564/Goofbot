@@ -16,16 +16,17 @@ namespace Goofbot
             _listener.Prefixes.Add(uri);
         }
 
-        public void Stop()
+        public void Close()
         {
-            _listener.Stop();
             _listener.Close();
         }
 
         public async Task<String> Listen()
         {
             _listener.Start();
-            return await OnRequest();
+            string code = await OnRequest();
+            _listener.Stop();
+            return code;
         }
 
         private async Task<String> OnRequest()

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using ImageMagick;
 using System.Diagnostics;
 using TwitchLib.Api;
+using SpotifyAPI.Web;
+using System.Threading;
 
 namespace Goofbot
 {
@@ -23,9 +25,11 @@ namespace Goofbot
         private const string TwitchBotUsername = "goofbotthebot";
         private const string TwitchChannelUsername = "goofballthecat";
 
-        private static readonly List<string> s_botScopes = new List<string> { "user:read:chat", "user:write:chat", "user:bot", "chat:read", "chat:edit" };
-        private static readonly List<string> s_channelScopes = new List<string> { "channel:bot", "channel:read:redemptions" };
+        private static readonly List<string> s_botScopes = ["user:read:chat", "user:write:chat", "user:bot", "chat:read", "chat:edit"];
+        private static readonly List<string> s_channelScopes = ["channel:bot", "channel:read:redemptions"];
         private static readonly HttpClient s_httpClient = new();
+        private static readonly WebServer s_server = new(TwitchAppRedirectUrl);
+        private static readonly SemaphoreSlim _semaphore = new(1, 1);
 
         private static dynamic s_twitchAppCredentials;
         private static string s_goofbotAppDataFolder;
@@ -41,35 +45,32 @@ namespace Goofbot
         {
             string localAppDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             s_goofbotAppDataFolder = Path.Combine(localAppDataFolder, "Goofbot");
+            
             string stuffLocationFile = Path.Join(s_goofbotAppDataFolder, "stufflocation.txt");
-            using (StreamWriter w = File.AppendText(stuffLocationFile));
             StuffFolder = File.ReadAllText(stuffLocationFile).Trim();
 
             s_colorNamesFile = Path.Combine(StuffFolder, "color_names.json");
+            Task colorNamesTask = Task.CompletedTask;
+            if (!File.Exists(s_colorNamesFile))
+            {
+                colorNamesTask = RefreshColorNames();
+            }
+
             string twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
             s_twitchAppCredentials = ParseJsonFile(twitchAppCredentialsFile);
-            
-            string code = await RequestTwitchAuthorizationCodeDefaultBrowser();
-            string tokensString = await RequestTwitchTokens(code);
-            dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
-            TwitchChannelAccessToken = Convert.ToString(tokensObject.access_token);
 
-            code = await RequestTwitchAuthorizationCodeChrome();
-            tokensString = await RequestTwitchTokens(code);
-            dynamic tokensObject2 = JsonConvert.DeserializeObject(tokensString);
-            TwitchBotAccessToken = Convert.ToString(tokensObject2.access_token);
-
-            MagickNET.Initialize();
+            Task twitchBotAccessTokenTask = RefreshTwitchAccessToken(true);
+            Task twitchChannelAccessTokenTask = RefreshTwitchAccessToken(false);
 
             TwitchAPI = new();
             TwitchAPI.Settings.ClientId = s_twitchAppCredentials.client_id;
-            TwitchAPI.Settings.AccessToken = TwitchChannelAccessToken;
 
-            /*string colorNamesString = await RequestColorNames();
-            File.WriteAllText(ColorNamesFile, colorNamesString);*/
+            MagickNET.Initialize();
 
-            ColorDictionary = new ColorDictionary(s_colorNamesFile);
-
+            await colorNamesTask;
+            await twitchBotAccessTokenTask;
+            await twitchChannelAccessTokenTask;
+            
             Bot bot = new Bot(TwitchBotUsername, TwitchChannelUsername, TwitchBotAccessToken);
             while(true)
             {
@@ -77,22 +78,44 @@ namespace Goofbot
             }
         }
 
-        public static async Task<string> RequestTwitchAuthorizationCodeDefaultBrowser()
+        private static async Task<string> RequestTwitchAuthorizationCode(bool useChrome)
         {
-            WebServer server = new WebServer(TwitchAppRedirectUrl);
-            Process.Start(new ProcessStartInfo { FileName = GetTwitchAuthorizationCodeRequestUrl(s_channelScopes), UseShellExecute = true });
-            string code = await server.Listen();
-            server.Stop();
+            await _semaphore.WaitAsync();
+            string code;
+            try
+            {
+                if (useChrome)
+                {
+                    Process.Start("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", GetTwitchAuthorizationCodeRequestUrl(s_botScopes));
+                }
+                else
+                {
+                    Process.Start(new ProcessStartInfo { FileName = GetTwitchAuthorizationCodeRequestUrl(s_channelScopes), UseShellExecute = true });
+                }
+                code = await s_server.Listen();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+            
             return code;
         }
 
-        public static async Task<string> RequestTwitchAuthorizationCodeChrome()
+        public static async Task RefreshTwitchAccessToken(bool botToken)
         {
-            WebServer server = new WebServer(TwitchAppRedirectUrl);
-            Process.Start("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", GetTwitchAuthorizationCodeRequestUrl(s_botScopes));
-            string code = await server.Listen();
-            server.Stop();
-            return code;
+            string code = await RequestTwitchAuthorizationCode(botToken);
+            string tokensString = await RequestTwitchTokens(code);
+            dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
+            if (botToken)
+            {
+                TwitchBotAccessToken = Convert.ToString(tokensObject.access_token);
+            }
+            else
+            {
+                TwitchChannelAccessToken = Convert.ToString(tokensObject.access_token);
+                TwitchAPI.Settings.AccessToken = TwitchChannelAccessToken;
+            }
         }
 
         public static dynamic ParseJsonFile(string filename)
@@ -101,10 +124,13 @@ namespace Goofbot
             return JsonConvert.DeserializeObject(jsonString);
         }
 
-        public static async Task<string> RequestColorNames()
+        public static async Task RefreshColorNames()
         {
             var response = await s_httpClient.GetAsync(ColorNamesRequestUrl);
-            return await response.Content.ReadAsStringAsync();
+            string colorNamesString = await response.Content.ReadAsStringAsync();
+            File.WriteAllText(s_colorNamesFile, colorNamesString);
+
+            ColorDictionary = new ColorDictionary(s_colorNamesFile);
         }
 
         /*private static async Task<string> RequestTokensWithRefreshToken()
