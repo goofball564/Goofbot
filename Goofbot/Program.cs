@@ -23,24 +23,18 @@ namespace Goofbot
         private const string TwitchBotUsername = "goofbotthebot";
         private const string TwitchChannelUsername = "goofballthecat";
 
-        public static readonly string s_colorNamesFile = Path.Combine(StuffFolder, "color_names.json");
-
+        private static readonly string s_colorNamesFile = Path.Combine(StuffFolder, "color_names.json");
         private static readonly string s_twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
         private static readonly List<string> s_botScopes = new List<string> { "user:read:chat", "user:write:chat", "user:bot", "chat:read", "chat:edit" };
         private static readonly List<string> s_channelScopes = new List<string> { "channel:bot", "channel:read:redemptions" };
         private static readonly HttpClient s_httpClient = new();
 
         private static dynamic s_twitchAppCredentials;
-        private static string s_twitchChannelAccessToken;
-        private static string s_twitchBotAccessToken;
-        private static ColorDictionary s_colorDictionary;
-        private static TwitchAPI s_twitchAPI = new();
 
-        public static string TwitchClientId { get { return s_twitchAppCredentials.client_id; } }
-        public static string TwitchChannelAccessToken { get { return s_twitchChannelAccessToken; } }
-        public static string TwitchBotAccessToken { get { return s_twitchBotAccessToken; } }
-        public static ColorDictionary ColorDictionary {  get { return s_colorDictionary; } }
-        public static TwitchAPI TwitchAPI { get { return s_twitchAPI; } }
+        public static string TwitchChannelAccessToken { get; private set; }
+        public static string TwitchBotAccessToken { get; private set; }
+        public static ColorDictionary ColorDictionary { get; private set; }
+        public static TwitchAPI TwitchAPI { get; private set; }
 
         public static async Task Main(string[] args)
         {
@@ -49,24 +43,24 @@ namespace Goofbot
             string code = await RequestTwitchAuthorizationCodeDefaultBrowser();
             string tokensString = await RequestTwitchTokens(code);
             dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
-            s_twitchChannelAccessToken = Convert.ToString(tokensObject.access_token);
+            TwitchChannelAccessToken = Convert.ToString(tokensObject.access_token);
 
             code = await RequestTwitchAuthorizationCodeChrome();
             tokensString = await RequestTwitchTokens(code);
             dynamic tokensObject2 = JsonConvert.DeserializeObject(tokensString);
-            s_twitchBotAccessToken = Convert.ToString(tokensObject2.access_token);
+            TwitchBotAccessToken = Convert.ToString(tokensObject2.access_token);
 
             MagickNET.Initialize();
 
-            s_twitchAPI.Settings.ClientId = Program.TwitchClientId;
-            s_twitchAPI.Settings.AccessToken = Program.TwitchChannelAccessToken;
+            TwitchAPI.Settings.ClientId = s_twitchAppCredentials.client_id;
+            TwitchAPI.Settings.AccessToken = TwitchChannelAccessToken;
 
             /*string colorNamesString = await RequestColorNames();
             File.WriteAllText(ColorNamesFile, colorNamesString);*/
 
-            s_colorDictionary = new ColorDictionary(s_colorNamesFile);
+            ColorDictionary = new ColorDictionary(s_colorNamesFile);
 
-            Bot bot = new Bot(TwitchBotUsername, TwitchChannelUsername, s_twitchBotAccessToken);
+            Bot bot = new Bot(TwitchBotUsername, TwitchChannelUsername, TwitchBotAccessToken);
             while(true)
             {
                 Console.ReadLine();
