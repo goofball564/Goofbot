@@ -152,7 +152,7 @@ namespace Goofbot
         {
             var values = new Dictionary<string, string>
             {
-                { "refresh_token", Convert.ToString(refreshToken) },
+                { "refresh_token", refreshToken },
                 { "client_id", Convert.ToString(s_twitchAppCredentials.client_id) },
                 { "client_secret", Convert.ToString(s_twitchAppCredentials.client_secret) },
                 { "grant_type", "refresh_token" },
