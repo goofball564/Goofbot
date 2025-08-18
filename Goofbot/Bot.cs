@@ -5,6 +5,7 @@ using TwitchLib.Client.Models;
 using TwitchLib.Communication.Clients;
 using TwitchLib.Communication.Models;
 using Goofbot.Modules;
+using System.Threading.Tasks;
 
 namespace Goofbot
 {
@@ -64,6 +65,7 @@ namespace Goofbot
 
             _commandParsingModule.BlueGuyCommand.ExecuteCommand += _blueGuyModule.OnGuyCommand;
             _commandParsingModule.SongCommand.ExecuteCommand += CommandParsingModule_OnSongCommand;
+            _commandParsingModule.RefreshColorsCommand.ExecuteCommand += CommandParsingModule_OnRefreshColorsCommand;
             // CommandParsingModule.QueueModeCommand.ExecuteCommand += CommandParsingModule_OnQueueModeCommand;
 
             CommandParsingModule.TimeoutNotElapsed += CommandParsingModule_OnTimeoutNotElapsed;
@@ -121,6 +123,11 @@ namespace Goofbot
             {
                 _client.SendMessage(_channel, song + " by " + artists);
             }
+        }
+
+        private async void CommandParsingModule_OnRefreshColorsCommand(object sender, string e)
+        {
+            await Program.RefreshColorNames();
         }
 
         /*private void CommandParsingModule_OnQueueModeCommand(object sender, string args)

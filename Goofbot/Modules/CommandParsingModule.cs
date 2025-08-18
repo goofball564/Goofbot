@@ -5,10 +5,11 @@ namespace Goofbot.Modules
 {
     internal class CommandParsingModule
     {
-        public Command BlueGuyCommand = new Command(0);
+        public Command BlueGuyCommand = new Command(1);
         public Command SongCommand = new Command(1);
         public Command FarmModeCommand = new Command(0, true);
         public Command QueueModeCommand = new Command(0, true);
+        public Command RefreshColorsCommand = new Command(0, true);
 
         public static event EventHandler<TimeSpan> TimeoutNotElapsed;
         public static event EventHandler NotBroadcaster;
@@ -53,6 +54,9 @@ namespace Goofbot.Modules
                     break;
                 case "!queuemode":
                     QueueModeCommand.IssueCommand(commandArgs, messageArgs);
+                    break;
+                case "!refreshcolors":
+                    RefreshColorsCommand.IssueCommand(commandArgs, messageArgs);
                     break;
                 default:
                     break;
