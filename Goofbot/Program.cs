@@ -27,7 +27,11 @@ namespace Goofbot
         private static readonly List<string> s_channelScopes = ["channel:bot", "channel:read:redemptions"];
         private static readonly HttpClient s_httpClient = new();
         private static readonly WebServer s_server = new(TwitchAppRedirectUrl);
-        private static readonly SemaphoreSlim _semaphore = new(1, 1);
+
+        private static readonly SemaphoreSlim s_webServerSemaphore = new(1, 1);
+        private static readonly SemaphoreSlim s_botTokensSemaphore = new(1, 1);
+        private static readonly SemaphoreSlim s_channelTokensSemaphore = new(1, 1);
+        private static readonly SemaphoreSlim s_colorDictionarySemaphore = new(1, 1);
 
         private static dynamic s_twitchAppCredentials;
         private static string s_goofbotAppDataFolder;
@@ -76,43 +80,73 @@ namespace Goofbot
             }
         }
 
-        public static async Task RefreshTwitchAccessToken(bool botToken)
-        {
-            string code = await RequestTwitchAuthorizationCode(botToken);
-            string tokensString = await RequestTwitchTokens(code);
-            
-            string tokensFile = botToken ? "bot_tokens.json" : "channel_tokens.json";
-            tokensFile = Path.Join(StuffFolder, tokensFile);
-            CancellationToken cancellationToken = new();
-            Task writeAllTextTask = File.WriteAllTextAsync(tokensFile, tokensString, cancellationToken);
-
-            dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
-            if (botToken)
-            {
-                TwitchBotAccessToken = Convert.ToString(tokensObject.access_token);
-            }
-            else
-            {
-                TwitchChannelAccessToken = Convert.ToString(tokensObject.access_token);
-                TwitchAPI.Settings.AccessToken = TwitchChannelAccessToken;
-            }
-
-            await writeAllTextTask;
-        }
-
         public static dynamic ParseJsonFile(string filename)
         {
             string jsonString = File.ReadAllText(filename);
             return JsonConvert.DeserializeObject(jsonString);
         }
 
+        public static async Task RefreshTwitchAccessToken(bool botToken)
+        {
+            SemaphoreSlim semaphore = s_webServerSemaphore;
+            string code;
+            await semaphore.WaitAsync();
+            try
+            {
+                code = await RequestTwitchAuthorizationCode(botToken);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+            
+            semaphore = botToken ? s_botTokensSemaphore : s_channelTokensSemaphore;
+            await semaphore.WaitAsync();
+            try
+            {
+                string tokensString = await RequestTwitchTokens(code);
+
+                string tokensFile = botToken ? "bot_tokens.json" : "channel_tokens.json";
+                tokensFile = Path.Join(StuffFolder, tokensFile);
+                CancellationToken cancellationToken = new();
+
+                Task writeAllTextTask = File.WriteAllTextAsync(tokensFile, tokensString, cancellationToken);
+
+                dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
+                if (botToken)
+                {
+                    TwitchBotAccessToken = Convert.ToString(tokensObject.access_token);
+                }
+                else
+                {
+                    TwitchChannelAccessToken = Convert.ToString(tokensObject.access_token);
+                    TwitchAPI.Settings.AccessToken = TwitchChannelAccessToken;
+                }
+
+                await writeAllTextTask;
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+            
+        }
+
         public static async Task RefreshColorNames()
         {
             var response = await s_httpClient.GetAsync(ColorNamesRequestUrl);
             string colorNamesString = await response.Content.ReadAsStringAsync();
-            File.WriteAllText(s_colorNamesFile, colorNamesString);
 
-            ColorDictionary = new ColorDictionary(s_colorNamesFile);
+            await s_colorDictionarySemaphore.WaitAsync();
+            try
+            {
+                File.WriteAllText(s_colorNamesFile, colorNamesString);
+                ColorDictionary = new ColorDictionary(s_colorNamesFile);
+            }
+            finally
+            {
+                s_colorDictionarySemaphore.Release();
+            }
         }
 
         /*private static async Task<string> RequestTokensWithRefreshToken()
@@ -158,26 +192,15 @@ namespace Goofbot
 
         private static async Task<string> RequestTwitchAuthorizationCode(bool useChrome)
         {
-            await _semaphore.WaitAsync();
-            string code;
-            try
+            if (useChrome)
             {
-                if (useChrome)
-                {
-                    Process.Start("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", GetTwitchAuthorizationCodeRequestUrl(s_botScopes));
-                }
-                else
-                {
-                    Process.Start(new ProcessStartInfo { FileName = GetTwitchAuthorizationCodeRequestUrl(s_channelScopes), UseShellExecute = true });
-                }
-                code = await s_server.Listen();
+                Process.Start("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", GetTwitchAuthorizationCodeRequestUrl(s_botScopes));
             }
-            finally
+            else
             {
-                _semaphore.Release();
+                Process.Start(new ProcessStartInfo { FileName = GetTwitchAuthorizationCodeRequestUrl(s_channelScopes), UseShellExecute = true });
             }
-
-            return code;
+            return await s_server.Listen();
         }
     }
 }
