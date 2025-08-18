@@ -6,13 +6,13 @@ namespace Goofbot
 {
     internal class ColorDictionary
     {
-        private readonly List<string> _colorNameList = new List<string>();
-        private readonly Dictionary<string, string> _colorDictionary = new Dictionary<string, string>();
+        private readonly List<string> _colorNameList = [];
+        private readonly Dictionary<string, string> _colorDictionary = [];
 
-        private readonly List<string> _saturatedColorNameList = new List<string>();
-        private readonly Dictionary<string, string> _saturatedColorDictionary = new Dictionary<string, string>();
+        private readonly List<string> _saturatedColorNameList = [];
+        private readonly Dictionary<string, string> _saturatedColorDictionary = [];
 
-        private readonly Random _random = new Random();
+        private readonly Random _random = new();
 
         public ColorDictionary(string colorNamesFile)
         {
@@ -61,7 +61,6 @@ namespace Goofbot
         public string GetRandomSaturatedName()
         {
             int randomIndex = _random.Next(0, _saturatedColorNameList.Count);
-            Console.WriteLine(_saturatedColorNameList.Count);
             return _saturatedColorNameList[randomIndex];
         }
 
