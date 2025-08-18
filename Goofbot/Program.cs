@@ -12,7 +12,7 @@ namespace Goofbot
 {
     class Program
     {
-        public const string StuffFolder = "Stuff";
+        
 
         public const string TwitchAppRedirectUrl = "http://localhost:3000/";
         public const string TwitchAuthorizationCodeRequestUrlBase = "https://id.twitch.tv/oauth2/authorize";
@@ -23,23 +23,34 @@ namespace Goofbot
         private const string TwitchBotUsername = "goofbotthebot";
         private const string TwitchChannelUsername = "goofballthecat";
 
-        private static readonly string s_colorNamesFile = Path.Combine(StuffFolder, "color_names.json");
-        private static readonly string s_twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
         private static readonly List<string> s_botScopes = new List<string> { "user:read:chat", "user:write:chat", "user:bot", "chat:read", "chat:edit" };
         private static readonly List<string> s_channelScopes = new List<string> { "channel:bot", "channel:read:redemptions" };
         private static readonly HttpClient s_httpClient = new();
 
         private static dynamic s_twitchAppCredentials;
+        private static string s_goofbotAppDataFolder;
+        private static string s_colorNamesFile;
 
         public static string TwitchChannelAccessToken { get; private set; }
         public static string TwitchBotAccessToken { get; private set; }
         public static ColorDictionary ColorDictionary { get; private set; }
         public static TwitchAPI TwitchAPI { get; private set; }
+        public static string StuffFolder { get; private set; }
+
+        
 
         public static async Task Main(string[] args)
         {
-            s_twitchAppCredentials = ParseJsonFile(s_twitchAppCredentialsFile);
+            string localAppDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            s_goofbotAppDataFolder = Path.Combine(localAppDataFolder, "Goofbot");
+            string stuffLocationFile = Path.Join(s_goofbotAppDataFolder, "stufflocation.txt");
+            using (StreamWriter w = File.AppendText(stuffLocationFile));
+            StuffFolder = File.ReadAllText(stuffLocationFile).Trim();
 
+            s_colorNamesFile = Path.Combine(StuffFolder, "color_names.json");
+            string twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
+            s_twitchAppCredentials = ParseJsonFile(twitchAppCredentialsFile);
+            
             string code = await RequestTwitchAuthorizationCodeDefaultBrowser();
             string tokensString = await RequestTwitchTokens(code);
             dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
@@ -52,6 +63,7 @@ namespace Goofbot
 
             MagickNET.Initialize();
 
+            TwitchAPI = new();
             TwitchAPI.Settings.ClientId = s_twitchAppCredentials.client_id;
             TwitchAPI.Settings.AccessToken = TwitchChannelAccessToken;
 
