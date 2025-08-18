@@ -100,6 +100,7 @@ namespace Goofbot
             }
             
             SemaphoreSlim semaphore = botToken ? s_botTokensSemaphore : s_channelTokensSemaphore;
+
             await semaphore.WaitAsync();
             try
             {
