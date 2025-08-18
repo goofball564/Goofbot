@@ -88,6 +88,9 @@ namespace Goofbot
 
         public static async Task RefreshTwitchAccessToken(bool botToken)
         {
+            string tokensFile = botToken ? "bot_tokens.json" : "channel_tokens.json";
+            tokensFile = Path.Join(StuffFolder, tokensFile);
+
             string code;
             await s_webServerSemaphore.WaitAsync();
             try
@@ -100,16 +103,12 @@ namespace Goofbot
             }
             
             SemaphoreSlim semaphore = botToken ? s_botTokensSemaphore : s_channelTokensSemaphore;
-
             await semaphore.WaitAsync();
             try
             {
-                string tokensString = await RequestTwitchTokens(code);
+                string tokensString = await RequestTwitchTokensWithAuthorizationCode(code);
 
-                string tokensFile = botToken ? "bot_tokens.json" : "channel_tokens.json";
-                tokensFile = Path.Join(StuffFolder, tokensFile);
                 CancellationToken cancellationToken = new();
-
                 Task writeAllTextTask = File.WriteAllTextAsync(tokensFile, tokensString, cancellationToken);
 
                 dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
@@ -149,24 +148,21 @@ namespace Goofbot
             }
         }
 
-        /*private static async Task<string> RequestTokensWithRefreshToken()
+        private static async Task<string> RequestTokensWithRefreshToken(string refreshToken)
         {
-            dynamic client = ParseJsonFile(ClientInfoFile);
-            dynamic tokens = ParseJsonFile(TokensFile);
-
             var values = new Dictionary<string, string>
             {
-                { "refresh_token", Convert.ToString(tokens.refresh_token) },
-                { "client_id", Convert.ToString(client.client_id) },
-                { "client_secret", Convert.ToString(client.client_secret) },
+                { "refresh_token", Convert.ToString(refreshToken) },
+                { "client_id", Convert.ToString(s_twitchAppCredentials.client_id) },
+                { "client_secret", Convert.ToString(s_twitchAppCredentials.client_secret) },
                 { "grant_type", "refresh_token" },
             };
             var content = new FormUrlEncodedContent(values);
-            var response = await Program.s_httpClient.PostAsync(TokenRequestUrl, content);
+            var response = await s_httpClient.PostAsync(TwitchTokenRequestUrl, content);
             return await response.Content.ReadAsStringAsync();
-        }*/
+        }
 
-        private static async Task<string> RequestTwitchTokens(string twitchAuthorizationCode)
+        private static async Task<string> RequestTwitchTokensWithAuthorizationCode(string twitchAuthorizationCode)
         {
             var values = new Dictionary<string, string>
             {
