@@ -80,6 +80,12 @@ namespace Goofbot
         {
             string code = await RequestTwitchAuthorizationCode(botToken);
             string tokensString = await RequestTwitchTokens(code);
+            
+            string tokensFile = botToken ? "bot_tokens.json" : "channel_tokens.json";
+            tokensFile = Path.Join(StuffFolder, tokensFile);
+            CancellationToken cancellationToken = new();
+            Task writeAllTextTask = File.WriteAllTextAsync(tokensFile, tokensString, cancellationToken);
+
             dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
             if (botToken)
             {
@@ -90,6 +96,8 @@ namespace Goofbot
                 TwitchChannelAccessToken = Convert.ToString(tokensObject.access_token);
                 TwitchAPI.Settings.AccessToken = TwitchChannelAccessToken;
             }
+
+            await writeAllTextTask;
         }
 
         public static dynamic ParseJsonFile(string filename)
