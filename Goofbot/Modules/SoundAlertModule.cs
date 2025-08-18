@@ -29,7 +29,7 @@ namespace Goofbot.Modules
 
         private class SoundAlertModuleService : IHostedService
         {
-            public const string SoundAlertFolderPath = "Stuff\\SoundAlertModule";
+            public static readonly string SoundAlertFolderPath = Path.Combine(Program.StuffFolder, "SoundAlertModule");
 
             // You need the UserID for the User/Channel you want to get Events from.
             // You can use await _api.Helix.Users.GetUsersAsync() for that.
