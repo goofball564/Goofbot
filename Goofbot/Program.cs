@@ -32,7 +32,6 @@ namespace Goofbot
         private static readonly SemaphoreSlim s_channelTokensSemaphore = new(1, 1);
 
         private static dynamic s_twitchAppCredentials;
-        private static string s_colorNamesFile;
 
         public static string TwitchChannelAccessToken { get; private set; }
         public static string TwitchBotAccessToken { get; private set; }
@@ -47,8 +46,8 @@ namespace Goofbot
             StuffFolder = File.ReadAllText(stuffLocationFile).Trim();
 
             // Create color dictionary
-            s_colorNamesFile = Path.Join(StuffFolder, "color_names.json");
-            ColorDictionary = new(s_colorNamesFile);
+            string colorNamesFile = Path.Join(StuffFolder, "color_names.json");
+            ColorDictionary = new(colorNamesFile);
             Task colorDictionaryTask = Task.Run(async () => { await ColorDictionary.Initialize(); });
 
             // get twitch app credentials
