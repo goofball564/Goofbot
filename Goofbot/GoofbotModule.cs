@@ -1,10 +1,4 @@
-﻿using Goofbot.Modules;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.IO;
 using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;

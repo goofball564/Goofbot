@@ -2,16 +2,11 @@
 using ImageMagick;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
-using WindowsAPICodePack.Dialogs;
 
 namespace Goofbot
 {
