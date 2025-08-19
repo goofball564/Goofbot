@@ -1,42 +1,31 @@
-﻿using Newtonsoft.Json;
+﻿using Goofbot.Modules;
+using ImageMagick;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
-using System.Threading.Tasks;
-using ImageMagick;
-using System.Diagnostics;
-using TwitchLib.Api;
 using System.Threading;
+using System.Threading.Tasks;
+using TwitchLib.Api;
+using TwitchLib.Client;
+using TwitchLib.Client.Events;
 using WindowsAPICodePack.Dialogs;
 
 namespace Goofbot
 {
     class Program
     {
-        public const string TwitchAppRedirectUrl = "http://localhost:3000/";
-        public const string TwitchAuthorizationCodeRequestUrlBase = "https://id.twitch.tv/oauth2/authorize";
-        public const string TwitchTokenRequestUrl = "https://id.twitch.tv/oauth2/token";
+        public const string TwitchBotUsername = "goofbotthebot";
+        public const string TwitchChannelUsername = "goofballthecat";
 
-        private const string TwitchBotUsername = "goofbotthebot";
-        private const string TwitchChannelUsername = "goofballthecat";
-
-        private static readonly List<string> s_botScopes = ["user:read:chat", "user:write:chat", "user:bot", "chat:read", "chat:edit"];
-        private static readonly List<string> s_channelScopes = ["channel:bot", "channel:read:redemptions"];
-        private static readonly HttpClient s_httpClient = new();
-        private static readonly WebServer s_server = new(TwitchAppRedirectUrl);
         private static readonly string s_goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
-        private static readonly SemaphoreSlim s_webServerSemaphore = new(1, 1);
-        private static readonly SemaphoreSlim s_botTokensSemaphore = new(1, 1);
-        private static readonly SemaphoreSlim s_channelTokensSemaphore = new(1, 1);
-
-        private static dynamic s_twitchAppCredentials;
-
-        public static string TwitchChannelAccessToken { get; private set; }
-        public static string TwitchBotAccessToken { get; private set; }
+        public static TwitchAuthenticationManager TwitchAuthenticationManager { get; private set; }
         public static ColorDictionary ColorDictionary { get; private set; }
-        public static TwitchAPI TwitchAPI { get; private set; }
+        public static TwitchAPI TwitchAPI { get; private set; } = new();
+        public static TwitchClient TwitchClient { get; private set; } = new();
         public static string StuffFolder { get; private set; }
 
         public static async Task Main(string[] args)
@@ -50,26 +39,28 @@ namespace Goofbot
             ColorDictionary = new(colorNamesFile);
             Task colorDictionaryTask = Task.Run(async () => { await ColorDictionary.Initialize(); });
 
-            // get twitch app credentials
+            // initialize TwitchClient and TwitchAPI, authenticate with twitch
             string twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
-            s_twitchAppCredentials = ParseJsonFile(twitchAppCredentialsFile);
-
-            // get twitch access tokens
-            Task twitchBotAccessTokenTask = RefreshTwitchAccessToken(true);
-            Task twitchChannelAccessTokenTask = RefreshTwitchAccessToken(false);
-
-            // instantiate twitch API
-            TwitchAPI = new();
-            TwitchAPI.Settings.ClientId = s_twitchAppCredentials.client_id;
+            dynamic twitchAppCredentials = ParseJsonFile(twitchAppCredentialsFile);
+            string clientID = twitchAppCredentials.client_id;
+            string clientSecret = twitchAppCredentials.client_secret;
+            TwitchAuthenticationManager = new(clientID, clientSecret, TwitchClient, TwitchAPI);
+            Task authenticationManagerInitializeTask = TwitchAuthenticationManager.Initialize();
 
             // initialize magick.net
             MagickNET.Initialize();
 
             await colorDictionaryTask;
-            await twitchBotAccessTokenTask;
-            await twitchChannelAccessTokenTask;
-            
-            Bot bot = new Bot(TwitchBotUsername, TwitchChannelUsername, TwitchBotAccessToken);
+            await authenticationManagerInitializeTask;
+
+            TwitchClient.OnLog += Client_OnLog;
+            TwitchClient.OnJoinedChannel += Client_OnJoinedChannel;
+            TwitchClient.OnMessageReceived += Client_OnMessageReceived;
+            TwitchClient.OnConnected += Client_OnConnected;
+            TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
+            TwitchClient.Connect();
+
+            Bot bot = new Bot(TwitchBotUsername, TwitchChannelUsername, TwitchAuthenticationManager._twitchBotAccessToken);
             while(true)
             {
                 Console.ReadLine();
@@ -82,100 +73,29 @@ namespace Goofbot
             return JsonConvert.DeserializeObject(jsonString);
         }
 
-        public static async Task RefreshTwitchAccessToken(bool botToken)
+        private static void Client_OnLog(object sender, OnLogArgs e)
         {
-            string tokensFile = botToken ? "bot_tokens.json" : "channel_tokens.json";
-            tokensFile = Path.Join(StuffFolder, tokensFile);
-
-            string code;
-            await s_webServerSemaphore.WaitAsync();
-            try
-            {
-                code = await RequestTwitchAuthorizationCode(botToken);
-            }
-            finally
-            {
-                s_webServerSemaphore.Release();
-            }
-            
-            SemaphoreSlim semaphore = botToken ? s_botTokensSemaphore : s_channelTokensSemaphore;
-            await semaphore.WaitAsync();
-            try
-            {
-                string tokensString = await RequestTwitchTokensWithAuthorizationCode(code);
-
-                CancellationToken cancellationToken = new();
-                Task writeAllTextTask = File.WriteAllTextAsync(tokensFile, tokensString, cancellationToken);
-
-                dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
-                if (botToken)
-                {
-                    TwitchBotAccessToken = Convert.ToString(tokensObject.access_token);
-                }
-                else
-                {
-                    TwitchChannelAccessToken = Convert.ToString(tokensObject.access_token);
-                    TwitchAPI.Settings.AccessToken = TwitchChannelAccessToken;
-                }
-
-                await writeAllTextTask;
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-            
+            Console.WriteLine($"{e.DateTime.ToString()}: {e.BotUsername} - {e.Data}");
         }
 
-        private static async Task<string> RequestTokensWithRefreshToken(string refreshToken)
+        private static void Client_OnConnected(object sender, OnConnectedArgs e)
         {
-            var values = new Dictionary<string, string>
-            {
-                { "refresh_token", refreshToken },
-                { "client_id", Convert.ToString(s_twitchAppCredentials.client_id) },
-                { "client_secret", Convert.ToString(s_twitchAppCredentials.client_secret) },
-                { "grant_type", "refresh_token" },
-            };
-            var content = new FormUrlEncodedContent(values);
-            var response = await s_httpClient.PostAsync(TwitchTokenRequestUrl, content);
-            return await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"Connected to {e.AutoJoinChannel}");
         }
 
-        private static async Task<string> RequestTwitchTokensWithAuthorizationCode(string twitchAuthorizationCode)
+        private static void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
         {
-            var values = new Dictionary<string, string>
-            {
-                { "code", twitchAuthorizationCode },
-                { "client_id", Convert.ToString(s_twitchAppCredentials.client_id) },
-                { "client_secret", Convert.ToString(s_twitchAppCredentials.client_secret) },
-                { "grant_type", "authorization_code" },
-                { "redirect_uri", TwitchAppRedirectUrl }
-            };
-            var content = new FormUrlEncodedContent(values);
-            var response = await s_httpClient.PostAsync(TwitchTokenRequestUrl, content);
-            return await response.Content.ReadAsStringAsync();
+
         }
 
-        private static string GetTwitchAuthorizationCodeRequestUrl(List<string> scopes)
+        private static void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
-            return $"{TwitchAuthorizationCodeRequestUrlBase}?" +
-                   $"client_id={s_twitchAppCredentials.client_id}&" +
-                   $"redirect_uri={System.Web.HttpUtility.UrlEncode(TwitchAppRedirectUrl)}&" +
-                   "response_type=code&" +
-                   $"scope={String.Join('+', scopes)}";
+            // _commandParsingModule.ParseMessageForCommand(e);
         }
 
-        private static async Task<string> RequestTwitchAuthorizationCode(bool useChrome)
+        private static void Client_OnIncorrectLogin(object sender, OnIncorrectLoginArgs e)
         {
-            if (useChrome)
-            {
-                Process.Start("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", GetTwitchAuthorizationCodeRequestUrl(s_botScopes));
-            }
-            else
-            {
-                Process.Start(new ProcessStartInfo { FileName = GetTwitchAuthorizationCodeRequestUrl(s_channelScopes), UseShellExecute = true });
-            }
-            return await s_server.Listen();
+
         }
     }
 }
