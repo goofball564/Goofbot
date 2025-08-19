@@ -2,9 +2,12 @@
 using SpotifyAPI.Web.Auth;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Threading;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using TwitchLib.Api;
+using TwitchLib.Client;
+using TwitchLib.Client.Events;
 
 namespace Goofbot.Modules
 {
@@ -102,7 +105,7 @@ namespace Goofbot.Modules
             }
         }
 
-        public SpotifyModule(string moduleDataFolder) : base(moduleDataFolder)
+        public SpotifyModule(string moduleDataFolder, TwitchClient twitchClient, TwitchAPI twitchAPI) : base(moduleDataFolder, twitchClient, twitchAPI)
         {
             _spotifyCredentialsFile = Path.Combine(_moduleDataFolder, "spotify_credentials.json");
             dynamic spotifyCredentials = Program.ParseJsonFile(_spotifyCredentialsFile);
@@ -115,6 +118,30 @@ namespace Goofbot.Modules
             // _playlistId = Convert.ToString(spotifyCredentials.playlist_id);
 
             Initialize();
+        }
+
+        private async void OnSongCommand(object sender, string e)
+        {
+            await RefreshCurrentlyPlaying();
+            string artists = string.Join(", ", CurrentlyPlayingArtistsNames);
+            string song = CurrentlyPlayingSongName;
+            if (song == "" || artists == "")
+            {
+                _twitchClient.SendMessage(Program.TwitchChannelUsername, "Ain't nothing playing.");
+            }
+            else
+            {
+                _twitchClient.SendMessage(Program.TwitchChannelUsername, song + " by " + artists);
+            }
+        }
+
+        protected override void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
+        {
+            string command = Program.ParseMessageForCommand(e, out string args);
+            if (command.Equals("!song"))
+            {
+                OnSongCommand(this, args);
+            }
         }
 
         public async Task Initialize()

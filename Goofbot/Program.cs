@@ -28,6 +28,11 @@ namespace Goofbot
         public static TwitchClient TwitchClient { get; private set; } = new();
         public static string StuffFolder { get; private set; }
 
+        private static BlueGuyModule _blueGuyModule;
+        private static CommandParsingModule _commandParsingModule;
+        private static SpotifyModule _spotifyModule;
+        private static SoundAlertModule _soundAlertModule;
+
         public static async Task Main(string[] args)
         {
             // Get location of bot data folder
@@ -54,13 +59,15 @@ namespace Goofbot
             await authenticationManagerInitializeTask;
 
             TwitchClient.OnLog += Client_OnLog;
-            TwitchClient.OnJoinedChannel += Client_OnJoinedChannel;
-            TwitchClient.OnMessageReceived += Client_OnMessageReceived;
             TwitchClient.OnConnected += Client_OnConnected;
             TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
             TwitchClient.Connect();
 
-            Bot bot = new Bot(TwitchBotUsername, TwitchChannelUsername, TwitchAuthenticationManager._twitchBotAccessToken);
+            _blueGuyModule = new("BlueGuyModule", TwitchClient, TwitchAPI);
+            _spotifyModule = new("SpotifyModule", TwitchClient, TwitchAPI);
+            _soundAlertModule = new();
+
+            // Bot bot = new Bot(TwitchBotUsername, TwitchChannelUsername, TwitchAuthenticationManager._twitchBotAccessToken);
             while(true)
             {
                 Console.ReadLine();
@@ -73,6 +80,30 @@ namespace Goofbot
             return JsonConvert.DeserializeObject(jsonString);
         }
 
+        public static string ParseMessageForCommand(OnMessageReceivedArgs messageArgs, out string commandArgs)
+        {
+            DateTime invocationTime = DateTime.UtcNow;
+            string trimmedMessage = messageArgs.ChatMessage.Message.Trim();
+            int indexOfSpace = trimmedMessage.IndexOf(' ');
+
+            string command;
+
+            if (indexOfSpace != -1)
+            {
+                command = trimmedMessage.Substring(0, indexOfSpace);
+                commandArgs = trimmedMessage.Substring(indexOfSpace + 1);
+            }
+            else
+            {
+                command = trimmedMessage;
+                commandArgs = "";
+            }
+
+            commandArgs = commandArgs.Trim();
+            return command.ToLowerInvariant();
+
+        }
+
         private static void Client_OnLog(object sender, OnLogArgs e)
         {
             Console.WriteLine($"{e.DateTime.ToString()}: {e.BotUsername} - {e.Data}");
@@ -81,16 +112,6 @@ namespace Goofbot
         private static void Client_OnConnected(object sender, OnConnectedArgs e)
         {
             Console.WriteLine($"Connected to {e.AutoJoinChannel}");
-        }
-
-        private static void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
-        {
-
-        }
-
-        private static void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
-        {
-            // _commandParsingModule.ParseMessageForCommand(e);
         }
 
         private static void Client_OnIncorrectLogin(object sender, OnIncorrectLoginArgs e)

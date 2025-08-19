@@ -1,8 +1,12 @@
-﻿using System;
+﻿using ImageMagick;
+using System;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
-using ImageMagick;
+using TwitchLib.Api;
+using TwitchLib.Client;
+using TwitchLib.Client.Events;
 
 namespace Goofbot.Modules
 {
@@ -29,7 +33,7 @@ namespace Goofbot.Modules
         public event EventHandler<string> RandomColor;
         public event EventHandler SameColor;
 
-        public BlueGuyModule(string moduleDataFolder) : base(moduleDataFolder)
+        public BlueGuyModule(string moduleDataFolder, TwitchClient twitchClient, TwitchAPI twitchAPI) : base(moduleDataFolder, twitchClient, twitchAPI)
         {
             _blueGuyGrayscaleFile = Path.Combine(_moduleDataFolder, "BlueGuyGrayscale.png");
             _blueGuyColorFile = Path.Combine(_moduleDataFolder, "BlueGuyColor.png");
@@ -42,27 +46,36 @@ namespace Goofbot.Modules
 
         protected virtual void OnColorChange()
         {
-            ColorChange?.Invoke(this, new EventArgs());
+            _twitchClient.SendMessage(Program.TwitchChannelUsername, "Oooooh... pretty! OhISee");
         }
 
-        protected virtual void OnUnknownColor(string colorName)
+        protected virtual void OnUnknownColor()
         {
-            UnknownColor?.Invoke(this, colorName);
+            _twitchClient.SendMessage(Program.TwitchChannelUsername, "I'm not familiar with this color birbAnalysis");
         }
 
         protected virtual void OnNoArgument()
         {
-            NoArgument?.Invoke(this, new EventArgs());
+            _twitchClient.SendMessage(Program.TwitchChannelUsername, "To change the Guy's color, try \"!guy purple\", \"!guy random\", or \"!guy #ff0000\"");
         }
 
         protected virtual void OnRandomColor(string colorName)
         {
-            RandomColor?.Invoke(this, colorName);
+            _twitchClient.SendMessage(Program.TwitchChannelUsername, String.Format("Let's try {0} LilAnalysis", colorName));
         }
 
         protected virtual void OnSameColor()
         {
-            SameColor?.Invoke(this, EventArgs.Empty);
+            _twitchClient.SendMessage(Program.TwitchChannelUsername, "The Guy is already that color Sussy");
+        }
+
+        protected override void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
+        {
+            string command = Program.ParseMessageForCommand(e, out string args);
+            if (command.Equals("!guy"))
+            {
+                OnGuyCommand(this, args);
+            }
         }
 
         public void OnGuyCommand(object sender, string args)
@@ -137,7 +150,7 @@ namespace Goofbot.Modules
                 }
                 else
                 {
-                    OnUnknownColor(args);
+                    OnUnknownColor();
                 }
             }
             else if (args == "")
@@ -173,7 +186,7 @@ namespace Goofbot.Modules
                 }
                 else
                 {
-                    OnUnknownColor(args);
+                    OnUnknownColor();
                 }
             }
         }

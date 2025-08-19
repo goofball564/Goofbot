@@ -1,4 +1,4 @@
-﻿using System;
+﻿/*using System;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -11,7 +11,7 @@ namespace Goofbot
 {
     internal class Bot
     {
-        private readonly TwitchClient _client;
+        private readonly TwitchClient TwitchClient;
         private readonly string _channel;
 
         // private readonly ChatInteractionModule ChatInteractionModule;
@@ -46,14 +46,14 @@ namespace Goofbot
 
             var credentials = new ConnectionCredentials(botUsername, botAccessToken);
 
-            _client = new TwitchClient();
-            _client.Initialize(credentials, channelUsername);
-            _client.OnLog += Client_OnLog;
-            _client.OnJoinedChannel += Client_OnJoinedChannel;
-            _client.OnMessageReceived += Client_OnMessageReceived;
-            _client.OnConnected += Client_OnConnected;
-            _client.OnIncorrectLogin += Client_OnIncorrectLogin;
-            _client.Connect();
+            TwitchClient = new TwitchClient();
+            TwitchClient.Initialize(credentials, channelUsername);
+            TwitchClient.OnLog += Client_OnLog;
+            TwitchClient.OnJoinedChannel += Client_OnJoinedChannel;
+            TwitchClient.OnMessageReceived += Client_OnMessageReceived;
+            TwitchClient.OnConnected += Client_OnConnected;
+            TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
+            TwitchClient.Connect();
 
             _commandParsingModule = new CommandParsingModule();
             _blueGuyModule = new BlueGuyModule("BlueGuyModule");
@@ -79,7 +79,7 @@ namespace Goofbot
             // PipeServerModule.RunSplit += PipeServerModule_OnRunSplit;*/
             // PipeServerModule.Start();
 
-            _client.SendMessage(_channel, "Goofbot is activated and at your service MrDestructoid");
+    /*        TwitchClient.SendMessage(_channel, "Goofbot is activated and at your service MrDestructoid");
         }
 
         private void Client_OnLog(object sender, OnLogArgs e)
@@ -114,11 +114,11 @@ namespace Goofbot
             string song = _spotifyModule.CurrentlyPlayingSongName;
             if (song == "" || artists == "")
             {
-                _client.SendMessage(_channel, "Ain't nothing playing.");
+                TwitchClient.SendMessage(_channel, "Ain't nothing playing.");
             }
             else
             {
-                _client.SendMessage(_channel, song + " by " + artists);
+                TwitchClient.SendMessage(_channel, song + " by " + artists);
             }
         }
 
@@ -127,7 +127,7 @@ namespace Goofbot
             await Program.ColorDictionary.Refresh(true);
         }
 
-        /*private void CommandParsingModule_OnQueueModeCommand(object sender, string args)
+        *//*private void CommandParsingModule_OnQueueModeCommand(object sender, string args)
         {
             const string successResponse = "Aye Aye, Captain! FrankerZ 7";
             args = args.ToLowerInvariant();
@@ -150,14 +150,14 @@ namespace Goofbot
         /*private void CommandParsingModule_OnTimeoutNotElapsed(object sender, TimeSpan timeUntilTimeoutElapses)
         {
             _client.SendMessage(_channel, String.Format("Please wait {0} minutes and {1} seconds, then try again.", timeUntilTimeoutElapses.Minutes, timeUntilTimeoutElapses.Seconds));
-        }*/
+        }*//*
 
         private void CommandParsingModule_OnNotBroadcaster(object sender, EventArgs e)
         {
-            _client.SendMessage(_channel, "I don't answer to you, peasant! OhMyDog (this command is for Goof's use only)");
+            TwitchClient.SendMessage(_channel, "I don't answer to you, peasant! OhMyDog (this command is for Goof's use only)");
         }
 
-        /*private void PiperServerModule_OnRunStart(object sender, int runCount)
+        *//*private void PiperServerModule_OnRunStart(object sender, int runCount)
         {
             // Client.SendMessage(Channel, String.Format("Run {0}! dinkDonk Give it up for run {1}! dinkDonk", runCount, runCount));
             SpotifyModule.QueueMode = true;
@@ -179,31 +179,32 @@ namespace Goofbot
             {
                 SpotifyModule.QueueMode = false;
             }
-        }*/
+        }*//*
 
         private void BlueGuyModule_OnColorChange(object sender, EventArgs e)
         {
-            _client.SendMessage(_channel, "Oooooh... pretty! OhISee");
+            TwitchClient.SendMessage(_channel, "Oooooh... pretty! OhISee");
         }
 
         private void BlueGuyModule_OnUnknownColor(object sender, string unknownColor)
         {
-            _client.SendMessage(_channel, String.Format("I'm not familiar with this color birbAnalysis", unknownColor));
+            TwitchClient.SendMessage(_channel, String.Format("I'm not familiar with this color birbAnalysis", unknownColor));
         }
 
         private void BlueGuyModule_OnNoArgument(object sender, EventArgs e)
         {
-            _client.SendMessage(_channel, "To change the Guy's color, try \"!guy purple\", \"!guy random\", or \"!guy #ff0000\"");
+            TwitchClient.SendMessage(_channel, "To change the Guy's color, try \"!guy purple\", \"!guy random\", or \"!guy #ff0000\"");
         }
 
         private void BlueGuyModule_OnRandomColor(object sender, string colorName)
         {
-            _client.SendMessage(_channel, String.Format("Let's try {0} LilAnalysis", colorName));
+            TwitchClient.SendMessage(_channel, String.Format("Let's try {0} LilAnalysis", colorName));
         }
 
         private void BlueGuyModule_OnSameColor(object sender, EventArgs e)
         {
-            _client.SendMessage(_channel, "The Guy is already that color Sussy");
+            TwitchClient.SendMessage(_channel, "The Guy is already that color Sussy");
         }
     }
 }
+*/
