@@ -45,11 +45,8 @@ namespace Goofbot
             _channel = channelUsername;
 
             var credentials = new ConnectionCredentials(botUsername, botAccessToken);
-            
-            var clientOptions = new ClientOptions();
-            var customClient = new WebSocketClient(clientOptions);
 
-            _client = new TwitchClient(customClient);
+            _client = new TwitchClient();
             _client.Initialize(credentials, channelUsername);
             _client.OnLog += Client_OnLog;
             _client.OnJoinedChannel += Client_OnJoinedChannel;
