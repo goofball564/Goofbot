@@ -16,8 +16,7 @@ namespace Goofbot
         private readonly Random _random = new();
         private readonly string _colorNamesFile;
         private readonly HttpClient _httpClient = new();
-        private readonly SemaphoreSlim _dictionarySemaphore = new(1, 1);
-        private readonly SemaphoreSlim _fileSemaphore = new(1, 1);
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
 
         private List<string> _colorNameList = [];
         private Dictionary<string, string> _colorDictionary = [];
@@ -37,7 +36,7 @@ namespace Goofbot
 
         public async Task Refresh(bool forceRedownload = false)
         {
-            await _dictionarySemaphore.WaitAsync();
+            await _semaphore.WaitAsync();
             try
             {
                 _colorNameList = [];
@@ -83,26 +82,17 @@ namespace Goofbot
             }
             finally
             {
-                _dictionarySemaphore.Release();
+                _semaphore.Release();
             }    
         }
 
-        public async Task RefreshColorNamesFile()
+        private async Task RefreshColorNamesFile()
         {
             string colorNamesString = await RequestColorNames();
             if (colorNamesString != "")
             {
-                await _fileSemaphore.WaitAsync();
-                try
-                {
-                    File.WriteAllText(_colorNamesFile, colorNamesString);
-                }
-                finally
-                {
-                    _fileSemaphore.Release();
-                }
+                File.WriteAllText(_colorNamesFile, colorNamesString);
             }
-            
         }
 
         public string GetHex(string colorName)
