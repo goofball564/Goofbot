@@ -47,14 +47,13 @@ namespace Goofbot
             TwitchAuthenticationManager = new(clientID, clientSecret, TwitchClient, TwitchAPI);
             Task authenticationManagerInitializeTask = TwitchAuthenticationManager.Initialize();
 
-            // initialize magick.net
             MagickNET.Initialize();
-
-            await authenticationManagerInitializeTask;
 
             TwitchClient.OnLog += Client_OnLog;
             TwitchClient.OnConnected += Client_OnConnected;
             TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
+
+            await authenticationManagerInitializeTask;
             TwitchClient.Connect();
 
             _spotifyModule = new("SpotifyModule", TwitchClient, TwitchAPI);
@@ -66,7 +65,6 @@ namespace Goofbot
             _blueGuyModule = new("BlueGuyModule", TwitchClient, TwitchAPI);
 
             await spotifyModuleInitializeTask;
-
             TwitchClient.SendMessage(TwitchChannelUsername, "Goofbot is activated and at your service MrDestructoid");
             while (true)
             {
