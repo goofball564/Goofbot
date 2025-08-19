@@ -116,8 +116,6 @@ namespace Goofbot.Modules
             _clientId = Convert.ToString(spotifyCredentials.client_id);
             _clientSecret = Convert.ToString(spotifyCredentials.client_secret);
             // _playlistId = Convert.ToString(spotifyCredentials.playlist_id);
-
-            Initialize();
         }
 
         private async void OnSongCommand(object sender, string e)

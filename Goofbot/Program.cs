@@ -55,7 +55,6 @@ namespace Goofbot
             // initialize magick.net
             MagickNET.Initialize();
 
-            await colorDictionaryTask;
             await authenticationManagerInitializeTask;
 
             TwitchClient.OnLog += Client_OnLog;
@@ -63,11 +62,15 @@ namespace Goofbot
             TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
             TwitchClient.Connect();
 
-            _blueGuyModule = new("BlueGuyModule", TwitchClient, TwitchAPI);
             _spotifyModule = new("SpotifyModule", TwitchClient, TwitchAPI);
+            Task spotifyModuleInitializeTask = _spotifyModule.Initialize();
+
             _soundAlertModule = new();
 
-            // Bot bot = new Bot(TwitchBotUsername, TwitchChannelUsername, TwitchAuthenticationManager._twitchBotAccessToken);
+            await colorDictionaryTask;
+            _blueGuyModule = new("BlueGuyModule", TwitchClient, TwitchAPI);
+
+            await spotifyModuleInitializeTask;
             while(true)
             {
                 Console.ReadLine();
