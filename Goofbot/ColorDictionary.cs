@@ -86,15 +86,6 @@ namespace Goofbot
             }    
         }
 
-        private async Task RefreshColorNamesFile()
-        {
-            string colorNamesString = await RequestColorNames();
-            if (colorNamesString != "")
-            {
-                File.WriteAllText(_colorNamesFile, colorNamesString);
-            }
-        }
-
         public string GetHex(string colorName)
         {
             _colorDictionary.TryGetValue(colorName.ToLowerInvariant(), out string hex);
@@ -148,6 +139,14 @@ namespace Goofbot
                 return "";
             }
             
+        }
+        private async Task RefreshColorNamesFile()
+        {
+            string colorNamesString = await RequestColorNames();
+            if (colorNamesString != "")
+            {
+                File.WriteAllText(_colorNamesFile, colorNamesString);
+            }
         }
     }
 }
