@@ -42,7 +42,7 @@ namespace Goofbot
             // Create color dictionary
             string colorNamesFile = Path.Join(StuffFolder, "color_names.json");
             ColorDictionary = new(colorNamesFile);
-            Task colorDictionaryTask = Task.Run(async () => { await ColorDictionary.Initialize(); });
+            Task colorDictionaryTask = Task.Run( () => { ColorDictionary.Initialize(); });
 
             // initialize TwitchClient and TwitchAPI, authenticate with twitch
             string twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
@@ -71,7 +71,9 @@ namespace Goofbot
             _blueGuyModule = new("BlueGuyModule", TwitchClient, TwitchAPI);
 
             await spotifyModuleInitializeTask;
-            while(true)
+
+            TwitchClient.SendMessage(TwitchChannelUsername, "Goofbot is activated and at your service MrDestructoid");
+            while (true)
             {
                 Console.ReadLine();
             }
