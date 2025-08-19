@@ -1,49 +1,108 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
+using System.Net.Http;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Goofbot
 {
     internal class ColorDictionary
     {
-        private readonly List<string> _colorNameList = [];
-        private readonly Dictionary<string, string> _colorDictionary = [];
-
-        private readonly List<string> _saturatedColorNameList = [];
-        private readonly Dictionary<string, string> _saturatedColorDictionary = [];
+        public const string ColorNamesRequestUrl = "https://api.color.pizza/v1/";
 
         private readonly Random _random = new();
+        private readonly string _colorNamesFile;
+        private readonly HttpClient _httpClient = new();
+        private readonly SemaphoreSlim _dictionarySemaphore = new(1, 1);
+        private readonly SemaphoreSlim _fileSemaphore = new(1, 1);
+
+        private List<string> _colorNameList = [];
+        private Dictionary<string, string> _colorDictionary = [];
+
+        private List<string> _saturatedColorNameList = [];
+        private Dictionary<string, string> _saturatedColorDictionary = [];
 
         public ColorDictionary(string colorNamesFile)
         {
-            Console.WriteLine("Building Color Dictionary");
-            dynamic colorNamesJson = Program.ParseJsonFile(colorNamesFile);
-            foreach(var color in colorNamesJson.colors)
+            _colorNamesFile = colorNamesFile;
+        }
+
+        public async Task Initialize(bool forceRedownload = false)
+        {
+            await Refresh(forceRedownload);
+        }
+
+        public async Task Refresh(bool forceRedownload = false)
+        {
+            await _dictionarySemaphore.WaitAsync();
+            try
             {
-                string colorName = Convert.ToString(color.name);
-                string colorNameLower = colorName.ToLowerInvariant();
-                string colorHex = Convert.ToString(color.hex).ToLowerInvariant();
+                _colorNameList = [];
+                _colorDictionary = [];
+                _saturatedColorNameList = [];
+                _saturatedColorDictionary = [];
 
-                if (!_colorDictionary.ContainsKey(colorNameLower))
+                Console.WriteLine("Building Color Dictionary");
+
+
+                if (forceRedownload || !File.Exists(_colorNamesFile))
                 {
-                    _colorDictionary.Add(colorNameLower, colorHex);
-                    _colorNameList.Add(colorName);
+                    await RefreshColorNamesFile();
                 }
-                else
+
+                dynamic colorNamesJson = Program.ParseJsonFile(_colorNamesFile);
+                foreach (var color in colorNamesJson.colors)
                 {
-                    Console.WriteLine("Color Collision: " + colorName);
+                    string colorName = Convert.ToString(color.name);
+                    string colorNameLower = colorName.ToLowerInvariant();
+                    string colorHex = Convert.ToString(color.hex).ToLowerInvariant();
+
+                    if (!_colorDictionary.ContainsKey(colorNameLower))
+                    {
+                        _colorDictionary.Add(colorNameLower, colorHex);
+                        _colorNameList.Add(colorName);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Color Collision: " + colorName);
+                    }
+
+                    GetHSV(colorHex, out double h, out double s, out double v);
+
+                    if (v >= 0.2 && GoodSaturation(s, v) && !_saturatedColorDictionary.ContainsKey(colorNameLower))
+                    {
+                        _saturatedColorDictionary.Add(colorNameLower, colorHex);
+                        _saturatedColorNameList.Add(colorName);
+                    }
                 }
 
-                GetHSV(colorHex, out double h, out double s, out double v);
+                Console.WriteLine("Color Dictionary Built");
+            }
+            finally
+            {
+                _dictionarySemaphore.Release();
+            }    
+        }
 
-                if (v >= 0.2 && GoodSaturation(s, v) && !_saturatedColorDictionary.ContainsKey(colorNameLower))
+        public async Task RefreshColorNamesFile()
+        {
+            string colorNamesString = await RequestColorNames();
+            if (colorNamesString != "")
+            {
+                await _fileSemaphore.WaitAsync();
+                try
                 {
-                    _saturatedColorDictionary.Add(colorNameLower, colorHex);
-                    _saturatedColorNameList.Add(colorName);
+                    File.WriteAllText(_colorNamesFile, colorNamesString);
+                }
+                finally
+                {
+                    _fileSemaphore.Release();
                 }
             }
-
-            Console.WriteLine("Color Dictionary Built");
+            
         }
 
         public string GetHex(string colorName)
@@ -85,6 +144,20 @@ namespace Goofbot
 
             
             return saturation >= (((100 - value) / 2.0) + 30.0);
+        }
+
+        private async Task<string> RequestColorNames()
+        {
+            var response = await _httpClient.GetAsync(ColorNamesRequestUrl);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsStringAsync();
+            }
+            else
+            {
+                return "";
+            }
+            
         }
     }
 }

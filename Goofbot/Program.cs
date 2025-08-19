@@ -18,8 +18,6 @@ namespace Goofbot
         public const string TwitchAuthorizationCodeRequestUrlBase = "https://id.twitch.tv/oauth2/authorize";
         public const string TwitchTokenRequestUrl = "https://id.twitch.tv/oauth2/token";
 
-        public const string ColorNamesRequestUrl = "https://api.color.pizza/v1/";
-
         private const string TwitchBotUsername = "goofbotthebot";
         private const string TwitchChannelUsername = "goofballthecat";
 
@@ -32,7 +30,6 @@ namespace Goofbot
         private static readonly SemaphoreSlim s_webServerSemaphore = new(1, 1);
         private static readonly SemaphoreSlim s_botTokensSemaphore = new(1, 1);
         private static readonly SemaphoreSlim s_channelTokensSemaphore = new(1, 1);
-        private static readonly SemaphoreSlim s_colorDictionarySemaphore = new(1, 1);
 
         private static dynamic s_twitchAppCredentials;
         private static string s_colorNamesFile;
@@ -49,13 +46,12 @@ namespace Goofbot
             string stuffLocationFile = Path.Join(s_goofbotAppDataFolder, "stufflocation.txt");
             StuffFolder = File.ReadAllText(stuffLocationFile).Trim();
 
+            Console.WriteLine(StuffFolder);
+
             // Create color dictionary
-            s_colorNamesFile = Path.Combine(StuffFolder, "color_names.json");
-            Task colorNamesTask = Task.CompletedTask;
-            if (!File.Exists(s_colorNamesFile))
-            {
-                colorNamesTask = RefreshColorNames();
-            }
+            s_colorNamesFile = Path.Join(StuffFolder, "color_names.json");
+            ColorDictionary = new(s_colorNamesFile);
+            Task colorDictionaryTask = ColorDictionary.Initialize();
 
             // get access tokens using app credentials
             string twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
@@ -71,7 +67,7 @@ namespace Goofbot
             // initialize magick.net
             MagickNET.Initialize();
 
-            await colorNamesTask;
+            await colorDictionaryTask;
             await twitchBotAccessTokenTask;
             await twitchChannelAccessTokenTask;
             
@@ -131,23 +127,6 @@ namespace Goofbot
                 semaphore.Release();
             }
             
-        }
-
-        public static async Task RefreshColorNames()
-        {
-            var response = await s_httpClient.GetAsync(ColorNamesRequestUrl);
-            string colorNamesString = await response.Content.ReadAsStringAsync();
-
-            await s_colorDictionarySemaphore.WaitAsync();
-            try
-            {
-                File.WriteAllText(s_colorNamesFile, colorNamesString);
-                ColorDictionary = new ColorDictionary(s_colorNamesFile);
-            }
-            finally
-            {
-                s_colorDictionarySemaphore.Release();
-            }
         }
 
         private static async Task<string> RequestTokensWithRefreshToken(string refreshToken)

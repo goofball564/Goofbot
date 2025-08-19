@@ -127,7 +127,7 @@ namespace Goofbot
 
         private async void CommandParsingModule_OnRefreshColorsCommand(object sender, string e)
         {
-            await Program.RefreshColorNames();
+            await Program.ColorDictionary.Refresh(true);
         }
 
         /*private void CommandParsingModule_OnQueueModeCommand(object sender, string args)
