@@ -18,11 +18,11 @@ namespace Goofbot
         private readonly HttpClient _httpClient = new();
         private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-        private List<string> _colorNameList = [];
-        private Dictionary<string, string> _colorDictionary = [];
+        private List<string> _colorNameList;
+        private Dictionary<string, string> _colorDictionary;
 
-        private List<string> _saturatedColorNameList = [];
-        private Dictionary<string, string> _saturatedColorDictionary = [];
+        private List<string> _saturatedColorNameList;
+        private Dictionary<string, string> _saturatedColorDictionary;
 
         public ColorDictionary(string colorNamesFile)
         {
