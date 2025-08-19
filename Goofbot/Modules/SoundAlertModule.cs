@@ -103,7 +103,7 @@ namespace Goofbot.Modules
                 string sound = _soundAlertDictionary.TryGetRandomFromList(reward);
 
                 await Task.Delay(1000);
-                await Task.Run(() => { new SoundPlayer(sound).Play(); });
+                new SoundPlayer(sound).Play();
             }
         }
 
