@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 using ImageMagick;
 using System.Diagnostics;
 using TwitchLib.Api;
-using SpotifyAPI.Web;
 using System.Threading;
+using WindowsAPICodePack.Dialogs;
 
 namespace Goofbot
 {
@@ -27,6 +27,7 @@ namespace Goofbot
         private static readonly List<string> s_channelScopes = ["channel:bot", "channel:read:redemptions"];
         private static readonly HttpClient s_httpClient = new();
         private static readonly WebServer s_server = new(TwitchAppRedirectUrl);
+        private static readonly string s_goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
         private static readonly SemaphoreSlim s_webServerSemaphore = new(1, 1);
         private static readonly SemaphoreSlim s_botTokensSemaphore = new(1, 1);
@@ -34,7 +35,6 @@ namespace Goofbot
         private static readonly SemaphoreSlim s_colorDictionarySemaphore = new(1, 1);
 
         private static dynamic s_twitchAppCredentials;
-        private static string s_goofbotAppDataFolder;
         private static string s_colorNamesFile;
 
         public static string TwitchChannelAccessToken { get; private set; }
@@ -45,12 +45,11 @@ namespace Goofbot
 
         public static async Task Main(string[] args)
         {
-            string localAppDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            s_goofbotAppDataFolder = Path.Combine(localAppDataFolder, "Goofbot");
-            
+            // Get location of bot data folder
             string stuffLocationFile = Path.Join(s_goofbotAppDataFolder, "stufflocation.txt");
             StuffFolder = File.ReadAllText(stuffLocationFile).Trim();
 
+            // Create color dictionary
             s_colorNamesFile = Path.Combine(StuffFolder, "color_names.json");
             Task colorNamesTask = Task.CompletedTask;
             if (!File.Exists(s_colorNamesFile))
@@ -58,15 +57,18 @@ namespace Goofbot
                 colorNamesTask = RefreshColorNames();
             }
 
+            // get access tokens using app credentials
             string twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
             s_twitchAppCredentials = ParseJsonFile(twitchAppCredentialsFile);
 
             Task twitchBotAccessTokenTask = RefreshTwitchAccessToken(true);
             Task twitchChannelAccessTokenTask = RefreshTwitchAccessToken(false);
 
+            // instantiate twitch API
             TwitchAPI = new();
             TwitchAPI.Settings.ClientId = s_twitchAppCredentials.client_id;
 
+            // initialize magick.net
             MagickNET.Initialize();
 
             await colorNamesTask;
