@@ -46,17 +46,16 @@ namespace Goofbot
             string stuffLocationFile = Path.Join(s_goofbotAppDataFolder, "stufflocation.txt");
             StuffFolder = File.ReadAllText(stuffLocationFile).Trim();
 
-            Console.WriteLine(StuffFolder);
-
             // Create color dictionary
             s_colorNamesFile = Path.Join(StuffFolder, "color_names.json");
             ColorDictionary = new(s_colorNamesFile);
-            Task colorDictionaryTask = ColorDictionary.Initialize();
+            Task colorDictionaryTask = Task.Run(async () => { await ColorDictionary.Initialize(); });
 
-            // get access tokens using app credentials
+            // get twitch app credentials
             string twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
             s_twitchAppCredentials = ParseJsonFile(twitchAppCredentialsFile);
 
+            // get twitch access tokens
             Task twitchBotAccessTokenTask = RefreshTwitchAccessToken(true);
             Task twitchChannelAccessTokenTask = RefreshTwitchAccessToken(false);
 
