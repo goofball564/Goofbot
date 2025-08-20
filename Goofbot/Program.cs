@@ -31,11 +31,6 @@ namespace Goofbot
         public static TwitchClient TwitchClient { get; private set; } = new();
         public static string StuffFolder { get; private set; }
 
-        private static BlueGuyModule _blueGuyModule;
-        // private static CommandParsingModule _commandParsingModule;
-        private static SpotifyModule _spotifyModule;
-        private static SoundAlertModule _soundAlertModule;
-
         public static async Task Main(string[] args)
         {
             // Get location of bot data folder
@@ -64,13 +59,15 @@ namespace Goofbot
             await authenticationManagerInitializeTask;
             TwitchClient.Connect();
 
-            _spotifyModule = new("SpotifyModule", s_commandDictionary);
-            Task spotifyModuleInitializeTask = _spotifyModule.Initialize();
+            SpotifyModule spotifyModule = new("SpotifyModule", s_commandDictionary);
+            Task spotifyModuleInitializeTask = spotifyModule.Initialize();
 
-            _soundAlertModule = new();
+            SoundAlertModule soundAlertModule = new();
+
+            MiscCommandsModule miscCommandsModule = new("MiscCommandsModule", s_commandDictionary);
 
             await colorDictionaryTask;
-            _blueGuyModule = new("BlueGuyModule", s_commandDictionary);
+            BlueGuyModule blueGuyModule = new("BlueGuyModule", s_commandDictionary);
 
             await spotifyModuleInitializeTask;
             TwitchClient.OnMessageReceived += Client_OnMessageReceived;
@@ -128,7 +125,7 @@ namespace Goofbot
             Console.WriteLine($"Connected to {e.AutoJoinChannel}");
         }
 
-        private static void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
+        private static async void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
             string message = "";
             string commandName = ParseMessageForCommand(e, out string commandArgs);
@@ -139,7 +136,7 @@ namespace Goofbot
 
             if (s_commandDictionary.TryGetCommand(commandName, out command))
             {
-                message = command.ExecuteCommand(commandArgs, e);
+                message = await command.ExecuteCommandAsync(commandArgs, e);
             }
             else if (s_commandDictionary.TryGetCommand(commandNameReversed, out command))
             {
@@ -150,7 +147,7 @@ namespace Goofbot
                 }
                 string commandArgsReversed = String.Join(" ", commandArgsArray);
             
-                message = command.ExecuteCommand(commandArgsReversed, e);
+                message = await command.ExecuteCommandAsync(commandArgsReversed, e);
                 message = ReverseString(message);
             }
 
