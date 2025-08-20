@@ -3,17 +3,11 @@ using Goofbot.Utils;
 using ImageMagick;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Documents;
-using System.Windows.Forms.VisualStyles;
 using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
-using TwitchLib.Client.Interfaces;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Goofbot
 {
