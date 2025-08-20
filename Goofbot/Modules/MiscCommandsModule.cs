@@ -18,10 +18,11 @@ namespace Goofbot.Modules
 
         public static async Task<string> AnticiCommand(OnMessageReceivedArgs e)
         {
-            Console.WriteLine("Hello?");
             Random random = new();
+            int randomDelay = random.Next(50000) + 10000;
+            await Task.Delay(randomDelay);
+
             string username = e.ChatMessage.DisplayName;
-            await Task.Delay(15000);
             return $"...pation! @{username}";
         }
     }
