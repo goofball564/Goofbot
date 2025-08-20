@@ -117,7 +117,7 @@ namespace Goofbot.Modules
             _clientSecret = Convert.ToString(spotifyCredentials.client_secret);
             // _playlistId = Convert.ToString(spotifyCredentials.playlist_id);
 
-            var songCommandLambda = (object obj, string args) => { return ((SpotifyModule)obj).SongCommand().Result; };
+            var songCommandLambda = (object module, string commandArgs, OnMessageReceivedArgs messageArgs) => { return ((SpotifyModule)module).SongCommand().Result; };
             commandDictionary.TryAddCommand(new Command("!song", this, songCommandLambda, 1));
         }
 

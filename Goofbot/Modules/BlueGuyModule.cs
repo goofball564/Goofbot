@@ -43,7 +43,7 @@ namespace Goofbot.Modules
             _guysFolder = Path.Combine(_moduleDataFolder, "Guys");
             Directory.CreateDirectory(_guysFolder);
 
-            var guyCommandLambda = (object obj, string args) => { return ((BlueGuyModule)obj).GuyCommand(args); };
+            var guyCommandLambda = (object module, string commandArgs, OnMessageReceivedArgs messageArgs) => { return ((BlueGuyModule)module).GuyCommand(commandArgs); };
             commandDictionary.TryAddCommand(new Command("!guy", this, guyCommandLambda, 1));
         }
 

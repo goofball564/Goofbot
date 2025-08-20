@@ -11,7 +11,7 @@ namespace Goofbot.Utils
     {
         private readonly string _name;
         private readonly object _module;
-        private readonly Func<object, string, string> _commandAction;
+        private readonly Func<object, string, OnMessageReceivedArgs, string> _commandAction;
         private readonly TimeSpan _timeout;
         private readonly bool _goofOnly;
 
@@ -19,7 +19,7 @@ namespace Goofbot.Utils
 
         public string Name { get { return _name; } }
 
-        public Command(string name, object module, Func<object, string, string> commandAction, int timeoutSeconds, bool goofOnly = false)
+        public Command(string name, object module, Func<object, string, OnMessageReceivedArgs, string> commandAction, int timeoutSeconds, bool goofOnly = false)
         {
             _name = name;
             _timeout = TimeSpan.FromSeconds(timeoutSeconds);
@@ -40,7 +40,7 @@ namespace Goofbot.Utils
             if (timeoutTime.CompareTo(invocationTime) < 0)
             {
                 _timeOfLastInvocation = invocationTime;
-                return _commandAction(_module, commandArgs);
+                return _commandAction(_module, commandArgs, messageArgs);
             }
             else
             {
