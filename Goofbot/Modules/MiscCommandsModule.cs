@@ -10,11 +10,11 @@ namespace Goofbot.Modules
 {
     internal class MiscCommandsModule : GoofbotModule
     {
-        private Random _random = new();
+        private readonly Random _random = new();
 
         public MiscCommandsModule(string moduleDataFolder, CommandDictionary commandDictionary) : base(moduleDataFolder)
         {
-            var anticiCommandLambda = async (object module, string commandArgs, OnMessageReceivedArgs messageArgs) => { return await ((MiscCommandsModule)module)AnticiCommand(messageArgs); };
+            var anticiCommandLambda = async (object module, string commandArgs, OnMessageReceivedArgs messageArgs) => { return await ((MiscCommandsModule)module).AnticiCommand(messageArgs); };
             commandDictionary.TryAddCommand(new("!antici", this, anticiCommandLambda, 1));
         }
 
