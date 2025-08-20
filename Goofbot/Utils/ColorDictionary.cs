@@ -43,9 +43,6 @@ namespace Goofbot.Utils
                 _saturatedColorNameList = [];
                 _saturatedColorDictionary = [];
 
-                Console.WriteLine("Building Color Dictionary");
-
-
                 if (forceRedownload || !File.Exists(_colorNamesFile))
                 {
                     await RefreshColorNamesFile();
@@ -63,10 +60,6 @@ namespace Goofbot.Utils
                         _colorDictionary.Add(colorNameLower, colorHex);
                         _colorNameList.Add(colorName);
                     }
-                    else
-                    {
-                        Console.WriteLine("Color Collision: " + colorName);
-                    }
 
                     GetHSV(colorHex, out double h, out double s, out double v);
 
@@ -76,8 +69,6 @@ namespace Goofbot.Utils
                         _saturatedColorNameList.Add(colorName);
                     }
                 }
-
-                Console.WriteLine("Color Dictionary Built");
             }
             finally
             {
