@@ -38,7 +38,7 @@ internal class SpotifyModule : GoofbotModule
     public SpotifyModule(string moduleDataFolder, CommandDictionary commandDictionary)
         : base(moduleDataFolder)
     {
-        this.spotifyCredentialsFile = Path.Combine(moduleDataFolder, "spotify_credentials.json");
+        this.spotifyCredentialsFile = Path.Combine(base.moduleDataFolder, "spotify_credentials.json");
         dynamic spotifyCredentials = Program.ParseJsonFile(this.spotifyCredentialsFile);
 
         this.volumeControlModule = new VolumeControlModule();
