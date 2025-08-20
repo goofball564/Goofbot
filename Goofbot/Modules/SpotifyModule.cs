@@ -1,4 +1,6 @@
-﻿using Goofbot.Utils;
+﻿namespace Goofbot.Modules;
+
+using Goofbot.Utils;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
 using System;
@@ -7,409 +9,411 @@ using System.IO;
 using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 
-namespace Goofbot.Modules
+internal class SpotifyModule : GoofbotModule
 {
-    internal class SpotifyModule : GoofbotModule
+    private const int QueueModeLoopInterval = 12000;
+    private const double QueueModeRemainingDurationThreshold = 60;
+
+    private readonly string spotifyCredentialsFile;
+    private readonly string clientId;
+    private readonly string clientSecret;
+    private readonly string playlistId;
+
+    private readonly VolumeControlModule volumeControlModule;
+    private readonly CachedApiResponses cachedApiResponses;
+
+    private readonly ThreadSafeObject<string> currentlyPlayingId = new ();
+    private readonly ThreadSafeObject<string> currentlyPlayingSongName = new ();
+    private readonly ThreadSafeObject<List<SimpleArtist>> currentlyPlayingArtistsNames = new ();
+
+    private EmbedIOAuthServer server;
+    private SpotifyClient spotify;
+
+    private volatile bool queueMode = false;
+    private volatile bool farmMode = true;
+
+    private bool removedFromPlaylist = false;
+    private bool addedToQueue = false;
+
+    public SpotifyModule(string moduleDataFolder, CommandDictionary commandDictionary)
+        : base(moduleDataFolder)
     {
-        private const int QueueModeLoopInterval = 12000;
-        private const double QueueModeRemainingDurationThreshold = 60;
+        this.spotifyCredentialsFile = Path.Combine(moduleDataFolder, "spotify_credentials.json");
+        dynamic spotifyCredentials = Program.ParseJsonFile(this.spotifyCredentialsFile);
 
-        private readonly string _spotifyCredentialsFile;
-        private readonly string _clientId;
-        private readonly string _clientSecret;
-        private readonly string _playlistId;
+        this.volumeControlModule = new VolumeControlModule();
+        this.cachedApiResponses = new CachedApiResponses();
 
-        private EmbedIOAuthServer _server;
-        private SpotifyClient _spotify;
-        private readonly VolumeControlModule _volumeControlModule;
-        private readonly CachedApiResponses _cachedApiResponses;
+        this.clientId = Convert.ToString(spotifyCredentials.client_id);
+        this.clientSecret = Convert.ToString(spotifyCredentials.client_secret);
 
-        private readonly ThreadSafeObject<string> _currentlyPlayingId = new();
-        private readonly ThreadSafeObject<string> _currentlyPlayingSongName = new();
-        private readonly ThreadSafeObject<List<SimpleArtist>> _currentlyPlayingArtistsNames = new();
+        // _playlistId = Convert.ToString(spotifyCredentials.playlist_id);
+        var songCommandLambda = async (object module, string commandArgs, OnChatCommandReceivedArgs eventArgs) => { return await ((SpotifyModule)module).SongCommand(); };
+        commandDictionary.TryAddCommand(new Command("song", this, songCommandLambda, 1));
+    }
 
-        private volatile bool _queueMode = false;
-        private volatile bool _farmMode = true;
-
-        private bool _removedFromPlaylist = false;
-        private bool _addedToQueue = false;
-
-        public bool QueueMode
+    public bool QueueMode
+    {
+        get
         {
-            get
-            {
-                return _queueMode;
-            }
-            set
-            {
-                if (value == true)
-                {
-                    _volumeControlModule.SpotifyVolume = 0.07f;
-                    _volumeControlModule.DarkSoulsVolume = 0.22f;
-                }
-                    
-                else
-                {
-                    _volumeControlModule.SpotifyVolume = 0.05f;
-                    _volumeControlModule.DarkSoulsVolume = 0.27f;
-                }
-                    
-                _queueMode = value;
-            }
+            return this.queueMode;
         }
 
-        public bool FarmMode
+        set
         {
-            get
+            if (value == true)
             {
-                return _farmMode;
-            }
-            set
-            {
-                _farmMode = value;
-            }
-        }
-
-        public string CurrentlyPlayingId
-        {
-            get
-            {
-                return _currentlyPlayingId.Value;
-            }
-        }
-
-        public string CurrentlyPlayingSongName
-        {
-            get
-            {
-                return _currentlyPlayingSongName.Value;   
-            }
-        }
-
-        public List<string> CurrentlyPlayingArtistsNames
-        {
-            get
-            {
-                var artistsNamesAsString = new List<string>();
-                var artistsAsSimpleArtist = _currentlyPlayingArtistsNames.Value;
-                if (artistsAsSimpleArtist != null)
-                {
-                    foreach (var artist in artistsAsSimpleArtist)
-                    {
-                        artistsNamesAsString.Add(artist.Name);
-                    }
-                } 
-                return artistsNamesAsString;
-            }
-        }
-
-        public SpotifyModule(string moduleDataFolder, CommandDictionary commandDictionary) : base(moduleDataFolder)
-        {
-            _spotifyCredentialsFile = Path.Combine(base.moduleDataFolder, "spotify_credentials.json");
-            dynamic spotifyCredentials = Program.ParseJsonFile(_spotifyCredentialsFile);
-
-            _volumeControlModule = new VolumeControlModule();
-            _cachedApiResponses = new CachedApiResponses();
-
-            _clientId = Convert.ToString(spotifyCredentials.client_id);
-            _clientSecret = Convert.ToString(spotifyCredentials.client_secret);
-            // _playlistId = Convert.ToString(spotifyCredentials.playlist_id);
-
-            var songCommandLambda = async (object module, string commandArgs, OnChatCommandReceivedArgs eventArgs) => { return await ((SpotifyModule)module).SongCommand(); };
-            commandDictionary.TryAddCommand(new Command("song", this, songCommandLambda, 1));
-        }
-
-        private async Task<string> SongCommand()
-        {
-            await RefreshCurrentlyPlaying();
-            string artists = string.Join(", ", CurrentlyPlayingArtistsNames);
-            string song = CurrentlyPlayingSongName;
-            if (song == "" || artists == "")
-            {
-                return "Ain't nothing playing.";
+                this.volumeControlModule.SpotifyVolume = 0.07f;
+                this.volumeControlModule.DarkSoulsVolume = 0.22f;
             }
             else
             {
-                return song + " by " + artists;
+                this.volumeControlModule.SpotifyVolume = 0.05f;
+                this.volumeControlModule.DarkSoulsVolume = 0.27f;
             }
+
+            this.queueMode = value;
+        }
+    }
+
+    public bool FarmMode
+    {
+        get
+        {
+            return this.farmMode;
         }
 
-        public async Task Initialize()
+        set
         {
-            // Make sure "http://localhost:5543/callback" is in your spotify application as redirect uri!
-            _server = new EmbedIOAuthServer(new Uri("http://localhost:5543/callback"), 5543);
-            await _server.Start();
+            this.farmMode = value;
+        }
+    }
 
-            _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
-            _server.ErrorReceived += OnErrorReceived;
+    public string CurrentlyPlayingId
+    {
+        get
+        {
+            return this.currentlyPlayingId.Value;
+        }
+    }
 
-            var request = new LoginRequest(_server.BaseUri, _clientId, LoginRequest.ResponseType.Code)
+    public string CurrentlyPlayingSongName
+    {
+        get
+        {
+            return this.currentlyPlayingSongName.Value;
+        }
+    }
+
+    public List<string> CurrentlyPlayingArtistsNames
+    {
+        get
+        {
+            var artistsNamesAsString = new List<string>();
+            var artistsAsSimpleArtist = this.currentlyPlayingArtistsNames.Value;
+            if (artistsAsSimpleArtist != null)
             {
-                Scope = new List<string> { Scopes.UserModifyPlaybackState, Scopes.UserReadPlaybackState, Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPrivate }
-            };
-            BrowserUtil.Open(request.ToUri());
+                foreach (var artist in artistsAsSimpleArtist)
+                {
+                    artistsNamesAsString.Add(artist.Name);
+                }
+            }
+
+            return artistsNamesAsString;
+        }
+    }
+
+    public async Task Initialize()
+    {
+        // Make sure "http://localhost:5543/callback" is in your spotify application as redirect uri!
+        this.server = new EmbedIOAuthServer(new Uri("http://localhost:5543/callback"), 5543);
+        await this.server.Start();
+
+        this.server.AuthorizationCodeReceived += this.OnAuthorizationCodeReceived;
+        this.server.ErrorReceived += this.OnErrorReceived;
+
+        var request = new LoginRequest(this.server.BaseUri, this.clientId, LoginRequest.ResponseType.Code)
+        {
+            Scope = [Scopes.UserModifyPlaybackState, Scopes.UserReadPlaybackState, Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPrivate,],
+        };
+        BrowserUtil.Open(request.ToUri());
+    }
+
+    public async Task<bool> RefreshCurrentlyPlaying()
+    {
+        await this.cachedApiResponses.RefreshCachedApiResponses(this.spotify);
+        var context = this.cachedApiResponses.Context;
+        var queue = this.cachedApiResponses.Queue;
+
+        if (context != null && context.IsPlaying)
+        {
+            var currentlyPlaying = GetCurrentlyPlaying(queue);
+            this.currentlyPlayingId.Value = currentlyPlaying?.Id;
+            this.currentlyPlayingSongName.Value = currentlyPlaying?.Name;
+            this.currentlyPlayingArtistsNames.Value = currentlyPlaying?.Artists;
+        }
+        else
+        {
+            this.currentlyPlayingId.Value = string.Empty;
+            this.currentlyPlayingSongName.Value = string.Empty;
+            this.currentlyPlayingArtistsNames.Value = [];
         }
 
-        public async Task<bool> RefreshCurrentlyPlaying()
-        {
-            await _cachedApiResponses.RefreshCachedApiResponses(_spotify);
-            var context = _cachedApiResponses.Context;
-            var queue = _cachedApiResponses.Queue;
+        return true;
+    }
 
+    private static double? GetRemainingDuration(QueueResponse? queue, CurrentlyPlayingContext? context)
+    {
+        if (queue == null || context == null)
+        {
+            return null;
+        }
+
+        if (queue.CurrentlyPlaying is FullTrack track)
+        {
+            int duration = track.DurationMs;
+            int remainingDuration = duration - context.ProgressMs;
+            return remainingDuration / 1000.0;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
+    {
+        if (queue == null)
+        {
+            return null;
+        }
+
+        if (queue.CurrentlyPlaying is FullTrack track)
+        {
+            return track;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    private static FullTrack? GetNextInQueue(QueueResponse? queue)
+    {
+        if (queue == null)
+        {
+            return null;
+        }
+
+        if (queue.Queue[0] is FullTrack track)
+        {
+            return track;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    private static FullTrack? GetFirstInPlaylist(FullPlaylist? playlist)
+    {
+        if (playlist == null || playlist.Tracks == null || playlist.Tracks.Items == null)
+        {
+            return null;
+        }
+
+        var playableItem = playlist.Tracks.Items[0].Track;
+        if (playableItem is FullTrack track)
+        {
+            return track;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    private async Task<string> SongCommand()
+    {
+        await this.RefreshCurrentlyPlaying();
+        string artists = string.Join(", ", this.CurrentlyPlayingArtistsNames);
+        string song = this.CurrentlyPlayingSongName;
+        if (song == string.Empty || artists == string.Empty)
+        {
+            return "Ain't nothing playing.";
+        }
+        else
+        {
+            return song + " by " + artists;
+        }
+    }
+
+    private async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
+    {
+        await this.server.Stop();
+
+        var tokenResponse = await new OAuthClient().RequestToken(
+          new AuthorizationCodeTokenRequest(
+              this.clientId, this.clientSecret, response.Code, new Uri("http://localhost:5543/callback")));
+
+        var config = SpotifyClientConfig.CreateDefault().WithAuthenticator(new AuthorizationCodeAuthenticator(this.clientId, this.clientSecret, tokenResponse));
+        this.spotify = new SpotifyClient(config);
+
+        // QueueModeLoop();
+    }
+
+    private async Task OnErrorReceived(object sender, string error, string state)
+    {
+        Console.WriteLine($"Aborting authorization, error received: {error}");
+        await this.server.Stop();
+    }
+
+    // ADDED HELLA COMMENTS CUZ THIS CODE IS BAD
+    // loop specifically handles the QueueMode functinality
+    // where if the mode is enabled, when current song is going to end,
+    // the next song is queued up by the bot from a queue playlist,
+    // (and then deleted from the playlist; the bot consumes the playlist)
+    // rather than letting spotify continue to do whatever it was doing
+    private async Task QueueModeLoop()
+    {
+        while (true)
+        {
+            // every 12 seconds
+            // call spotify API to refresh currently known data
+            await Task.Delay(QueueModeLoopInterval);
+
+            await this.cachedApiResponses.RefreshCachedApiResponses(this.spotify);
+            var context = this.cachedApiResponses.Context;
+            var queue = this.cachedApiResponses.Queue;
+
+            // if spotify is playing
             if (context != null && context.IsPlaying)
             {
+                // get what's currently playing, see if it's changed
+                // from the last time we checked
                 var currentlyPlaying = GetCurrentlyPlaying(queue);
-                _currentlyPlayingId.Value = currentlyPlaying?.Id;
-                _currentlyPlayingSongName.Value = currentlyPlaying?.Name;
-                _currentlyPlayingArtistsNames.Value = currentlyPlaying?.Artists;
-            }
-            else
-            {
-                _currentlyPlayingId.Value = "";
-                _currentlyPlayingSongName.Value = "";
-                _currentlyPlayingArtistsNames.Value = [];
-            }
-            return true;
-        }
-
-        private async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
-        {
-            await _server.Stop();
-
-            var tokenResponse = await new OAuthClient().RequestToken(
-              new AuthorizationCodeTokenRequest(
-                  _clientId, _clientSecret, response.Code, new Uri("http://localhost:5543/callback")
-              )
-            );
-
-            var config = SpotifyClientConfig.CreateDefault().WithAuthenticator(new AuthorizationCodeAuthenticator(_clientId, _clientSecret, tokenResponse));
-            _spotify = new SpotifyClient(config);
-
-            // QueueModeLoop();
-        }
-
-        private async Task OnErrorReceived(object sender, string error, string state)
-        {
-            Console.WriteLine($"Aborting authorization, error received: {error}");
-            await _server.Stop();
-        }
-
-        // ADDED HELLA COMMENTS CUZ THIS CODE IS BAD
-        // loop specifically handles the QueueMode functinality
-        // where if the mode is enabled, when current song is going to end,
-        // the next song is queued up by the bot from a queue playlist,
-        // (and then deleted from the playlist; the bot consumes the playlist)
-        // rather than letting spotify continue to do whatever it was doing
-        private async Task QueueModeLoop()
-        {
-            while (true)
-            {
-                // every 12 seconds
-                // call spotify API to refresh currently known data
-                await Task.Delay(QueueModeLoopInterval);
-
-                await _cachedApiResponses.RefreshCachedApiResponses(_spotify);
-                var context = _cachedApiResponses.Context;
-                var queue = _cachedApiResponses.Queue;
-
-                // if spotify is playing
-                if (context != null && context.IsPlaying)
+                string? currentlyPlayingId = currentlyPlaying?.Id;
+                if (currentlyPlayingId != null && currentlyPlayingId != this.CurrentlyPlayingId)
                 {
-                    // get what's currently playing, see if it's changed
-                    // from the last time we checked
-                    var currentlyPlaying = GetCurrentlyPlaying(queue);
-                    string? currentlyPlayingId = currentlyPlaying?.Id;
-                    if (currentlyPlayingId != null && currentlyPlayingId != CurrentlyPlayingId)
+                    // IF now playing a different song than before...
+                    // set currently playing song info
+                    this.currentlyPlayingId.Value = currentlyPlayingId;
+                    this.currentlyPlayingSongName.Value = currentlyPlaying?.Name;
+                    this.currentlyPlayingArtistsNames.Value = currentlyPlaying?.Artists;
+
+                    // set these to false, meaning these actions are
+                    // queued to happen (will be set to true when the action is taken
+                    // so the action only happens once)
+                    this.addedToQueue = false;
+                    this.removedFromPlaylist = false;
+                }
+
+                // get remaining duration of current song, next song in queue
+                double? remainingDuration = GetRemainingDuration(queue, context);
+                var nextInQueue = GetNextInQueue(queue);
+                string? nextInQueueId = nextInQueue?.Id;
+
+                // if a certain duration remains in the current song
+                if (remainingDuration != null && remainingDuration < QueueModeRemainingDurationThreshold)
+                {
+                    // get queue playlist
+                    var playlist = await this.spotify.Playlists.Get(this.playlistId);
+
+                    // get first song in queue playlist
+                    var firstInPlaylist = GetFirstInPlaylist(playlist);
+                    string? firstInPlaylistId = firstInPlaylist?.Id;
+                    string? firstInPlaylistUri = firstInPlaylist?.Uri;
+
+                    if (!this.removedFromPlaylist && currentlyPlayingId != null && currentlyPlayingId == firstInPlaylistId)
                     {
-                        // IF now playing a different song than before...
-                        // set currently playing song info
-                        this._currentlyPlayingId.Value = currentlyPlayingId;
-                        this._currentlyPlayingSongName.Value = currentlyPlaying?.Name;
-                        this._currentlyPlayingArtistsNames.Value = currentlyPlaying?.Artists;
-
-                        // set these to false, meaning these actions are
-                        // queued to happen (will be set to true when the action is taken
-                        // so the action only happens once)
-                        _addedToQueue = false;
-                        _removedFromPlaylist = false;
-                    }
-
-                    // get remaining duration of current song, next song in queue
-                    double? remainingDuration = GetRemainingDuration(queue, context);
-                    var nextInQueue = GetNextInQueue(queue);
-                    string? nextInQueueId = nextInQueue?.Id;
-
-                    // if a certain duration remains in the current song
-                    if (remainingDuration != null && remainingDuration < QueueModeRemainingDurationThreshold)
-                    {
-                        // get queue playlist
-                        var playlist = await _spotify.Playlists.Get(_playlistId);
-
-                        // get first song in queue playlist
-                        var firstInPlaylist = GetFirstInPlaylist(playlist);
-                        string? firstInPlaylistId = firstInPlaylist?.Id;
-                        string? firstInPlaylistUri = firstInPlaylist?.Uri;
-
                         // if first song in queue playlist is currently playing, remove it from head of playlist
                         // (do this only once until currently playing song changes)
-                        if (!_removedFromPlaylist && currentlyPlayingId != null && currentlyPlayingId == firstInPlaylistId)
-                        {
-                            _removedFromPlaylist = true;
-                            await RemoveFirstSongFromPlaylist(playlist, _playlistId);
-                        }
+                        this.removedFromPlaylist = true;
+                        await this.RemoveFirstSongFromPlaylist(playlist, this.playlistId);
+                    }
+                    else if (this.QueueMode && !this.addedToQueue && nextInQueueId != null && firstInPlaylistUri != null && nextInQueueId != firstInPlaylistId)
+                    {
                         // if first song in queue playlist is NOT currently playing, add first song in queue playlist to queue
                         // (do this only once until currently playing song changes)
-                        else if (QueueMode && !_addedToQueue && nextInQueueId != null && firstInPlaylistUri != null && nextInQueueId != firstInPlaylistId)
-                        {
-                            _addedToQueue = true;
-                            await _spotify.Player.AddToQueue(new PlayerAddToQueueRequest(firstInPlaylistUri));
-                        }
+                        this.addedToQueue = true;
+                        await this.spotify.Player.AddToQueue(new PlayerAddToQueueRequest(firstInPlaylistUri));
                     }
                 }
             }
         }
+    }
 
-        private async Task RemoveFirstSongFromPlaylist(FullPlaylist playlist, string playlistId)
+    private async Task RemoveFirstSongFromPlaylist(FullPlaylist playlist, string playlistId)
+    {
+        IList<int>? indicesToRemove = [0,];
+        string? snapshotId = playlist.SnapshotId;
+        await this.spotify.Playlists.RemoveItems(playlistId, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
+    }
+
+    public class ThreadSafeObject<T>
+    {
+        private readonly object lockObject = new ();
+        private T value;
+
+        public T Value
         {
-            IList<int>? indicesToRemove = new List<int> { 0, };
-            string? snapshotId = playlist.SnapshotId;
-            await _spotify.Playlists.RemoveItems(playlistId, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
-        }
-
-        private static double? GetRemainingDuration(QueueResponse? queue, CurrentlyPlayingContext? context)
-        {
-            if (queue == null || context == null)
+            get
             {
-                return null;
-            }
-
-            if (queue.CurrentlyPlaying is FullTrack track)
-            {
-                int duration = track.DurationMs;
-                int remainingDuration = duration - context.ProgressMs;
-                return remainingDuration / 1000.0;
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
-        {
-            if (queue == null)
-            {
-                return null;
-            }
-
-            if (queue.CurrentlyPlaying is FullTrack track)
-            {
-                return track;
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        private static FullTrack? GetNextInQueue(QueueResponse? queue)
-        {
-            if (queue == null)
-            {
-                return null;
-            }
-
-            if (queue.Queue[0] is FullTrack track)
-            {
-                return track;
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        private static FullTrack? GetFirstInPlaylist(FullPlaylist? playlist)
-        {
-            if (playlist == null || playlist.Tracks == null || playlist.Tracks.Items == null)
-            {
-                return null;
-            }
-
-            var playableItem = playlist.Tracks.Items[0].Track;
-            if (playableItem is FullTrack track)
-            {
-                return track;
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        public class ThreadSafeObject<T>
-        {
-            private readonly object _lockObject = new();
-            private T _value;
-
-            public T Value
-            {
-                get
+                lock (this.lockObject)
                 {
-                    lock (_lockObject)
-                    {
-                        return _value;
-                    }
-                }
-                set
-                {
-                    lock (_lockObject)
-                    {
-                        this._value = value;
-                    }
-                }
-            }
-        }
-
-        private class CachedApiResponses
-        {
-            public CurrentlyPlayingContext Context
-            {
-                get
-                {
-                    return _contextCached.Value;
+                    return this.value;
                 }
             }
 
-            public QueueResponse Queue
+            set
             {
-                get
+                lock (this.lockObject)
                 {
-                    return _queueCached.Value;
+                    this.value = value;
                 }
             }
+        }
+    }
 
-            private readonly TimeSpan _callAgainTimeout = TimeSpan.FromSeconds(6);
-            private DateTime _timeOfLastCall = DateTime.MinValue;
+    private class CachedApiResponses
+    {
+        private readonly TimeSpan callAgainTimeout = TimeSpan.FromSeconds(6);
+        private readonly ThreadSafeObject<CurrentlyPlayingContext> contextCached = new ();
+        private readonly ThreadSafeObject<QueueResponse> queueCached = new ();
 
-            private ThreadSafeObject<CurrentlyPlayingContext> _contextCached = new();
-            private ThreadSafeObject<QueueResponse> _queueCached = new();
+        private DateTime timeOfLastCall = DateTime.MinValue;
 
-            public async Task<bool> RefreshCachedApiResponses(SpotifyClient spotify)
+        public CurrentlyPlayingContext Context
+        {
+            get
             {
-                DateTime now = DateTime.UtcNow;
-                DateTime timeoutTime = _timeOfLastCall.Add(_callAgainTimeout);
-                if (timeoutTime.CompareTo(now) < 0)
-                {
-                    _timeOfLastCall = now;
-                    var context = spotify.Player.GetCurrentPlayback();
-                    var queue = spotify.Player.GetQueue();
-
-                    _contextCached.Value = await context;
-                    _queueCached.Value = await queue;
-                }
-                return true;
+                return this.contextCached.Value;
             }
+        }
+
+        public QueueResponse Queue
+        {
+            get
+            {
+                return this.queueCached.Value;
+            }
+        }
+
+        public async Task<bool> RefreshCachedApiResponses(SpotifyClient spotify)
+        {
+            DateTime now = DateTime.UtcNow;
+            DateTime timeoutTime = this.timeOfLastCall.Add(this.callAgainTimeout);
+            if (timeoutTime.CompareTo(now) < 0)
+            {
+                this.timeOfLastCall = now;
+                var context = spotify.Player.GetCurrentPlayback();
+                var queue = spotify.Player.GetQueue();
+
+                this.contextCached.Value = await context;
+                this.queueCached.Value = await queue;
+            }
+
+            return true;
         }
     }
 }
