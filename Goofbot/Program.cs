@@ -1,186 +1,189 @@
-﻿using AngouriMath;
-using Goofbot.Modules;
-using Goofbot.Utils;
-using ImageMagick;
-using Newtonsoft.Json;
+﻿// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Goofbot;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using AngouriMath;
+using Goofbot.Modules;
+using Goofbot.Utils;
+using ImageMagick;
+using Newtonsoft.Json;
 using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 
-namespace Goofbot
+internal class Program
 {
-    class Program
+    public const string TwitchBotUsername = "goofbotthebot";
+    public const string TwitchChannelUsername = "goofballthecat";
+
+    private static readonly CommandDictionary CommandDictionary = new ();
+    private static readonly string GoofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
+
+    public static TwitchAuthenticationManager TwitchAuthenticationManager { get; private set; }
+
+    public static ColorDictionary ColorDictionary { get; private set; }
+
+    public static TwitchAPI TwitchAPI { get; private set; } = new ();
+
+    public static TwitchClient TwitchClient { get; private set; } = new ();
+
+    public static string StuffFolder { get; private set; }
+
+    public static async Task Main(string[] args)
     {
-        public const string TwitchBotUsername = "goofbotthebot";
-        public const string TwitchChannelUsername = "goofballthecat";
+        // Get location of bot data folder
+        string stuffLocationFile = Path.Join(GoofbotAppDataFolder, "stufflocation.txt");
+        StuffFolder = File.ReadAllText(stuffLocationFile).Trim();
 
-        private static readonly CommandDictionary s_commandDictionary = new();
-        private static readonly string s_goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
+        // Create color dictionary
+        string colorNamesFile = Path.Join(StuffFolder, "color_names.json");
+        ColorDictionary = new (colorNamesFile);
+        Task colorDictionaryTask = Task.Run(() => { ColorDictionary.Initialize(); });
 
-        public static TwitchAuthenticationManager TwitchAuthenticationManager { get; private set; }
-        public static ColorDictionary ColorDictionary { get; private set; }
-        public static TwitchAPI TwitchAPI { get; private set; } = new();
-        public static TwitchClient TwitchClient { get; private set; } = new();
-        public static string StuffFolder { get; private set; }
+        // initialize TwitchClient and TwitchAPI, authenticate with twitch
+        string twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
+        dynamic twitchAppCredentials = ParseJsonFile(twitchAppCredentialsFile);
+        string clientID = twitchAppCredentials.client_id;
+        string clientSecret = twitchAppCredentials.client_secret;
+        TwitchAuthenticationManager = new (clientID, clientSecret, TwitchClient, TwitchAPI);
+        Task authenticationManagerInitializeTask = TwitchAuthenticationManager.Initialize();
 
-        public static async Task Main(string[] args)
+        SpotifyModule spotifyModule = new ("SpotifyModule", CommandDictionary);
+        Task spotifyModuleInitializeTask = spotifyModule.Initialize();
+
+        MagickNET.Initialize();
+
+        TwitchClient.OnLog += Client_OnLog;
+        TwitchClient.OnConnected += Client_OnConnected;
+        TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
+        TwitchClient.OnMessageReceived += Client_OnMessageReceived;
+        TwitchClient.OnChatCommandReceived += Client_OnChatCommandReceived;
+
+        SoundAlertModule soundAlertModule = new ();
+        MiscCommandsModule miscCommandsModule = new ("MiscCommandsModule", CommandDictionary);
+
+        await authenticationManagerInitializeTask;
+        await spotifyModuleInitializeTask;
+        await colorDictionaryTask;
+        BlueGuyModule blueGuyModule = new ("BlueGuyModule", CommandDictionary);
+        TwitchClient.AddChatCommandIdentifier('!');
+        TwitchClient.Connect();
+        while (true)
         {
-            // Get location of bot data folder
-            string stuffLocationFile = Path.Join(s_goofbotAppDataFolder, "stufflocation.txt");
-            StuffFolder = File.ReadAllText(stuffLocationFile).Trim();
+            Console.ReadLine();
+        }
+    }
 
-            // Create color dictionary
-            string colorNamesFile = Path.Join(StuffFolder, "color_names.json");
-            ColorDictionary = new(colorNamesFile);
-            Task colorDictionaryTask = Task.Run(() => { ColorDictionary.Initialize(); });
+    public static dynamic ParseJsonFile(string filename)
+    {
+        string jsonString = File.ReadAllText(filename);
+        return JsonConvert.DeserializeObject(jsonString);
+    }
 
-            // initialize TwitchClient and TwitchAPI, authenticate with twitch
-            string twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
-            dynamic twitchAppCredentials = ParseJsonFile(twitchAppCredentialsFile);
-            string clientID = twitchAppCredentials.client_id;
-            string clientSecret = twitchAppCredentials.client_secret;
-            TwitchAuthenticationManager = new(clientID, clientSecret, TwitchClient, TwitchAPI);
-            Task authenticationManagerInitializeTask = TwitchAuthenticationManager.Initialize();
+    private static string ReverseString(string str)
+    {
+        char[] charArray = str.ToCharArray();
+        Array.Reverse(charArray);
+        return new string(charArray);
+    }
 
-            SpotifyModule spotifyModule = new("SpotifyModule", s_commandDictionary);
-            Task spotifyModuleInitializeTask = spotifyModule.Initialize();
+    private static string RemoveSpaces(string str)
+    {
+        return str.Replace(" ", string.Empty);
+    }
 
-            MagickNET.Initialize();
+    private static void Client_OnLog(object sender, OnLogArgs e)
+    {
+        Console.WriteLine($"{e.DateTime.ToString()}: {e.BotUsername} - {e.Data}");
+    }
 
-            TwitchClient.OnLog += Client_OnLog;
-            TwitchClient.OnConnected += Client_OnConnected;
-            TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
-            TwitchClient.OnMessageReceived += Client_OnMessageReceived;
-            TwitchClient.OnChatCommandReceived += Client_OnChatCommandReceived;
+    private static void Client_OnConnected(object sender, OnConnectedArgs e)
+    {
+        Console.WriteLine($"Connected to {e.AutoJoinChannel}");
+        TwitchClient.SendMessage(TwitchChannelUsername, "Goofbot is activated and at your service MrDestructoid");
+    }
 
-            SoundAlertModule soundAlertModule = new();
-            MiscCommandsModule miscCommandsModule = new("MiscCommandsModule", s_commandDictionary);
+    private static async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
+    {
+        string message = string.Empty;
+        string commandName = e.Command.CommandText;
+        string commandArgs = e.Command.ArgumentsAsString;
 
-            await authenticationManagerInitializeTask;
-            await spotifyModuleInitializeTask;
-            await colorDictionaryTask;
-            BlueGuyModule blueGuyModule = new("BlueGuyModule", s_commandDictionary);
-            TwitchClient.AddChatCommandIdentifier('!');
-            TwitchClient.Connect();
-            while (true)
+        Command command;
+        if (CommandDictionary.TryGetCommand(commandName, out command))
+        {
+            message = await command.ExecuteCommandAsync(commandArgs, e);
+        }
+        else if (CommandDictionary.TryGetCommand(ReverseString(commandName), out command))
+        {
+            List<string> a = e.Command.ArgumentsAsList;
+            a.ForEach(s => ReverseString(s));
+            string commandArgsReversed = string.Join(" ", a);
+
+            message = await command.ExecuteCommandAsync(commandArgsReversed, e);
+            message = ReverseString(message);
+        }
+
+        if (!message.Equals(string.Empty))
+        {
+            TwitchClient.SendMessage(TwitchChannelUsername, message);
+        }
+    }
+
+    private static void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
+    {
+        string message = string.Empty;
+        try
+        {
+            Entity expr = e.ChatMessage.Message;
+
+            if (expr.EvaluableNumerical)
             {
-                Console.ReadLine();
+                Entity eval = expr.Evaled;
+                string evalString = eval.ToString();
+                if (!RemoveSpaces(expr.ToString()).Equals(eval.ToString()))
+                {
+                    if (eval is not Entity.Number.Rational)
+                    {
+                        message = string.Format("{0:F7}", (double)(Entity.Number)eval);
+                    }
+                    else
+                    {
+                        message = eval.ToString();
+                    }
+                }
+                else if (evalString.Contains("/"))
+                {
+                    string[] nums = evalString.Split("/");
+                    if (nums.Length == 2)
+                    {
+                        double result = double.Parse(nums[0]) / double.Parse(nums[1]);
+                        message = string.Format("{0:0.#######}", result);
+                    }
+                    else
+                    {
+                        message = "Goof, fix your damn calculator.";
+                    }
+                }
             }
         }
-
-        public static dynamic ParseJsonFile(string filename)
+        catch
         {
-            string jsonString = File.ReadAllText(filename);
-            return JsonConvert.DeserializeObject(jsonString);
         }
-
-        private static string ReverseString(string str)
+        finally
         {
-            char[] charArray = str.ToCharArray();
-            Array.Reverse(charArray);
-            return new string(charArray);
-        }
-
-        private static string RemoveSpaces(string str)
-        {
-            return str.Replace(" ", String.Empty);
-        }
-
-        private static void Client_OnLog(object sender, OnLogArgs e)
-        {
-            Console.WriteLine($"{e.DateTime.ToString()}: {e.BotUsername} - {e.Data}");
-        }
-
-        private static void Client_OnConnected(object sender, OnConnectedArgs e)
-        {
-            Console.WriteLine($"Connected to {e.AutoJoinChannel}");
-            TwitchClient.SendMessage(TwitchChannelUsername, "Goofbot is activated and at your service MrDestructoid");
-        }
-
-        private static async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
-        {
-            string message = "";
-            string commandName = e.Command.CommandText;
-            string commandArgs = e.Command.ArgumentsAsString;
-
-            Command command;
-            if (s_commandDictionary.TryGetCommand(commandName, out command))
-            {
-                message = await command.ExecuteCommandAsync(commandArgs, e);
-            }
-            else if (s_commandDictionary.TryGetCommand(ReverseString(commandName), out command))
-            {
-                List<string> a = e.Command.ArgumentsAsList;
-                a.ForEach(s => ReverseString(s));
-                string commandArgsReversed = String.Join(" ", a);
-
-                message = await command.ExecuteCommandAsync(commandArgsReversed, e);
-                message = ReverseString(message);
-            }
-
-            if (!message.Equals(""))
+            if (!message.Equals(string.Empty))
             {
                 TwitchClient.SendMessage(TwitchChannelUsername, message);
             }
         }
+    }
 
-        private static void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
-        {
-            string message = "";
-            try
-            {
-                Entity expr = e.ChatMessage.Message;
-
-                if (expr.EvaluableNumerical)
-                {
-                    Entity eval = expr.Evaled;
-                    string evalString = eval.ToString();
-                    if (!RemoveSpaces(expr.ToString()).Equals(eval.ToString()))
-                    {
-                        if (eval is not Entity.Number.Rational)
-                        {
-                            message = String.Format("{0:F7}", (double)(Entity.Number)eval);
-                        }
-                        else
-                        {
-                            message = eval.ToString();
-                        }
-                    }
-                    else if (evalString.Contains("/"))
-                    {
-                        string[] nums = evalString.Split("/");
-                        if (nums.Length == 2)
-                        {
-                            double result = Double.Parse(nums[0]) / Double.Parse(nums[1]);
-                            message = String.Format("{0:0.#######}", result);
-                        }
-                        else
-                        {
-                            message = "Goof, fix your damn calculator.";
-                        }
-                    }
-                }
-            }
-            catch 
-            {
-                
-            }
-            finally
-            {
-                if (!message.Equals(""))
-                {
-                    TwitchClient.SendMessage(TwitchChannelUsername, message);
-                }
-            }
-        }
-
-        private static void Client_OnIncorrectLogin(object sender, OnIncorrectLoginArgs e)
-        {
-
-        }
+    private static void Client_OnIncorrectLogin(object sender, OnIncorrectLoginArgs e)
+    {
     }
 }
