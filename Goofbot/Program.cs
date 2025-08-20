@@ -133,7 +133,7 @@ namespace Goofbot
             string message = "";
             string commandName = ParseMessageForCommand(e, out string commandArgs);
 
-            string commandNameReversed = "!" + ReverseString(commandName.Substring(1));
+            string commandNameReversed = commandName[0] + ReverseString(commandName.Substring(1));
 
             Command command;
 
