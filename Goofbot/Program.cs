@@ -159,7 +159,17 @@ namespace Goofbot
                     Entity expr = e.ChatMessage.Message;
                     if (expr.EvaluableNumerical)
                     {
-                        TwitchClient.SendMessage(TwitchChannelUsername, expr.EvalNumerical().ToString());
+                        var eval = expr.EvalNumerical();
+                        if (eval is not Entity.Number.Rational)
+                        {
+                            message = String.Format("{0:F7}", (double)eval);
+                        }
+                        else
+                        {
+                            message = eval.ToString();
+                        }
+
+                        TwitchClient.SendMessage(TwitchChannelUsername, message);
                     }
                 }
                 catch
