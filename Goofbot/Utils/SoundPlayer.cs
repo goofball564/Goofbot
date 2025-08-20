@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Goofbot
+namespace Goofbot.Utils
 {
     internal class SoundPlayer
     {
@@ -30,7 +30,7 @@ namespace Goofbot
              _soundOut.Play();
         }
 
-        public void OnStopped(object? sender, PlaybackStoppedEventArgs e)
+        public void OnStopped(object sender, PlaybackStoppedEventArgs e)
         {
             Task.Run(() => { _soundOut.Dispose(); _waveSource.Dispose(); });
         }

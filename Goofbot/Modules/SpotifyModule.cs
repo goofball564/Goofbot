@@ -1,4 +1,5 @@
-﻿using SpotifyAPI.Web;
+﻿using Goofbot.Utils;
+using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
 using System;
 using System.Collections.Generic;
@@ -104,7 +105,7 @@ namespace Goofbot.Modules
             }
         }
 
-        public SpotifyModule(string moduleDataFolder, TwitchClient twitchClient, TwitchAPI twitchAPI) : base(moduleDataFolder, twitchClient, twitchAPI)
+        public SpotifyModule(string moduleDataFolder, CommandDictionary commandDictionary) : base(moduleDataFolder)
         {
             _spotifyCredentialsFile = Path.Combine(_moduleDataFolder, "spotify_credentials.json");
             dynamic spotifyCredentials = Program.ParseJsonFile(_spotifyCredentialsFile);
@@ -115,29 +116,23 @@ namespace Goofbot.Modules
             _clientId = Convert.ToString(spotifyCredentials.client_id);
             _clientSecret = Convert.ToString(spotifyCredentials.client_secret);
             // _playlistId = Convert.ToString(spotifyCredentials.playlist_id);
+
+            var songCommandLambda = (object obj, string args) => { return ((SpotifyModule)obj).SongCommand().Result; };
+            commandDictionary.TryAddCommand(new Command("!song", this, songCommandLambda, 1));
         }
 
-        private async void OnSongCommand(object sender, string e)
+        private async Task<string> SongCommand()
         {
             await RefreshCurrentlyPlaying();
             string artists = string.Join(", ", CurrentlyPlayingArtistsNames);
             string song = CurrentlyPlayingSongName;
             if (song == "" || artists == "")
             {
-                _twitchClient.SendMessage(Program.TwitchChannelUsername, "Ain't nothing playing.");
+                return "Ain't nothing playing.";
             }
             else
             {
-                _twitchClient.SendMessage(Program.TwitchChannelUsername, song + " by " + artists);
-            }
-        }
-
-        protected override void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
-        {
-            string command = Program.ParseMessageForCommand(e, out string args);
-            if (command.Equals("!song"))
-            {
-                OnSongCommand(this, args);
+                return song + " by " + artists;
             }
         }
 

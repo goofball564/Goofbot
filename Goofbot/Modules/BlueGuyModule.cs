@@ -1,6 +1,6 @@
-﻿using ImageMagick;
+﻿using Goofbot.Utils;
+using ImageMagick;
 using System;
-using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -25,15 +25,15 @@ namespace Goofbot.Modules
         private const string DefaultColorName = "BlueGuy";
         private const string SpeedGuy = "SpeedGuy";
 
+        private const string ColorChangeString = "Oooooh... pretty! OhISee";
+        private const string UnknownColorString = "I'm not familiar with this color birbAnalysis";
+        private const string NoArgumentString = "To change the Guy's color, try \"!guy purple\", \"!guy random\", or \"!guy #ff0000\"";
+        private const string RandomColorString = "Let's try {0} LilAnalysis";
+        private const string SameColorString = "The Guy is already that color Sussy";
+
         private string _lastColorCode = "";
 
-        public event EventHandler<EventArgs> ColorChange;
-        public event EventHandler<string> UnknownColor;
-        public event EventHandler<EventArgs> NoArgument;
-        public event EventHandler<string> RandomColor;
-        public event EventHandler SameColor;
-
-        public BlueGuyModule(string moduleDataFolder, TwitchClient twitchClient, TwitchAPI twitchAPI) : base(moduleDataFolder, twitchClient, twitchAPI)
+        public BlueGuyModule(string moduleDataFolder, CommandDictionary commandDictionary) : base(moduleDataFolder)
         {
             _blueGuyGrayscaleFile = Path.Combine(_moduleDataFolder, "BlueGuyGrayscale.png");
             _blueGuyColorFile = Path.Combine(_moduleDataFolder, "BlueGuyColor.png");
@@ -42,153 +42,88 @@ namespace Goofbot.Modules
 
             _guysFolder = Path.Combine(_moduleDataFolder, "Guys");
             Directory.CreateDirectory(_guysFolder);
+
+            var guyCommandLambda = (object obj, string args) => { return ((BlueGuyModule)obj).GuyCommand(args); };
+            commandDictionary.TryAddCommand(new Command("!guy", this, guyCommandLambda, 1));
         }
 
-        protected virtual void OnColorChange()
-        {
-            _twitchClient.SendMessage(Program.TwitchChannelUsername, "Oooooh... pretty! OhISee");
-        }
-
-        protected virtual void OnUnknownColor()
-        {
-            _twitchClient.SendMessage(Program.TwitchChannelUsername, "I'm not familiar with this color birbAnalysis");
-        }
-
-        protected virtual void OnNoArgument()
-        {
-            _twitchClient.SendMessage(Program.TwitchChannelUsername, "To change the Guy's color, try \"!guy purple\", \"!guy random\", or \"!guy #ff0000\"");
-        }
-
-        protected virtual void OnRandomColor(string colorName)
-        {
-            _twitchClient.SendMessage(Program.TwitchChannelUsername, String.Format("Let's try {0} LilAnalysis", colorName));
-        }
-
-        protected virtual void OnSameColor()
-        {
-            _twitchClient.SendMessage(Program.TwitchChannelUsername, "The Guy is already that color Sussy");
-        }
-
-        protected override void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
-        {
-            string command = Program.ParseMessageForCommand(e, out string args);
-            if (command.Equals("!guy"))
-            {
-                OnGuyCommand(this, args);
-            }
-        }
-
-        public void OnGuyCommand(object sender, string args)
+        public string GuyCommand(string args)
         {
             args = args.ToLowerInvariant();
+            string message = "";
+
+            if (args != _lastColorCode)
+            {
+                message = ColorChangeString;
+            }
+            else
+            {
+                message = SameColorString;
+            }
+
             if (IsColorHexCode(args))
             {
-                if (args != _lastColorCode)
-                {
-                    _lastColorCode = args;
-                    CreateBlueGuyImage(args);
-                    OnColorChange();
-                }
-                else
-                {
-                    OnSameColor();
-                }
+                CreateBlueGuyImage(args);
+                _lastColorCode = args;
             }
-            else if (args.ToLowerInvariant() == "default" || args == DefaultColorName)
+            else if (args == "default" || args == DefaultColorName)
             {
-                if (_lastColorCode != DefaultColorName)
-                {
-                    _lastColorCode = DefaultColorName;
-                    RestoreDefaultBlueGuy();
-                    OnColorChange();
-                }
-                else
-                {
-                    OnSameColor();
-                }
-
+                _lastColorCode = DefaultColorName;
+                RestoreDefaultBlueGuy();
             }
             else if (args == SpeedGuy)
             {
-                if (_lastColorCode != SpeedGuy)
-                {
-                    _lastColorCode = SpeedGuy;
-                    CreateBlueGuyImage(SpeedGuy);
-                    OnColorChange();
-                }
-                else
-                {
-                    OnSameColor();
-                }
-
-            }
-            else if (args.ToLowerInvariant() == "random")
-            {
-                string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
-                if (hexColorCode != null)
-                {
-                    if (hexColorCode != _lastColorCode)
-                    {
-                        _lastColorCode = hexColorCode;
-                        CreateBlueGuyImage(hexColorCode);
-                        OnRandomColor(colorName);
-
-                        string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", "") + "Guy.png";
-                        try
-                        {
-                            File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
-                        }
-                        catch (IOException)
-                        {
-
-                        }
-                    }
-                    else
-                    {
-                        OnSameColor();
-                    }
-                }
-                else
-                {
-                    OnUnknownColor();
-                }
+                _lastColorCode = SpeedGuy;
+                CreateBlueGuyImage(SpeedGuy);
             }
             else if (args == "")
             {
-                OnNoArgument();
+                message = NoArgumentString;
+            }
+            else if (args == "random")
+            {
+                string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
+
+                _lastColorCode = hexColorCode;
+                CreateBlueGuyImage(hexColorCode);
+
+                string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", "") + "Guy.png";
+                try
+                {
+                    File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
+                }
+                catch (IOException)
+                {
+
+                }
+
+                message = String.Format(RandomColorString, colorName);
             }
             else
             {
                 string hexColorCode = Program.ColorDictionary.GetHex(args);
                 if (hexColorCode != null)
                 {
-                    if (hexColorCode != _lastColorCode)
+                    _lastColorCode = hexColorCode;
+                    CreateBlueGuyImage(hexColorCode);
+
+                    string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args).Replace(" ", "") + "Guy.png";
+                    try
                     {
-                        _lastColorCode = hexColorCode;
-                        CreateBlueGuyImage(hexColorCode);
-                        OnColorChange();
-
-                        string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args).Replace(" ", "") + "Guy.png";
-                        try
-                        {
-                            File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
-                        }
-                        catch (IOException)
-                        {
-
-                        }
+                        File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
                     }
-                    else
+                    catch (IOException)
                     {
-                        OnSameColor();
-                    }
 
+                    }
                 }
                 else
                 {
-                    OnUnknownColor();
+                    message = UnknownColorString;
                 }
             }
+
+            return message;
         }
 
         private void CreateBlueGuyImage(string hexColorCode)

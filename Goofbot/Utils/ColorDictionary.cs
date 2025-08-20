@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Goofbot
+namespace Goofbot.Utils
 {
     internal class ColorDictionary
     {
@@ -113,7 +113,7 @@ namespace Goofbot
             int min = Math.Min(color.R, Math.Min(color.G, color.B));
 
             hue = color.GetHue();
-            saturation = (max == 0) ? 0 : 1.0 - (1.0 * min / max);
+            saturation = max == 0 ? 0 : 1.0 - 1.0 * min / max;
             value = max / 255.0;
         }
 
@@ -123,7 +123,7 @@ namespace Goofbot
             saturation *= 100;
 
             
-            return saturation >= (((100 - value) / 2.0) + 30.0);
+            return saturation >= (100 - value) / 2.0 + 30.0;
         }
 
         private async Task<string> RequestColorNames()

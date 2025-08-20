@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Net;
 
-namespace Goofbot
+namespace Goofbot.Utils
 {
     public class WebServer
     {
@@ -21,7 +21,7 @@ namespace Goofbot
             _listener.Close();
         }
 
-        public async Task<String> Listen()
+        public async Task<string> Listen()
         {
             _listener.Start();
             string code = await OnRequest();
@@ -29,7 +29,7 @@ namespace Goofbot
             return code;
         }
 
-        private async Task<String> OnRequest()
+        private async Task<string> OnRequest()
         {
             while (_listener.IsListening)
             {

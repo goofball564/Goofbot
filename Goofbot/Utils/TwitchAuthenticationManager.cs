@@ -10,7 +10,7 @@ using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Models;
 
-namespace Goofbot
+namespace Goofbot.Utils
 {
     internal class TwitchAuthenticationManager
     {
@@ -30,7 +30,7 @@ namespace Goofbot
 
         private string _twitchClientID;
         private string _twitchClientSecret;
-        public string _twitchBotAccessToken; // should be made private
+        private string _twitchBotAccessToken;
         private string _twitchChannelAccessToken;
 
         private TwitchClient _twitchClient;
@@ -138,7 +138,7 @@ namespace Goofbot
                    $"client_id={_twitchClientID}&" +
                    $"redirect_uri={System.Web.HttpUtility.UrlEncode(TwitchAppRedirectUrl)}&" +
                    "response_type=code&" +
-                   $"scope={String.Join('+', scopes)}";
+                   $"scope={string.Join('+', scopes)}";
         }
 
         private async Task<string> RequestTwitchAuthorizationCode(bool useChrome)
