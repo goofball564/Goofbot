@@ -1,38 +1,38 @@
-﻿using CSCore.Codecs;
+﻿namespace Goofbot.Utils;
+
+using System.Threading.Tasks;
+using CSCore.Codecs;
 using CSCore;
 using CSCore.SoundOut;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace Goofbot.Utils
+internal class SoundPlayer
 {
-    internal class SoundPlayer
+    private const float DefaultVolume = 0.15f;
+
+    private readonly ISoundOut soundOut;
+    private readonly IWaveSource waveSource;
+
+    public SoundPlayer(string soundFile)
     {
-        private const float DefaultVolume = 0.15f;
+        this.waveSource = CodecFactory.Instance.GetCodec(soundFile);
 
-        private readonly ISoundOut _soundOut;
-        private readonly IWaveSource _waveSource;
+        this.soundOut = new WasapiOut();
+        this.soundOut.Initialize(this.waveSource);
+        this.soundOut.Volume = DefaultVolume;
+        this.soundOut.Stopped += this.OnStopped;
+    }
 
-        public SoundPlayer(string soundFile)
+    public void Play()
+    {
+         this.soundOut.Play();
+    }
+
+    public void OnStopped(object sender, PlaybackStoppedEventArgs e)
+    {
+        Task.Run(() =>
         {
-            _waveSource = CodecFactory.Instance.GetCodec(soundFile);
-
-            _soundOut = new WasapiOut();
-            _soundOut.Initialize(_waveSource);
-            _soundOut.Volume = DefaultVolume;
-            _soundOut.Stopped += OnStopped;
-        }
-
-        public void Play()
-        {
-             _soundOut.Play();
-        }
-
-        public void OnStopped(object sender, PlaybackStoppedEventArgs e)
-        {
-            Task.Run(() => { _soundOut.Dispose(); _waveSource.Dispose(); });
-        }
+            this.soundOut.Dispose();
+            this.waveSource.Dispose();
+        });
     }
 }
