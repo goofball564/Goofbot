@@ -6,6 +6,8 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 internal partial class BlueGuyModule : GoofbotModule
 {
@@ -28,6 +30,8 @@ internal partial class BlueGuyModule : GoofbotModule
     private readonly string speedGuyColorFile;
     private readonly string guysFolder;
 
+    private readonly SemaphoreSlim semaphore = new (1, 1);
+
     private string lastColorCode = string.Empty;
 
     public BlueGuyModule(string moduleDataFolder, CommandDictionary commandDictionary)
@@ -41,70 +45,54 @@ internal partial class BlueGuyModule : GoofbotModule
         this.guysFolder = Path.Combine(this.ModuleDataFolder, "Guys");
         Directory.CreateDirectory(this.guysFolder);
 
-        var guyCommandLambda = async (object module, string commandArgs, OnChatCommandReceivedArgs eventArgs) => { return ((BlueGuyModule)module).GuyCommand(commandArgs); };
+        var guyCommandLambda = async (object module, string commandArgs, OnChatCommandReceivedArgs eventArgs) => { return await ((BlueGuyModule)module).GuyCommand(commandArgs); };
         commandDictionary.TryAddCommand(new Command("guy", this, guyCommandLambda, 1));
     }
 
-    public string GuyCommand(string args)
+    public async Task<string> GuyCommand(string args)
     {
-        args = args.ToLowerInvariant();
         string message;
+        await this.semaphore.WaitAsync();
+        try
+        {
+            args = args.ToLowerInvariant();
 
-        if (args != this.lastColorCode)
-        {
-            message = ColorChangeString;
-        }
-        else
-        {
-            message = SameColorString;
-        }
-
-        if (IsColorHexCode(args))
-        {
-            this.CreateBlueGuyImage(args);
-            this.lastColorCode = args;
-        }
-        else if (args == "default" || args == DefaultColorName)
-        {
-            this.lastColorCode = DefaultColorName;
-            this.RestoreDefaultBlueGuy();
-        }
-        else if (args == SpeedGuy)
-        {
-            this.lastColorCode = SpeedGuy;
-            this.CreateBlueGuyImage(SpeedGuy);
-        }
-        else if (args == string.Empty)
-        {
-            message = NoArgumentString;
-        }
-        else if (args == "random")
-        {
-            string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
-
-            this.lastColorCode = hexColorCode;
-            this.CreateBlueGuyImage(hexColorCode);
-
-            string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", string.Empty) + "Guy.png";
-            try
+            if (args != this.lastColorCode)
             {
-                File.Copy(OtherOutputFile, Path.Combine(this.guysFolder, colorFileName), false);
+                message = ColorChangeString;
             }
-            catch (IOException)
+            else
             {
+                message = SameColorString;
             }
 
-            message = string.Format(RandomColorString, colorName);
-        }
-        else
-        {
-            string hexColorCode = Program.ColorDictionary.GetHex(args);
-            if (hexColorCode != null)
+            if (IsColorHexCode(args))
             {
+                this.CreateBlueGuyImage(args);
+                this.lastColorCode = args;
+            }
+            else if (args == "default" || args == DefaultColorName)
+            {
+                this.lastColorCode = DefaultColorName;
+                this.RestoreDefaultBlueGuy();
+            }
+            else if (args == SpeedGuy)
+            {
+                this.lastColorCode = SpeedGuy;
+                this.CreateBlueGuyImage(SpeedGuy);
+            }
+            else if (args == string.Empty)
+            {
+                message = NoArgumentString;
+            }
+            else if (args == "random")
+            {
+                string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
+
                 this.lastColorCode = hexColorCode;
                 this.CreateBlueGuyImage(hexColorCode);
 
-                string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args).Replace(" ", string.Empty) + "Guy.png";
+                string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", string.Empty) + "Guy.png";
                 try
                 {
                     File.Copy(OtherOutputFile, Path.Combine(this.guysFolder, colorFileName), false);
@@ -112,11 +100,35 @@ internal partial class BlueGuyModule : GoofbotModule
                 catch (IOException)
                 {
                 }
+
+                message = string.Format(RandomColorString, colorName);
             }
             else
             {
-                message = UnknownColorString;
+                string hexColorCode = Program.ColorDictionary.GetHex(args);
+                if (hexColorCode != null)
+                {
+                    this.lastColorCode = hexColorCode;
+                    this.CreateBlueGuyImage(hexColorCode);
+
+                    string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args).Replace(" ", string.Empty) + "Guy.png";
+                    try
+                    {
+                        File.Copy(OtherOutputFile, Path.Combine(this.guysFolder, colorFileName), false);
+                    }
+                    catch (IOException)
+                    {
+                    }
+                }
+                else
+                {
+                    message = UnknownColorString;
+                }
             }
+        }
+        finally
+        {
+            this.semaphore.Release();
         }
 
         return message;
