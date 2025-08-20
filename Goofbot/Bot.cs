@@ -1,25 +1,4 @@
-﻿/*using System;
-using TwitchLib.Client;
-using TwitchLib.Client.Events;
-using TwitchLib.Client.Models;
-using TwitchLib.Communication.Clients;
-using TwitchLib.Communication.Models;
-using Goofbot.Modules;
-using System.Threading.Tasks;
-
-namespace Goofbot
-{
-    internal class Bot
-    {
-        private readonly TwitchClient TwitchClient;
-        private readonly string _channel;
-
-        // private readonly ChatInteractionModule ChatInteractionModule;
-        // private readonly PipeServerModule PipeServerModule;
-        private readonly BlueGuyModule _blueGuyModule;
-        private readonly CommandParsingModule _commandParsingModule;
-        private readonly SpotifyModule _spotifyModule;
-        private readonly SoundAlertModule _soundAlertModule;
+﻿/*
 
         // react to game or livesplit
         // track stats?
@@ -39,88 +18,6 @@ namespace Goofbot
         // interface to easily modify commands?
         // 
 
-
-        public Bot(string botUsername, string channelUsername, string botAccessToken)
-        {
-            _channel = channelUsername;
-
-            var credentials = new ConnectionCredentials(botUsername, botAccessToken);
-
-            TwitchClient = new TwitchClient();
-            TwitchClient.Initialize(credentials, channelUsername);
-            TwitchClient.OnLog += Client_OnLog;
-            TwitchClient.OnJoinedChannel += Client_OnJoinedChannel;
-            TwitchClient.OnMessageReceived += Client_OnMessageReceived;
-            TwitchClient.OnConnected += Client_OnConnected;
-            TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
-            TwitchClient.Connect();
-
-            _commandParsingModule = new CommandParsingModule();
-            _blueGuyModule = new BlueGuyModule("BlueGuyModule");
-            _spotifyModule = new SpotifyModule("SpotifyModule");
-            _soundAlertModule = new SoundAlertModule();
-
-            _commandParsingModule.BlueGuyCommand.ExecuteCommand += _blueGuyModule.OnGuyCommand;
-            _commandParsingModule.SongCommand.ExecuteCommand += CommandParsingModule_OnSongCommand;
-            _commandParsingModule.RefreshColorsCommand.ExecuteCommand += CommandParsingModule_OnRefreshColorsCommand;
-            // CommandParsingModule.QueueModeCommand.ExecuteCommand += CommandParsingModule_OnQueueModeCommand;
-
-            // CommandParsingModule.TimeoutNotElapsed += CommandParsingModule_OnTimeoutNotElapsed;
-            CommandParsingModule.NotBroadcaster += CommandParsingModule_OnNotBroadcaster;
-
-            _blueGuyModule.ColorChange += BlueGuyModule_OnColorChange;
-            _blueGuyModule.UnknownColor += BlueGuyModule_OnUnknownColor;
-            _blueGuyModule.NoArgument += BlueGuyModule_OnNoArgument;
-            _blueGuyModule.RandomColor += BlueGuyModule_OnRandomColor;
-            _blueGuyModule.SameColor += BlueGuyModule_OnSameColor;
-
-            // PipeServerModule.RunStart += PiperServerModule_OnRunStart;
-            // PipeServerModule.RunReset += PipeServerModule_OnRunReset;
-            // PipeServerModule.RunSplit += PipeServerModule_OnRunSplit;*/
-            // PipeServerModule.Start();
-
-    /*        TwitchClient.SendMessage(_channel, "Goofbot is activated and at your service MrDestructoid");
-        }
-
-        private void Client_OnLog(object sender, OnLogArgs e)
-        {
-            Console.WriteLine($"{e.DateTime.ToString()}: {e.BotUsername} - {e.Data}");
-        }
-
-        private void Client_OnConnected(object sender, OnConnectedArgs e)
-        {
-            Console.WriteLine($"Connected to {e.AutoJoinChannel}");
-        }
-
-        private void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
-        {
-            
-        }
-
-        private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
-        {
-            _commandParsingModule.ParseMessageForCommand(e);
-        }
-
-        private void Client_OnIncorrectLogin(object sender, OnIncorrectLoginArgs e)
-        {
-
-        }
-
-        private async void CommandParsingModule_OnSongCommand(object sender, string e)
-        {
-            await _spotifyModule.RefreshCurrentlyPlaying();
-            string artists = string.Join(", ", _spotifyModule.CurrentlyPlayingArtistsNames);
-            string song = _spotifyModule.CurrentlyPlayingSongName;
-            if (song == "" || artists == "")
-            {
-                TwitchClient.SendMessage(_channel, "Ain't nothing playing.");
-            }
-            else
-            {
-                TwitchClient.SendMessage(_channel, song + " by " + artists);
-            }
-        }
 
         private async void CommandParsingModule_OnRefreshColorsCommand(object sender, string e)
         {
@@ -181,29 +78,6 @@ namespace Goofbot
             }
         }*//*
 
-        private void BlueGuyModule_OnColorChange(object sender, EventArgs e)
-        {
-            TwitchClient.SendMessage(_channel, "Oooooh... pretty! OhISee");
-        }
-
-        private void BlueGuyModule_OnUnknownColor(object sender, string unknownColor)
-        {
-            TwitchClient.SendMessage(_channel, String.Format("I'm not familiar with this color birbAnalysis", unknownColor));
-        }
-
-        private void BlueGuyModule_OnNoArgument(object sender, EventArgs e)
-        {
-            TwitchClient.SendMessage(_channel, "To change the Guy's color, try \"!guy purple\", \"!guy random\", or \"!guy #ff0000\"");
-        }
-
-        private void BlueGuyModule_OnRandomColor(object sender, string colorName)
-        {
-            TwitchClient.SendMessage(_channel, String.Format("Let's try {0} LilAnalysis", colorName));
-        }
-
-        private void BlueGuyModule_OnSameColor(object sender, EventArgs e)
-        {
-            TwitchClient.SendMessage(_channel, "The Guy is already that color Sussy");
         }
     }
 }
