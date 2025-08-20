@@ -55,17 +55,15 @@ internal class ColorDictionary
                 string colorNameLower = colorName.ToLowerInvariant();
                 string colorHex = Convert.ToString(color.hex).ToLowerInvariant();
 
-                if (!this.colorDictionary.ContainsKey(colorNameLower))
+                if (this.colorDictionary.TryAdd(colorNameLower, colorHex))
                 {
-                    this.colorDictionary.Add(colorNameLower, colorHex);
                     this.colorNameList.Add(colorName);
                 }
 
                 GetHSV(colorHex, out double h, out double s, out double v);
 
-                if (v >= 0.2 && GoodSaturation(s, v) && !this.saturatedColorDictionary.ContainsKey(colorNameLower))
+                if (v >= 0.2 && GoodSaturation(s, v) && this.saturatedColorDictionary.TryAdd(colorNameLower, colorHex))
                 {
-                    this.saturatedColorDictionary.Add(colorNameLower, colorHex);
                     this.saturatedColorNameList.Add(colorName);
                 }
             }
