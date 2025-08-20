@@ -22,24 +22,24 @@ internal partial class BlueGuyModule : GoofbotModule
     private const string RandomColorString = "Let's try {0} LilAnalysis";
     private const string SameColorString = "The Guy is already that color Sussy";
 
-    private readonly string _blueGuyGrayscaleFile;
-    private readonly string _blueGuyColorFile;
-    private readonly string _blueGuyEyesFile;
-    private readonly string _speedGuyColorFile;
-    private readonly string _guysFolder;
+    private readonly string blueGuyGrayscaleFile;
+    private readonly string blueGuyColorFile;
+    private readonly string blueGuyEyesFile;
+    private readonly string speedGuyColorFile;
+    private readonly string guysFolder;
 
-    private string _lastColorCode = string.Empty;
+    private string lastColorCode = string.Empty;
 
     public BlueGuyModule(string moduleDataFolder, CommandDictionary commandDictionary)
         : base(moduleDataFolder)
     {
-        _blueGuyGrayscaleFile = Path.Combine(base.moduleDataFolder, "BlueGuyGrayscale.png");
-        _blueGuyColorFile = Path.Combine(base.moduleDataFolder, "BlueGuyColor.png");
-        _blueGuyEyesFile = Path.Combine(base.moduleDataFolder, "BlueGuyEyes.png");
-        _speedGuyColorFile = Path.Combine(base.moduleDataFolder, "SpeedGuyColor.png");
+        this.blueGuyGrayscaleFile = Path.Combine(this.ModuleDataFolder, "BlueGuyGrayscale.png");
+        this.blueGuyColorFile = Path.Combine(this.ModuleDataFolder, "BlueGuyColor.png");
+        this.blueGuyEyesFile = Path.Combine(this.ModuleDataFolder, "BlueGuyEyes.png");
+        this.speedGuyColorFile = Path.Combine(this.ModuleDataFolder, "SpeedGuyColor.png");
 
-        _guysFolder = Path.Combine(base.moduleDataFolder, "Guys");
-        Directory.CreateDirectory(_guysFolder);
+        this.guysFolder = Path.Combine(this.ModuleDataFolder, "Guys");
+        Directory.CreateDirectory(this.guysFolder);
 
         var guyCommandLambda = async (object module, string commandArgs, OnChatCommandReceivedArgs eventArgs) => { return ((BlueGuyModule)module).GuyCommand(commandArgs); };
         commandDictionary.TryAddCommand(new Command("guy", this, guyCommandLambda, 1));
@@ -50,7 +50,7 @@ internal partial class BlueGuyModule : GoofbotModule
         args = args.ToLowerInvariant();
         string message;
 
-        if (args != _lastColorCode)
+        if (args != this.lastColorCode)
         {
             message = ColorChangeString;
         }
@@ -61,18 +61,18 @@ internal partial class BlueGuyModule : GoofbotModule
 
         if (IsColorHexCode(args))
         {
-            CreateBlueGuyImage(args);
-            _lastColorCode = args;
+            this.CreateBlueGuyImage(args);
+            this.lastColorCode = args;
         }
         else if (args == "default" || args == DefaultColorName)
         {
-            _lastColorCode = DefaultColorName;
-            RestoreDefaultBlueGuy();
+            this.lastColorCode = DefaultColorName;
+            this.RestoreDefaultBlueGuy();
         }
         else if (args == SpeedGuy)
         {
-            _lastColorCode = SpeedGuy;
-            CreateBlueGuyImage(SpeedGuy);
+            this.lastColorCode = SpeedGuy;
+            this.CreateBlueGuyImage(SpeedGuy);
         }
         else if (args == string.Empty)
         {
@@ -82,13 +82,13 @@ internal partial class BlueGuyModule : GoofbotModule
         {
             string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
 
-            _lastColorCode = hexColorCode;
-            CreateBlueGuyImage(hexColorCode);
+            this.lastColorCode = hexColorCode;
+            this.CreateBlueGuyImage(hexColorCode);
 
             string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", string.Empty) + "Guy.png";
             try
             {
-                File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
+                File.Copy(OtherOutputFile, Path.Combine(this.guysFolder, colorFileName), false);
             }
             catch (IOException)
             {
@@ -101,13 +101,13 @@ internal partial class BlueGuyModule : GoofbotModule
             string hexColorCode = Program.ColorDictionary.GetHex(args);
             if (hexColorCode != null)
             {
-                _lastColorCode = hexColorCode;
-                CreateBlueGuyImage(hexColorCode);
+                this.lastColorCode = hexColorCode;
+                this.CreateBlueGuyImage(hexColorCode);
 
                 string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args).Replace(" ", string.Empty) + "Guy.png";
                 try
                 {
-                    File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
+                    File.Copy(OtherOutputFile, Path.Combine(this.guysFolder, colorFileName), false);
                 }
                 catch (IOException)
                 {
@@ -122,15 +122,24 @@ internal partial class BlueGuyModule : GoofbotModule
         return message;
     }
 
+    [GeneratedRegex("^#[0-9A-Fa-f]{6}$")]
+    private static partial Regex HexColorCodeRegex();
+
+    private static bool IsColorHexCode(string args)
+    {
+        Match match = HexColorCodeRegex().Match(args);
+        return match.Success;
+    }
+
     private void CreateBlueGuyImage(string hexColorCode)
     {
         using (var images = new MagickImageCollection())
         {
-            var first = new MagickImage(_blueGuyGrayscaleFile);
+            var first = new MagickImage(this.blueGuyGrayscaleFile);
 
             if (hexColorCode == SpeedGuy)
             {
-                var speedBackground = new MagickImage(_speedGuyColorFile);
+                var speedBackground = new MagickImage(this.speedGuyColorFile);
 
                 var croppedFlag = first.Clone();
                 croppedFlag.Composite(speedBackground, CompositeOperator.Atop);
@@ -149,7 +158,7 @@ internal partial class BlueGuyModule : GoofbotModule
                 solidColor.Dispose();
             }
 
-            var second = new MagickImage(_blueGuyEyesFile);
+            var second = new MagickImage(this.blueGuyEyesFile);
 
             images.Add(first);
             images.Add(second);
@@ -168,20 +177,11 @@ internal partial class BlueGuyModule : GoofbotModule
         try
         {
             // true means it is allowed to overwrite the file
-            File.Copy(_blueGuyColorFile, OtherOutputFile, true);
+            File.Copy(this.blueGuyColorFile, OtherOutputFile, true);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
         }
-    }
-
-    [GeneratedRegex("^#[0-9A-Fa-f]{6}$")]
-    private static partial Regex HexColorCodeRegex();
-
-    private static bool IsColorHexCode(string args)
-    {
-        Match match = HexColorCodeRegex().Match(args);
-        return match.Success;
     }
 }

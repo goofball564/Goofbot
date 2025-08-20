@@ -96,7 +96,7 @@ internal class Program
 
     private static void Client_OnLog(object sender, OnLogArgs e)
     {
-        Console.WriteLine($"{e.DateTime.ToString()}: {e.BotUsername} - {e.Data}");
+        Console.WriteLine($"{e.DateTime}: {e.BotUsername} - {e.Data}");
     }
 
     private static void Client_OnConnected(object sender, OnConnectedArgs e)
@@ -154,7 +154,7 @@ internal class Program
                         message = eval.ToString();
                     }
                 }
-                else if (evalString.Contains("/"))
+                else if (evalString.Contains('/'))
                 {
                     string[] nums = evalString.Split("/");
                     if (nums.Length == 2)
