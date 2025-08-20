@@ -1,94 +1,98 @@
-﻿using System;
+﻿namespace Goofbot.Modules;
+
+using System;
 using System.Diagnostics;
 using System.Linq;
 using CoreAudio;
-
-namespace Goofbot.Modules
+internal class VolumeControlModule
 {
-    internal class VolumeControlModule
+    private readonly AudioSessionVolumeControl darkSouls;
+    private readonly AudioSessionVolumeControl spotify;
+
+    public VolumeControlModule()
     {
-        private readonly AudioSessionVolumeControl _darkSouls;
-        private readonly AudioSessionVolumeControl _spotify;
+        this.darkSouls = new AudioSessionVolumeControl(["DarkSoulsRemastered", "DARKSOULS"]);
+        this.spotify = new AudioSessionVolumeControl("Spotify");
+    }
 
-        public float SpotifyVolume
+    public float SpotifyVolume
+    {
+        set
+        {
+            this.spotify.Volume = value;
+        }
+    }
+
+    public float DarkSoulsVolume
+    {
+        set
+        {
+            this.darkSouls.Volume = value;
+        }
+    }
+
+    private class AudioSessionVolumeControl
+    {
+        private readonly string[] processNames;
+        private AudioSessionControl2? audioSessionControl;
+
+        public AudioSessionVolumeControl(string processName)
+        {
+            this.processNames = [processName];
+        }
+
+        public AudioSessionVolumeControl(string[] processNames)
+        {
+            this.processNames = processNames;
+        }
+
+        public float Volume
         {
             set
             {
-                _spotify.Volume = value;
-            }
-        }
-
-        public float DarkSoulsVolume
-        {
-            set
-            {
-                _darkSouls.Volume = value;
-            }
-        }
-        public VolumeControlModule()
-        {
-            _darkSouls = new AudioSessionVolumeControl(["DarkSoulsRemastered", "DARKSOULS"]);
-            _spotify = new AudioSessionVolumeControl("Spotify");
-        }
-
-        private class AudioSessionVolumeControl
-        {
-            private readonly string[] _processNames;
-            private AudioSessionControl2? _audioSessionControl;
-
-            public float Volume
-            {
-                set
+                if (this.audioSessionControl == null || this.audioSessionControl.State == AudioSessionState.AudioSessionStateExpired)
                 {
-                    if (_audioSessionControl == null || _audioSessionControl.State == AudioSessionState.AudioSessionStateExpired)
-                    {
-                        RefreshSession();
-                    }
+                    this.RefreshSession();
+                }
 
-                    if (value > 1.0f)
-                        value = 1.0f;
-                    else if (value < 0.0f)
-                        value = 0.0f;
-                    try
+                if (value > 1.0f)
+                {
+                    value = 1.0f;
+                }
+                else if (value < 0.0f)
+                {
+                    value = 0.0f;
+                }
+
+                try
+                {
+                    if (this.audioSessionControl != null)
                     {
-                        if (_audioSessionControl != null)
-                        {
-                            _audioSessionControl.SimpleAudioVolume.MasterVolume = value;
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        // Do nothing :)
+                        this.audioSessionControl.SimpleAudioVolume.MasterVolume = value;
                     }
                 }
-            }
-
-            public AudioSessionVolumeControl(string processName)
-            {
-                this._processNames = [processName];
-            }
-
-            public AudioSessionVolumeControl(string[] processNames)
-            {
-                this._processNames = processNames;
-            }
-
-            public void RefreshSession()
-            {
-                MMDeviceEnumerator DevEnum = new MMDeviceEnumerator(Guid.NewGuid());
-                MMDeviceCollection devices = DevEnum.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
-                foreach (MMDevice device in devices)
+                catch (Exception)
                 {
-                    foreach (AudioSessionControl2 session in device.AudioSessionManager2.Sessions)
+                    // Do nothing :)
+                }
+            }
+        }
+
+        public void RefreshSession()
+        {
+            MMDeviceEnumerator devEnum = new (Guid.NewGuid());
+            MMDeviceCollection devices = devEnum.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+            foreach (MMDevice device in devices)
+            {
+                foreach (AudioSessionControl2 session in device.AudioSessionManager2.Sessions)
+                {
+                    if (session.State == AudioSessionState.AudioSessionStateActive)
                     {
-                        if (session.State == AudioSessionState.AudioSessionStateActive)
+                        Process p = Process.GetProcessById((int)session.ProcessID);
+                        if (this.processNames.Contains(p.ProcessName))
                         {
-                            Process p = Process.GetProcessById((int)session.ProcessID);
-                            if (_processNames.Contains(p.ProcessName))
-                            {
-                                _audioSessionControl = session;
-                                return;
-                            }
+                            this.audioSessionControl = session;
+                            return;
                         }
                     }
                 }
