@@ -1,9 +1,11 @@
-﻿using Goofbot.Modules;
+﻿using AngouriMath;
+using Goofbot.Modules;
 using Goofbot.Utils;
 using ImageMagick;
 using Newtonsoft.Json;
 using System;
 using System.IO;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Client;
@@ -34,7 +36,7 @@ namespace Goofbot
             // Create color dictionary
             string colorNamesFile = Path.Join(StuffFolder, "color_names.json");
             ColorDictionary = new(colorNamesFile);
-            Task colorDictionaryTask = Task.Run( () => { ColorDictionary.Initialize(); });
+            Task colorDictionaryTask = Task.Run(() => { ColorDictionary.Initialize(); });
 
             // initialize TwitchClient and TwitchAPI, authenticate with twitch
             string twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
@@ -121,31 +123,51 @@ namespace Goofbot
             string message = "";
             string commandName = ParseMessageForCommand(e, out string commandArgs);
 
-            string commandNameReversed = commandName[0] + ReverseString(commandName.Substring(1));
-
             Command command;
-
             if (s_commandDictionary.TryGetCommand(commandName, out command))
             {
                 message = await command.ExecuteCommandAsync(commandArgs, e);
             }
-            else if (s_commandDictionary.TryGetCommand(commandNameReversed, out command))
+            else
             {
-                string[] commandArgsArray = commandArgs.Split(" ");
-                for(int i = 0; i < commandArgsArray.Length; i++)
+                string commandNameReversed = commandName[0] + ReverseString(commandName.Substring(1));
+
+                if (s_commandDictionary.TryGetCommand(commandNameReversed, out command))
                 {
-                    commandArgsArray[i] = ReverseString(commandArgsArray[i]);
-                }
-                string commandArgsReversed = String.Join(" ", commandArgsArray);
-            
-                message = await command.ExecuteCommandAsync(commandArgsReversed, e);
-                message = ReverseString(message);
+                    string[] commandArgsArray = commandArgs.Split(" ");
+                    for (int i = 0; i < commandArgsArray.Length; i++)
+                    {
+                        commandArgsArray[i] = ReverseString(commandArgsArray[i]);
+                    }
+                    string commandArgsReversed = String.Join(" ", commandArgsArray);
+
+                    message = await command.ExecuteCommandAsync(commandArgsReversed, e);
+                    message = ReverseString(message);
+                }           
             }
+            
+            
 
             if (!message.Equals(""))
             {
                 TwitchClient.SendMessage(TwitchChannelUsername, message);
-            } 
+            }
+            else
+            {
+                try
+                {
+                    Entity expr = e.ChatMessage.Message;
+                    if (expr.EvaluableNumerical)
+                    {
+                        TwitchClient.SendMessage(TwitchChannelUsername, expr.EvalNumerical().ToString());
+                    }
+                }
+                catch
+                {
+
+                }
+                
+            }
         }
 
         private static void Client_OnIncorrectLogin(object sender, OnIncorrectLoginArgs e)
