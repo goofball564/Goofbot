@@ -1,16 +1,13 @@
-﻿using System.IO;
-using TwitchLib.Api;
-using TwitchLib.Client;
-using TwitchLib.Client.Events;
+﻿namespace Goofbot.Utils;
 
-namespace Goofbot.Utils
+using System.IO;
+
+internal abstract class GoofbotModule
 {
-    internal abstract class GoofbotModule
+    private readonly string moduleDataFolder;
+
+    protected GoofbotModule(string moduleDataFolder)
     {
-        protected readonly string _moduleDataFolder;
-        protected GoofbotModule(string moduleDataFolder) 
-        {
-            _moduleDataFolder = Path.Combine(Program.StuffFolder, moduleDataFolder);
-        }
+        this.moduleDataFolder = Path.Combine(Program.StuffFolder, moduleDataFolder);
     }
 }

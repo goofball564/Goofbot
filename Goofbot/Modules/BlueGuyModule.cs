@@ -35,12 +35,12 @@ namespace Goofbot.Modules
 
         public BlueGuyModule(string moduleDataFolder, CommandDictionary commandDictionary) : base(moduleDataFolder)
         {
-            _blueGuyGrayscaleFile = Path.Combine(_moduleDataFolder, "BlueGuyGrayscale.png");
-            _blueGuyColorFile = Path.Combine(_moduleDataFolder, "BlueGuyColor.png");
-            _blueGuyEyesFile = Path.Combine(_moduleDataFolder, "BlueGuyEyes.png");
-            _speedGuyColorFile = Path.Combine(_moduleDataFolder, "SpeedGuyColor.png");
+            _blueGuyGrayscaleFile = Path.Combine(base.moduleDataFolder, "BlueGuyGrayscale.png");
+            _blueGuyColorFile = Path.Combine(base.moduleDataFolder, "BlueGuyColor.png");
+            _blueGuyEyesFile = Path.Combine(base.moduleDataFolder, "BlueGuyEyes.png");
+            _speedGuyColorFile = Path.Combine(base.moduleDataFolder, "SpeedGuyColor.png");
 
-            _guysFolder = Path.Combine(_moduleDataFolder, "Guys");
+            _guysFolder = Path.Combine(base.moduleDataFolder, "Guys");
             Directory.CreateDirectory(_guysFolder);
 
             var guyCommandLambda = async (object module, string commandArgs, OnChatCommandReceivedArgs eventArgs) => { return ((BlueGuyModule)module).GuyCommand(commandArgs); };

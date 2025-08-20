@@ -105,7 +105,7 @@ namespace Goofbot.Modules
 
         public SpotifyModule(string moduleDataFolder, CommandDictionary commandDictionary) : base(moduleDataFolder)
         {
-            _spotifyCredentialsFile = Path.Combine(_moduleDataFolder, "spotify_credentials.json");
+            _spotifyCredentialsFile = Path.Combine(base.moduleDataFolder, "spotify_credentials.json");
             dynamic spotifyCredentials = Program.ParseJsonFile(_spotifyCredentialsFile);
 
             _volumeControlModule = new VolumeControlModule();
