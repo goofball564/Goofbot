@@ -1,180 +1,187 @@
-﻿using Goofbot.Utils;
+﻿namespace Goofbot.Modules;
+
+using Goofbot.Utils;
 using ImageMagick;
 using System;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
-using TwitchLib.Api;
-using TwitchLib.Client;
 using TwitchLib.Client.Events;
-
-namespace Goofbot.Modules
+internal partial class BlueGuyModule : GoofbotModule
 {
-    internal partial class BlueGuyModule : GoofbotModule
+    private const string OutputFile = "R:\\temp.png";
+    private const string OtherOutputFile = "R:\\temp-1.png";
+    private const string ColorOutputFile = "R:\\color.png";
+
+    private const string DefaultColorName = "BlueGuy";
+    private const string SpeedGuy = "SpeedGuy";
+
+    private const string ColorChangeString = "Oooooh... pretty! OhISee";
+    private const string UnknownColorString = "I'm not familiar with this color birbAnalysis";
+    private const string NoArgumentString = "To change the Guy's color, try \"!guy purple\", \"!guy random\", or \"!guy #ff0000\"";
+    private const string RandomColorString = "Let's try {0} LilAnalysis";
+    private const string SameColorString = "The Guy is already that color Sussy";
+
+    private readonly string _blueGuyGrayscaleFile;
+    private readonly string _blueGuyColorFile;
+    private readonly string _blueGuyEyesFile;
+    private readonly string _speedGuyColorFile;
+    private readonly string _guysFolder;
+
+    private string _lastColorCode = string.Empty;
+
+    public BlueGuyModule(string moduleDataFolder, CommandDictionary commandDictionary)
+        : base(moduleDataFolder)
     {
-        private readonly string _blueGuyGrayscaleFile;
-        private readonly string _blueGuyColorFile;
-        private readonly string _blueGuyEyesFile;
-        private readonly string _speedGuyColorFile;
-        private readonly string _guysFolder;
+        _blueGuyGrayscaleFile = Path.Combine(base.moduleDataFolder, "BlueGuyGrayscale.png");
+        _blueGuyColorFile = Path.Combine(base.moduleDataFolder, "BlueGuyColor.png");
+        _blueGuyEyesFile = Path.Combine(base.moduleDataFolder, "BlueGuyEyes.png");
+        _speedGuyColorFile = Path.Combine(base.moduleDataFolder, "SpeedGuyColor.png");
 
-        private const string OutputFile = "R:\\temp.png";
-        private const string OtherOutputFile = "R:\\temp-1.png";
-        private const string ColorOutputFile = "R:\\color.png";
+        _guysFolder = Path.Combine(base.moduleDataFolder, "Guys");
+        Directory.CreateDirectory(_guysFolder);
 
-        private const string DefaultColorName = "BlueGuy";
-        private const string SpeedGuy = "SpeedGuy";
+        var guyCommandLambda = async (object module, string commandArgs, OnChatCommandReceivedArgs eventArgs) => { return ((BlueGuyModule)module).GuyCommand(commandArgs); };
+        commandDictionary.TryAddCommand(new Command("guy", this, guyCommandLambda, 1));
+    }
 
-        private const string ColorChangeString = "Oooooh... pretty! OhISee";
-        private const string UnknownColorString = "I'm not familiar with this color birbAnalysis";
-        private const string NoArgumentString = "To change the Guy's color, try \"!guy purple\", \"!guy random\", or \"!guy #ff0000\"";
-        private const string RandomColorString = "Let's try {0} LilAnalysis";
-        private const string SameColorString = "The Guy is already that color Sussy";
+    public string GuyCommand(string args)
+    {
+        args = args.ToLowerInvariant();
+        string message;
 
-        private string _lastColorCode = "";
-
-        public BlueGuyModule(string moduleDataFolder, CommandDictionary commandDictionary) : base(moduleDataFolder)
+        if (args != _lastColorCode)
         {
-            _blueGuyGrayscaleFile = Path.Combine(base.moduleDataFolder, "BlueGuyGrayscale.png");
-            _blueGuyColorFile = Path.Combine(base.moduleDataFolder, "BlueGuyColor.png");
-            _blueGuyEyesFile = Path.Combine(base.moduleDataFolder, "BlueGuyEyes.png");
-            _speedGuyColorFile = Path.Combine(base.moduleDataFolder, "SpeedGuyColor.png");
-
-            _guysFolder = Path.Combine(base.moduleDataFolder, "Guys");
-            Directory.CreateDirectory(_guysFolder);
-
-            var guyCommandLambda = async (object module, string commandArgs, OnChatCommandReceivedArgs eventArgs) => { return ((BlueGuyModule)module).GuyCommand(commandArgs); };
-            commandDictionary.TryAddCommand(new Command("guy", this, guyCommandLambda, 1));
+            message = ColorChangeString;
+        }
+        else
+        {
+            message = SameColorString;
         }
 
-        public string GuyCommand(string args)
+        if (IsColorHexCode(args))
         {
-            args = args.ToLowerInvariant();
-            string message = "";
+            CreateBlueGuyImage(args);
+            _lastColorCode = args;
+        }
+        else if (args == "default" || args == DefaultColorName)
+        {
+            _lastColorCode = DefaultColorName;
+            RestoreDefaultBlueGuy();
+        }
+        else if (args == SpeedGuy)
+        {
+            _lastColorCode = SpeedGuy;
+            CreateBlueGuyImage(SpeedGuy);
+        }
+        else if (args == string.Empty)
+        {
+            message = NoArgumentString;
+        }
+        else if (args == "random")
+        {
+            string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
 
-            if (args != _lastColorCode)
+            _lastColorCode = hexColorCode;
+            CreateBlueGuyImage(hexColorCode);
+
+            string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", string.Empty) + "Guy.png";
+            try
             {
-                message = ColorChangeString;
+                File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
             }
-            else
+            catch (IOException)
             {
-                message = SameColorString;
             }
 
-            if (IsColorHexCode(args))
+            message = string.Format(RandomColorString, colorName);
+        }
+        else
+        {
+            string hexColorCode = Program.ColorDictionary.GetHex(args);
+            if (hexColorCode != null)
             {
-                CreateBlueGuyImage(args);
-                _lastColorCode = args;
-            }
-            else if (args == "default" || args == DefaultColorName)
-            {
-                _lastColorCode = DefaultColorName;
-                RestoreDefaultBlueGuy();
-            }
-            else if (args == SpeedGuy)
-            {
-                _lastColorCode = SpeedGuy;
-                CreateBlueGuyImage(SpeedGuy);
-            }
-            else if (args == "")
-            {
-                message = NoArgumentString;
-            }
-            else if (args == "random")
-            {
-                string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
-
                 _lastColorCode = hexColorCode;
                 CreateBlueGuyImage(hexColorCode);
 
-                string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", "") + "Guy.png";
-                try { File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false); } catch (IOException) { }
-
-                message = String.Format(RandomColorString, colorName);
+                string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args).Replace(" ", string.Empty) + "Guy.png";
+                try
+                {
+                    File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
+                }
+                catch (IOException)
+                {
+                }
             }
             else
             {
-                string hexColorCode = Program.ColorDictionary.GetHex(args);
-                if (hexColorCode != null)
-                {
-                    _lastColorCode = hexColorCode;
-                    CreateBlueGuyImage(hexColorCode);
-
-                    string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args).Replace(" ", "") + "Guy.png";
-                    try { File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false); } catch (IOException) { }
-                }
-                else
-                {
-                    message = UnknownColorString;
-                }
+                message = UnknownColorString;
             }
-
-            return message;
         }
 
-        private void CreateBlueGuyImage(string hexColorCode)
+        return message;
+    }
+
+    private void CreateBlueGuyImage(string hexColorCode)
+    {
+        using (var images = new MagickImageCollection())
         {
-            using (var images = new MagickImageCollection())
+            var first = new MagickImage(_blueGuyGrayscaleFile);
+
+            if (hexColorCode == SpeedGuy)
             {
-                var first = new MagickImage(_blueGuyGrayscaleFile);
+                var speedBackground = new MagickImage(_speedGuyColorFile);
 
-                if (hexColorCode == SpeedGuy)
-                {
-                    var speedBackground = new MagickImage(_speedGuyColorFile);
+                var croppedFlag = first.Clone();
+                croppedFlag.Composite(speedBackground, CompositeOperator.Atop);
 
-                    var croppedFlag = first.Clone();
-                    croppedFlag.Composite(speedBackground, CompositeOperator.Atop);
+                first.Composite(croppedFlag, CompositeOperator.Overlay);
 
-                    first.Composite(croppedFlag, CompositeOperator.Overlay);
-
-                    croppedFlag.Dispose();
-                    speedBackground.Dispose();
-                }
-                else
-                {
-                    var solidColor = first.Clone();
-                    solidColor.Colorize(new MagickColor(hexColorCode), (Percentage)100.0);
-                    first.Composite(solidColor, CompositeOperator.Overlay);
-                    solidColor.Write(ColorOutputFile, MagickFormat.Png);
-                    solidColor.Dispose();
-                }
-
-                var second = new MagickImage(_blueGuyEyesFile);
-
-                images.Add(first);
-                images.Add(second);
-                images.Coalesce();
-
-                images.Write(OutputFile, MagickFormat.Png);
-
-                images.Dispose();
-                first.Dispose();
-                second.Dispose();
+                croppedFlag.Dispose();
+                speedBackground.Dispose();
             }
-        }
+            else
+            {
+                var solidColor = first.Clone();
+                solidColor.Colorize(new MagickColor(hexColorCode), (Percentage)100.0);
+                first.Composite(solidColor, CompositeOperator.Overlay);
+                solidColor.Write(ColorOutputFile, MagickFormat.Png);
+                solidColor.Dispose();
+            }
 
-        private void RestoreDefaultBlueGuy()
+            var second = new MagickImage(_blueGuyEyesFile);
+
+            images.Add(first);
+            images.Add(second);
+            images.Coalesce();
+
+            images.Write(OutputFile, MagickFormat.Png);
+
+            images.Dispose();
+            first.Dispose();
+            second.Dispose();
+        }
+    }
+
+    private void RestoreDefaultBlueGuy()
+    {
+        try
         {
-            try
-            {
-                // true means it is allowed to overwrite the file
-                File.Copy(_blueGuyColorFile, OtherOutputFile, true);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
+            // true means it is allowed to overwrite the file
+            File.Copy(_blueGuyColorFile, OtherOutputFile, true);
         }
-
-        [GeneratedRegex("^#[0-9A-Fa-f]{6}$")]
-        private static partial Regex HexColorCodeRegex();
-
-        private static bool IsColorHexCode(string args)
+        catch (Exception e)
         {
-            Match match = HexColorCodeRegex().Match(args);
-            return match.Success;
+            Console.WriteLine(e);
         }
+    }
 
-        
+    [GeneratedRegex("^#[0-9A-Fa-f]{6}$")]
+    private static partial Regex HexColorCodeRegex();
+
+    private static bool IsColorHexCode(string args)
+    {
+        Match match = HexColorCodeRegex().Match(args);
+        return match.Success;
     }
 }
