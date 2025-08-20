@@ -4,7 +4,7 @@ using System.IO;
 
 internal abstract class GoofbotModule
 {
-    private readonly string moduleDataFolder;
+    protected readonly string moduleDataFolder;
 
     protected GoofbotModule(string moduleDataFolder)
     {
