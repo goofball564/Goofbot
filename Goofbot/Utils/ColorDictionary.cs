@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Goofbot.Utils;
+
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -6,137 +10,133 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Goofbot.Utils
+internal class ColorDictionary
 {
-    internal class ColorDictionary
+    public const string ColorNamesRequestUrl = "https://api.color.pizza/v1/";
+
+    private readonly Random random = new ();
+    private readonly string colorNamesFile;
+    private readonly HttpClient httpClient = new ();
+    private readonly SemaphoreSlim semaphore = new (1, 1);
+
+    private List<string> colorNameList;
+    private Dictionary<string, string> colorDictionary;
+
+    private List<string> saturatedColorNameList;
+    private Dictionary<string, string> saturatedColorDictionary;
+
+    public ColorDictionary(string colorNamesFile)
     {
-        public const string ColorNamesRequestUrl = "https://api.color.pizza/v1/";
+        this.colorNamesFile = colorNamesFile;
+    }
 
-        private readonly Random _random = new();
-        private readonly string _colorNamesFile;
-        private readonly HttpClient _httpClient = new();
-        private readonly SemaphoreSlim _semaphore = new(1, 1);
+    public async Task Initialize(bool forceRedownload = false)
+    {
+        await this.Refresh(forceRedownload);
+    }
 
-        private List<string> _colorNameList;
-        private Dictionary<string, string> _colorDictionary;
-
-        private List<string> _saturatedColorNameList;
-        private Dictionary<string, string> _saturatedColorDictionary;
-
-        public ColorDictionary(string colorNamesFile)
+    public async Task Refresh(bool forceRedownload = false)
+    {
+        await this.semaphore.WaitAsync();
+        try
         {
-            _colorNamesFile = colorNamesFile;
-        }
+            this.colorNameList = [];
+            this.colorDictionary = [];
+            this.saturatedColorNameList = [];
+            this.saturatedColorDictionary = [];
 
-        public async Task Initialize(bool forceRedownload = false)
-        {
-            await Refresh(forceRedownload);
-        }
-
-        public async Task Refresh(bool forceRedownload = false)
-        {
-            await _semaphore.WaitAsync();
-            try
+            if (forceRedownload || !File.Exists(this.colorNamesFile))
             {
-                _colorNameList = [];
-                _colorDictionary = [];
-                _saturatedColorNameList = [];
-                _saturatedColorDictionary = [];
+                await this.RefreshColorNamesFile();
+            }
 
-                if (forceRedownload || !File.Exists(_colorNamesFile))
+            dynamic colorNamesJson = Program.ParseJsonFile(this.colorNamesFile);
+            foreach (var color in colorNamesJson.colors)
+            {
+                string colorName = Convert.ToString(color.name);
+                string colorNameLower = colorName.ToLowerInvariant();
+                string colorHex = Convert.ToString(color.hex).ToLowerInvariant();
+
+                if (!this.colorDictionary.ContainsKey(colorNameLower))
                 {
-                    await RefreshColorNamesFile();
+                    this.colorDictionary.Add(colorNameLower, colorHex);
+                    this.colorNameList.Add(colorName);
                 }
 
-                dynamic colorNamesJson = Program.ParseJsonFile(_colorNamesFile);
-                foreach (var color in colorNamesJson.colors)
+                GetHSV(colorHex, out double h, out double s, out double v);
+
+                if (v >= 0.2 && GoodSaturation(s, v) && !this.saturatedColorDictionary.ContainsKey(colorNameLower))
                 {
-                    string colorName = Convert.ToString(color.name);
-                    string colorNameLower = colorName.ToLowerInvariant();
-                    string colorHex = Convert.ToString(color.hex).ToLowerInvariant();
-
-                    if (!_colorDictionary.ContainsKey(colorNameLower))
-                    {
-                        _colorDictionary.Add(colorNameLower, colorHex);
-                        _colorNameList.Add(colorName);
-                    }
-
-                    GetHSV(colorHex, out double h, out double s, out double v);
-
-                    if (v >= 0.2 && GoodSaturation(s, v) && !_saturatedColorDictionary.ContainsKey(colorNameLower))
-                    {
-                        _saturatedColorDictionary.Add(colorNameLower, colorHex);
-                        _saturatedColorNameList.Add(colorName);
-                    }
+                    this.saturatedColorDictionary.Add(colorNameLower, colorHex);
+                    this.saturatedColorNameList.Add(colorName);
                 }
             }
-            finally
-            {
-                _semaphore.Release();
-            }    
         }
-
-        public string GetHex(string colorName)
+        finally
         {
-            _colorDictionary.TryGetValue(colorName.ToLowerInvariant(), out string hex);
-            return hex;
+            this.semaphore.Release();
         }
+    }
 
-        public string GetRandomName()
+    public string GetHex(string colorName)
+    {
+        this.colorDictionary.TryGetValue(colorName.ToLowerInvariant(), out string hex);
+        return hex;
+    }
+
+    public string GetRandomName()
+    {
+        int randomIndex = this.random.Next(0, this.colorNameList.Count);
+        return this.colorNameList[randomIndex];
+    }
+
+    public string GetRandomSaturatedName(out string hex)
+    {
+        int randomIndex = this.random.Next(0, this.saturatedColorNameList.Count);
+        string colorName = this.saturatedColorNameList[randomIndex];
+        hex = this.GetHex(colorName);
+        return this.saturatedColorNameList[randomIndex];
+    }
+
+    private static void GetHSV(string hex, out double hue, out double saturation, out double value)
+    {
+        var color = ColorTranslator.FromHtml(hex);
+
+        int max = Math.Max(color.R, Math.Max(color.G, color.B));
+        int min = Math.Min(color.R, Math.Min(color.G, color.B));
+
+        hue = color.GetHue();
+        saturation = max == 0 ? 0 : 1.0 - (1.0 * min / max);
+        value = max / 255.0;
+    }
+
+    private static bool GoodSaturation(double saturation, double value)
+    {
+        value *= 100;
+        saturation *= 100;
+
+        return saturation >= ((100 - value) / 2.0) + 30.0;
+    }
+
+    private async Task<string> RequestColorNames()
+    {
+        var response = await this.httpClient.GetAsync(ColorNamesRequestUrl);
+        if (response.IsSuccessStatusCode)
         {
-            int randomIndex = _random.Next(0, _colorNameList.Count);
-            return _colorNameList[randomIndex];
+            return await response.Content.ReadAsStringAsync();
         }
-
-        public string GetRandomSaturatedName(out string hex)
+        else
         {
-            int randomIndex = _random.Next(0, _saturatedColorNameList.Count);
-            string colorName = _saturatedColorNameList[randomIndex];
-            hex = GetHex(colorName);
-            return _saturatedColorNameList[randomIndex];
+            return string.Empty;
         }
+    }
 
-        private static void GetHSV(string hex, out double hue, out double saturation, out double value)
+    private async Task RefreshColorNamesFile()
+    {
+        string colorNamesString = await this.RequestColorNames();
+        if (colorNamesString != string.Empty)
         {
-            var color = ColorTranslator.FromHtml(hex);
-
-            int max = Math.Max(color.R, Math.Max(color.G, color.B));
-            int min = Math.Min(color.R, Math.Min(color.G, color.B));
-
-            hue = color.GetHue();
-            saturation = max == 0 ? 0 : 1.0 - 1.0 * min / max;
-            value = max / 255.0;
-        }
-
-        private static bool GoodSaturation(double saturation, double value)
-        {
-            value *= 100;
-            saturation *= 100;
-
-            
-            return saturation >= (100 - value) / 2.0 + 30.0;
-        }
-
-        private async Task<string> RequestColorNames()
-        {
-            var response = await _httpClient.GetAsync(ColorNamesRequestUrl);
-            if (response.IsSuccessStatusCode)
-            {
-                return await response.Content.ReadAsStringAsync();
-            }
-            else
-            {
-                return "";
-            }
-            
-        }
-        private async Task RefreshColorNamesFile()
-        {
-            string colorNamesString = await RequestColorNames();
-            if (colorNamesString != "")
-            {
-                File.WriteAllText(_colorNamesFile, colorNamesString);
-            }
+            File.WriteAllText(this.colorNamesFile, colorNamesString);
         }
     }
 }
