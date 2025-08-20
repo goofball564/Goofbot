@@ -167,11 +167,11 @@ namespace Goofbot.Modules
         }
 
         [GeneratedRegex("^#[0-9A-Fa-f]{6}$")]
-        private static partial Regex MyRegex();
+        private static partial Regex HexColorCodeRegex();
 
         private static bool IsColorHexCode(string args)
         {
-            Match match = MyRegex().Match(args);
+            Match match = HexColorCodeRegex().Match(args);
             return match.Success;
         }
 
