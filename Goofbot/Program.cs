@@ -58,11 +58,11 @@ internal class Program
         TwitchClient.OnLog += Client_OnLog;
         TwitchClient.OnConnected += Client_OnConnected;
         TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
-        TwitchClient.OnMessageReceived += Client_OnMessageReceived;
         TwitchClient.OnChatCommandReceived += Client_OnChatCommandReceived;
 
         SoundAlertModule soundAlertModule = new ();
         MiscCommandsModule miscCommandsModule = new ("MiscCommandsModule", CommandDictionary);
+        CalculatorModule calculatorModule = new (TwitchClient);
 
         await authenticationManagerInitializeTask;
         await spotifyModuleInitializeTask;
@@ -82,14 +82,14 @@ internal class Program
         return JsonConvert.DeserializeObject(jsonString);
     }
 
-    private static string ReverseString(string str)
+    public static string ReverseString(string str)
     {
         char[] charArray = str.ToCharArray();
         Array.Reverse(charArray);
         return new string(charArray);
     }
 
-    private static string RemoveSpaces(string str)
+    public static string RemoveSpaces(string str)
     {
         return str.Replace(" ", string.Empty);
     }
@@ -133,55 +133,6 @@ internal class Program
         if (!message.Equals(string.Empty))
         {
             TwitchClient.SendMessage(TwitchChannelUsername, message);
-        }
-    }
-
-    private static void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
-    {
-        string message = string.Empty;
-        try
-        {
-            Entity expr = e.ChatMessage.Message;
-
-            if (expr.EvaluableNumerical)
-            {
-                Entity eval = expr.Evaled;
-                string evalString = eval.ToString();
-                if (!RemoveSpaces(expr.ToString()).Equals(eval.ToString()))
-                {
-                    if (eval is not Entity.Number.Rational)
-                    {
-                        message = string.Format("{0:F7}", (double)(Entity.Number)eval);
-                    }
-                    else
-                    {
-                        message = eval.ToString();
-                    }
-                }
-                else if (evalString.Contains('/'))
-                {
-                    string[] nums = evalString.Split("/");
-                    if (nums.Length == 2)
-                    {
-                        double result = double.Parse(nums[0]) / double.Parse(nums[1]);
-                        message = string.Format("{0:0.#######}", result);
-                    }
-                    else
-                    {
-                        message = "Goof, fix your damn calculator.";
-                    }
-                }
-            }
-        }
-        catch
-        {
-        }
-        finally
-        {
-            if (!message.Equals(string.Empty))
-            {
-                TwitchClient.SendMessage(TwitchChannelUsername, message);
-            }
         }
     }
 
