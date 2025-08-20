@@ -119,7 +119,11 @@ internal class Program
         else if (CommandDictionary.TryGetCommand(ReverseString(commandName), out command))
         {
             List<string> a = e.Command.ArgumentsAsList;
-            a.ForEach(s => ReverseString(s));
+            for (int i = 0; i < a.Count; i++)
+            {
+                a[i] = ReverseString(a[i]);
+            }
+
             string commandArgsReversed = string.Join(" ", a);
 
             message = await command.ExecuteCommandAsync(commandArgsReversed, e);
