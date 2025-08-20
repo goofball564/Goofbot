@@ -115,8 +115,8 @@ namespace Goofbot.Modules
             _clientSecret = Convert.ToString(spotifyCredentials.client_secret);
             // _playlistId = Convert.ToString(spotifyCredentials.playlist_id);
 
-            var songCommandLambda = async (object module, string commandArgs, OnMessageReceivedArgs messageArgs) => { return await ((SpotifyModule)module).SongCommand(); };
-            commandDictionary.TryAddCommand(new Command("!song", this, songCommandLambda, 1));
+            var songCommandLambda = async (object module, string commandArgs, OnChatCommandReceivedArgs eventArgs) => { return await ((SpotifyModule)module).SongCommand(); };
+            commandDictionary.TryAddCommand(new Command("song", this, songCommandLambda, 1));
         }
 
         private async Task<string> SongCommand()

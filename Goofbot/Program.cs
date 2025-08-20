@@ -4,8 +4,8 @@ using Goofbot.Utils;
 using ImageMagick;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Security.Principal;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Client;
@@ -55,6 +55,7 @@ namespace Goofbot
             TwitchClient.OnConnected += Client_OnConnected;
             TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
             TwitchClient.OnMessageReceived += Client_OnMessageReceived;
+            TwitchClient.OnChatCommandReceived += Client_OnChatCommandReceived;
 
             SoundAlertModule soundAlertModule = new();
             MiscCommandsModule miscCommandsModule = new("MiscCommandsModule", s_commandDictionary);
@@ -63,6 +64,7 @@ namespace Goofbot
             await spotifyModuleInitializeTask;
             await colorDictionaryTask;
             BlueGuyModule blueGuyModule = new("BlueGuyModule", s_commandDictionary);
+            TwitchClient.AddChatCommandIdentifier('!');
             TwitchClient.Connect();
             while (true)
             {
@@ -74,30 +76,6 @@ namespace Goofbot
         {
             string jsonString = File.ReadAllText(filename);
             return JsonConvert.DeserializeObject(jsonString);
-        }
-
-        public static string ParseMessageForCommand(OnMessageReceivedArgs messageArgs, out string commandArgs)
-        {
-            DateTime invocationTime = DateTime.UtcNow;
-            string trimmedMessage = messageArgs.ChatMessage.Message.Trim();
-            int indexOfSpace = trimmedMessage.IndexOf(' ');
-
-            string command;
-
-            if (indexOfSpace != -1)
-            {
-                command = trimmedMessage.Substring(0, indexOfSpace);
-                commandArgs = trimmedMessage.Substring(indexOfSpace + 1);
-            }
-            else
-            {
-                command = trimmedMessage;
-                commandArgs = "";
-            }
-
-            commandArgs = commandArgs.Trim();
-            return command.ToLowerInvariant();
-
         }
 
         public static string ReverseString(string str)
@@ -118,65 +96,57 @@ namespace Goofbot
             TwitchClient.SendMessage(TwitchChannelUsername, "Goofbot is activated and at your service MrDestructoid");
         }
 
-        private static async void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
+        private static async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
         {
             string message = "";
-            string commandName = ParseMessageForCommand(e, out string commandArgs);
+            string commandName = e.Command.CommandText;
+            string commandArgs = e.Command.ArgumentsAsString;
 
             Command command;
             if (s_commandDictionary.TryGetCommand(commandName, out command))
             {
                 message = await command.ExecuteCommandAsync(commandArgs, e);
             }
-            else
+            else if (s_commandDictionary.TryGetCommand(ReverseString(commandName), out command))
             {
-                string commandNameReversed = commandName[0] + ReverseString(commandName.Substring(1));
+                List<string> a = e.Command.ArgumentsAsList;
+                a.ForEach(s => ReverseString(s));
+                string commandArgsReversed = String.Join(" ", a);
 
-                if (s_commandDictionary.TryGetCommand(commandNameReversed, out command))
-                {
-                    string[] commandArgsArray = commandArgs.Split(" ");
-                    for (int i = 0; i < commandArgsArray.Length; i++)
-                    {
-                        commandArgsArray[i] = ReverseString(commandArgsArray[i]);
-                    }
-                    string commandArgsReversed = String.Join(" ", commandArgsArray);
-
-                    message = await command.ExecuteCommandAsync(commandArgsReversed, e);
-                    message = ReverseString(message);
-                }           
+                message = await command.ExecuteCommandAsync(commandArgsReversed, e);
+                message = ReverseString(message);
             }
-            
-            
 
             if (!message.Equals(""))
             {
                 TwitchClient.SendMessage(TwitchChannelUsername, message);
             }
-            else
+        }
+
+        private static void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
+        {
+            string message = "";
+            try
             {
-                try
+                Entity expr = e.ChatMessage.Message;
+                if (expr.EvaluableNumerical)
                 {
-                    Entity expr = e.ChatMessage.Message;
-                    if (expr.EvaluableNumerical)
+                    var eval = expr.EvalNumerical();
+                    if (eval is not Entity.Number.Rational)
                     {
-                        var eval = expr.EvalNumerical();
-                        if (eval is not Entity.Number.Rational)
-                        {
-                            message = String.Format("{0:F7}", (double)eval);
-                        }
-                        else
-                        {
-                            message = eval.ToString();
-                        }
-
-                        TwitchClient.SendMessage(TwitchChannelUsername, message);
+                        message = String.Format("{0:F7}", (double)eval);
                     }
-                }
-                catch
-                {
+                    else
+                    {
+                        message = eval.ToString();
+                    }
 
+                    TwitchClient.SendMessage(TwitchChannelUsername, message);
                 }
-                
+            }
+            catch
+            {
+
             }
         }
 

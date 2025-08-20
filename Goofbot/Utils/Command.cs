@@ -11,7 +11,7 @@ namespace Goofbot.Utils
     {
         private readonly string _name;
         private readonly object _module;
-        private readonly Func<object, string, OnMessageReceivedArgs, Task<string>> _commandAction;
+        private readonly Func<object, string, OnChatCommandReceivedArgs, Task<string>> _commandAction;
         private readonly TimeSpan _timeout;
         private readonly bool _goofOnly;
 
@@ -19,7 +19,7 @@ namespace Goofbot.Utils
 
         public string Name { get { return _name; } }
 
-        public Command(string name, object module, Func<object, string, OnMessageReceivedArgs, Task<string>> commandAction, int timeoutSeconds, bool goofOnly = false)
+        public Command(string name, object module, Func<object, string, OnChatCommandReceivedArgs, Task<string>> commandAction, int timeoutSeconds, bool goofOnly = false)
         {
             _name = name;
             _timeout = TimeSpan.FromSeconds(timeoutSeconds);
@@ -28,9 +28,9 @@ namespace Goofbot.Utils
             _commandAction = commandAction;
         }
 
-        public async Task<string> ExecuteCommandAsync(string commandArgs, OnMessageReceivedArgs messageArgs)
+        public async Task<string> ExecuteCommandAsync(string commandArgs, OnChatCommandReceivedArgs eventArgs)
         {
-            if (_goofOnly && !messageArgs.ChatMessage.IsBroadcaster)
+            if (_goofOnly && !eventArgs.Command.ChatMessage.IsBroadcaster)
             {
                 return "I don't answer to you, peasant! OhMyDog (this command is for Goof's use only)";
             }
@@ -40,7 +40,7 @@ namespace Goofbot.Utils
             if (timeoutTime.CompareTo(invocationTime) < 0)
             {
                 _timeOfLastInvocation = invocationTime;
-                return await _commandAction(_module, commandArgs, messageArgs);
+                return await _commandAction(_module, commandArgs, eventArgs);
             }
             else
             {
