@@ -1,6 +1,4 @@
-﻿// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-namespace Goofbot.Utils;
+﻿namespace Goofbot.Utils;
 
 using System;
 using System.Collections.Generic;
