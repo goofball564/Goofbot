@@ -50,28 +50,24 @@ namespace Goofbot
             TwitchAuthenticationManager = new(clientID, clientSecret, TwitchClient, TwitchAPI);
             Task authenticationManagerInitializeTask = TwitchAuthenticationManager.Initialize();
 
+            SpotifyModule spotifyModule = new("SpotifyModule", s_commandDictionary);
+            Task spotifyModuleInitializeTask = spotifyModule.Initialize();
+
             MagickNET.Initialize();
 
             TwitchClient.OnLog += Client_OnLog;
             TwitchClient.OnConnected += Client_OnConnected;
             TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
-
-            await authenticationManagerInitializeTask;
-            TwitchClient.Connect();
-
-            SpotifyModule spotifyModule = new("SpotifyModule", s_commandDictionary);
-            Task spotifyModuleInitializeTask = spotifyModule.Initialize();
+            TwitchClient.OnMessageReceived += Client_OnMessageReceived;
 
             SoundAlertModule soundAlertModule = new();
-
             MiscCommandsModule miscCommandsModule = new("MiscCommandsModule", s_commandDictionary);
 
+            await authenticationManagerInitializeTask;
+            await spotifyModuleInitializeTask;
             await colorDictionaryTask;
             BlueGuyModule blueGuyModule = new("BlueGuyModule", s_commandDictionary);
-
-            await spotifyModuleInitializeTask;
-            TwitchClient.OnMessageReceived += Client_OnMessageReceived;
-            TwitchClient.SendMessage(TwitchChannelUsername, "Goofbot is activated and at your service MrDestructoid");
+            TwitchClient.Connect();
             while (true)
             {
                 Console.ReadLine();
@@ -123,6 +119,7 @@ namespace Goofbot
         private static void Client_OnConnected(object sender, OnConnectedArgs e)
         {
             Console.WriteLine($"Connected to {e.AutoJoinChannel}");
+            TwitchClient.SendMessage(TwitchChannelUsername, "Goofbot is activated and at your service MrDestructoid");
         }
 
         private static async void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
