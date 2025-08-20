@@ -1,51 +1,50 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿namespace Goofbot.Utils;
+
+using System;
 using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 
-namespace Goofbot.Utils
+internal class Command
 {
-    internal class Command
+    private readonly string name;
+    private readonly object module;
+    private readonly Func<object, string, OnChatCommandReceivedArgs, Task<string>> commandAction;
+    private readonly TimeSpan timeout;
+    private readonly bool goofOnly;
+
+    private DateTime timeOfLastInvocation = DateTime.MinValue;
+
+    public Command(string name, object module, Func<object, string, OnChatCommandReceivedArgs, Task<string>> commandAction, int timeoutSeconds, bool goofOnly = false)
     {
-        private readonly string _name;
-        private readonly object _module;
-        private readonly Func<object, string, OnChatCommandReceivedArgs, Task<string>> _commandAction;
-        private readonly TimeSpan _timeout;
-        private readonly bool _goofOnly;
+        this.name = name;
+        this.timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        this.goofOnly = goofOnly;
+        this.module = module;
+        this.commandAction = commandAction;
+    }
 
-        private DateTime _timeOfLastInvocation = DateTime.MinValue;
+    public string Name
+    {
+        get { return this.name; }
+    }
 
-        public string Name { get { return _name; } }
-
-        public Command(string name, object module, Func<object, string, OnChatCommandReceivedArgs, Task<string>> commandAction, int timeoutSeconds, bool goofOnly = false)
+    public async Task<string> ExecuteCommandAsync(string commandArgs, OnChatCommandReceivedArgs eventArgs)
+    {
+        if (this.goofOnly && !eventArgs.Command.ChatMessage.IsBroadcaster)
         {
-            _name = name;
-            _timeout = TimeSpan.FromSeconds(timeoutSeconds);
-            _goofOnly = goofOnly;
-            _module = module;
-            _commandAction = commandAction;
+            return "I don't answer to you, peasant! OhMyDog (this command is for Goof's use only)";
         }
 
-        public async Task<string> ExecuteCommandAsync(string commandArgs, OnChatCommandReceivedArgs eventArgs)
+        DateTime invocationTime = DateTime.UtcNow;
+        DateTime timeoutTime = this.timeOfLastInvocation.Add(this.timeout);
+        if (timeoutTime.CompareTo(invocationTime) < 0)
         {
-            if (_goofOnly && !eventArgs.Command.ChatMessage.IsBroadcaster)
-            {
-                return "I don't answer to you, peasant! OhMyDog (this command is for Goof's use only)";
-            }
-
-            DateTime invocationTime = DateTime.UtcNow;
-            DateTime timeoutTime = _timeOfLastInvocation.Add(_timeout);
-            if (timeoutTime.CompareTo(invocationTime) < 0)
-            {
-                _timeOfLastInvocation = invocationTime;
-                return await _commandAction(_module, commandArgs, eventArgs);
-            }
-            else
-            {
-                return "";
-            }
+            this.timeOfLastInvocation = invocationTime;
+            return await this.commandAction(this.module, commandArgs, eventArgs);
+        }
+        else
+        {
+            return string.Empty;
         }
     }
 }
