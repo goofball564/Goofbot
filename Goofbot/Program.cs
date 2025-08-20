@@ -78,11 +78,16 @@ namespace Goofbot
             return JsonConvert.DeserializeObject(jsonString);
         }
 
-        public static string ReverseString(string str)
+        private static string ReverseString(string str)
         {
             char[] charArray = str.ToCharArray();
             Array.Reverse(charArray);
             return new string(charArray);
+        }
+
+        private static string RemoveSpaces(string str)
+        {
+            return str.Replace(" ", String.Empty);
         }
 
         private static void Client_OnLog(object sender, OnLogArgs e)
@@ -129,24 +134,47 @@ namespace Goofbot
             try
             {
                 Entity expr = e.ChatMessage.Message;
+
                 if (expr.EvaluableNumerical)
                 {
-                    var eval = expr.EvalNumerical();
-                    if (eval is not Entity.Number.Rational)
+                    Entity eval = expr.Evaled;
+                    string evalString = eval.ToString();
+                    if (!RemoveSpaces(expr.ToString()).Equals(eval.ToString()))
                     {
-                        message = String.Format("{0:F7}", (double)eval);
+                        if (eval is not Entity.Number.Rational)
+                        {
+                            message = String.Format("{0:F7}", (double)(Entity.Number)eval);
+                        }
+                        else
+                        {
+                            message = eval.ToString();
+                        }
                     }
-                    else
+                    else if (evalString.Contains("/"))
                     {
-                        message = eval.ToString();
+                        string[] nums = evalString.Split("/");
+                        if (nums.Length == 2)
+                        {
+                            double result = Double.Parse(nums[0]) / Double.Parse(nums[1]);
+                            message = String.Format("{0:0.#######}", result);
+                        }
+                        else
+                        {
+                            message = "Goof, fix your damn calculator.";
+                        }
                     }
-
-                    TwitchClient.SendMessage(TwitchChannelUsername, message);
                 }
             }
-            catch
+            catch 
             {
-
+                
+            }
+            finally
+            {
+                if (!message.Equals(""))
+                {
+                    TwitchClient.SendMessage(TwitchChannelUsername, message);
+                }
             }
         }
 
