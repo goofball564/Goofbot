@@ -40,7 +40,7 @@ internal class Program
         // Create color dictionary
         string colorNamesFile = Path.Join(StuffFolder, "color_names.json");
         ColorDictionary = new (colorNamesFile);
-        Task colorDictionaryTask = Task.Run(() => { ColorDictionary.Initialize(); });
+        Task colorDictionaryTask = Task.Run(async () => { await ColorDictionary.Initialize(); });
 
         // initialize TwitchClient and TwitchAPI, authenticate with twitch
         string twitchAppCredentialsFile = Path.Combine(StuffFolder, "twitch_credentials.json");
