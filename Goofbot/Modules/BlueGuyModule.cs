@@ -88,14 +88,7 @@ namespace Goofbot.Modules
                 CreateBlueGuyImage(hexColorCode);
 
                 string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", "") + "Guy.png";
-                try
-                {
-                    File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
-                }
-                catch (IOException)
-                {
-
-                }
+                try { File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false); } catch (IOException) { }
 
                 message = String.Format(RandomColorString, colorName);
             }
@@ -108,14 +101,7 @@ namespace Goofbot.Modules
                     CreateBlueGuyImage(hexColorCode);
 
                     string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args).Replace(" ", "") + "Guy.png";
-                    try
-                    {
-                        File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false);
-                    }
-                    catch (IOException)
-                    {
-
-                    }
+                    try { File.Copy(OtherOutputFile, Path.Combine(_guysFolder, colorFileName), false); } catch (IOException) { }
                 }
                 else
                 {
