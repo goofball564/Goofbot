@@ -9,14 +9,14 @@ internal class SoundPlayer
 {
     private const float DefaultVolume = 0.15f;
 
-    private readonly ISoundOut soundOut;
+    private readonly WasapiOut soundOut;
     private readonly IWaveSource waveSource;
 
-    public SoundPlayer(string soundFile)
+    public SoundPlayer(string soundFile, float volume = DefaultVolume, int numberTimesToLoop = 1)
     {
         this.waveSource = CodecFactory.Instance.GetCodec(soundFile);
 
-        this.soundOut = new WasapiOut();
+        this.soundOut = new ();
         this.soundOut.Initialize(this.waveSource);
         this.soundOut.Volume = DefaultVolume;
         this.soundOut.Stopped += this.OnStopped;
