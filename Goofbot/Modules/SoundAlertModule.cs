@@ -101,7 +101,7 @@ internal class SoundAlertModule
             string sound = this.soundAlertDictionary.TryGetRandomFromList(reward);
 
             await Task.Delay(1000);
-            new SoundPlayer(sound).Play();
+            new SoundPlayer(sound);
         }
     }
 
