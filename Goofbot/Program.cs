@@ -63,6 +63,7 @@ internal class Program
         SoundAlertModule soundAlertModule = new ();
         MiscCommandsModule miscCommandsModule = new ("MiscCommandsModule", CommandDictionary);
         CalculatorModule calculatorModule = new (TwitchClient);
+        EmoteSoundModule emoteSoundModule = new ("EmoteSoundModule", TwitchClient);
 
         await authenticationManagerInitializeTask;
         await spotifyModuleInitializeTask;
