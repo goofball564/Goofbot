@@ -24,16 +24,13 @@ internal class SoundPlayer
         this.volume = volume;
         this.remainingTimesToLoop = numberTimesToLoop;
 
-        this.CreateSoundOut();
+        this.Loop();
     }
 
     private async void OnStopped(object sender, PlaybackStoppedEventArgs e)
     {
         await this.Dispose();
-        if (this.remainingTimesToLoop > 0)
-        {
-            this.CreateSoundOut();
-        }
+        this.Loop();
     }
 
     private async Task Dispose()
@@ -45,9 +42,17 @@ internal class SoundPlayer
         });
     }
 
+    private void Loop()
+    {
+        if (this.remainingTimesToLoop > 0)
+        {
+            this.remainingTimesToLoop--;
+            this.CreateSoundOut();
+        }
+    }
+
     private void CreateSoundOut()
     {
-        this.remainingTimesToLoop--;
         this.waveSource = CodecFactory.Instance.GetCodec(this.soundFile);
         this.soundOut = new ();
         this.soundOut.Initialize(this.waveSource);
