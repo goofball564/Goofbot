@@ -21,7 +21,7 @@ internal partial class EmoteSoundModule : GoofbotModule
         twitchClient.OnMessageReceived += this.Client_OnMessageReceived;
     }
 
-    [GeneratedRegex("LIZARD($|\\s)")]
+    [GeneratedRegex("(?<=\\b)LIZARD(?=\\b)")]
     private static partial Regex LizardRegex();
 
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
