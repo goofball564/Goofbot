@@ -67,7 +67,7 @@ internal class Program
         await authenticationManagerInitializeTask;
         await spotifyModuleInitializeTask;
         await colorDictionaryTask;
-        BlueGuyModule blueGuyModule = new ("BlueGuyModule", CommandDictionary);
+        BlueGuyModule blueGuyModule = new ("BlueGuyModule", CommandDictionary, TwitchClient);
         TwitchClient.AddChatCommandIdentifier('!');
         TwitchClient.Connect();
         while (true)
