@@ -5,6 +5,7 @@ using CSCore.Codecs;
 using CSCore;
 using CSCore.SoundOut;
 using System;
+using System.IO;
 
 internal class SoundPlayer
 {
@@ -18,30 +19,20 @@ internal class SoundPlayer
 
     public SoundPlayer(string soundFile, float volume = DefaultVolume)
     {
-        this.soundFile = soundFile;
-        this.volume = volume;
-
-        try
+        if (File.Exists(soundFile))
         {
+            this.soundFile = soundFile;
+            this.volume = volume;
             this.waveSource = CodecFactory.Instance.GetCodec(this.soundFile);
+            this.soundOut = new();
+            this.soundOut.Initialize(this.waveSource);
+            this.soundOut.Volume = this.volume;
+            this.soundOut.Stopped += this.OnStopped;
+            this.soundOut.Play();
         }
-        catch
-        {
-        }
-
-        this.soundOut = new ();
-        this.soundOut.Initialize(this.waveSource);
-        this.soundOut.Volume = this.volume;
-        this.soundOut.Stopped += this.OnStopped;
-        this.soundOut.Play();
     }
 
     private async void OnStopped(object sender, PlaybackStoppedEventArgs e)
-    {
-        await this.Dispose();
-    }
-
-    private async Task Dispose()
     {
         await Task.Run(() =>
         {
