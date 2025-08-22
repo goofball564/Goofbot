@@ -13,6 +13,8 @@ using TwitchLib.Client.Events;
 internal partial class EmoteSoundModule : GoofbotModule
 {
     private const string EmoteListFileName = "emotes.txt";
+    private const int SoundIntervalInMilliseconds = 500;
+    private const float Volume = 0.075f;
 
     private readonly string emoteListFile;
 
@@ -27,6 +29,11 @@ internal partial class EmoteSoundModule : GoofbotModule
         twitchClient.OnMessageReceived += this.Client_OnMessageReceived;
     }
 
+    /*
+     * Regex matches each word in a string.
+     * (A word is all non-whitespace characters between word boundaries,
+     * assuming there's at least one character).
+     */
     [GeneratedRegex("(?<=\\b)\\S+(?=\\b)")]
     private static partial Regex WordRegex();
 
@@ -50,6 +57,10 @@ internal partial class EmoteSoundModule : GoofbotModule
         }
     }
 
+    /*
+     * Play a sound for every matching word (emote) in a message. There is an interval of time
+     * between each sound being played.
+     */
     private async void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
     {
         string message = e.ChatMessage.Message;
@@ -60,8 +71,9 @@ internal partial class EmoteSoundModule : GoofbotModule
         {
             if (this.emoteSoundDictionary.TryGetValue(match.Value, out string soundFile))
             {
-                await Task.Delay(500 - (int)stopwatch.ElapsedMilliseconds);
-                new SoundPlayer(soundFile, volume: 0.075f);
+                int delay = Math.Max(0, SoundIntervalInMilliseconds - (int)stopwatch.ElapsedMilliseconds);
+                await Task.Delay(delay);
+                new SoundPlayer(soundFile, volume: Volume);
                 stopwatch.Restart();
             }
         }
