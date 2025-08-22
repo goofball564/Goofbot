@@ -19,47 +19,25 @@ internal class CalculatorModule
         string message = string.Empty;
         try
         {
-            Entity expr = e.ChatMessage.Message;
-
-            if (expr.EvaluableNumerical)
+            using (var _ = MathS.Settings.FloatToRationalIterCount.Set(0))
             {
-                Entity eval = expr.Evaled;
-                string evalString = eval.ToString();
-                if (!Program.RemoveSpaces(expr.ToString()).Equals(eval.ToString()))
+                Entity expr = e.ChatMessage.Message;
+
+                if (expr.EvaluableNumerical)
                 {
-                    if (eval is not Entity.Number.Rational)
-                    {
-                        message = string.Format("{0:F7}", (double)(Entity.Number)eval);
-                    }
-                    else
-                    {
-                        message = eval.ToString();
-                    }
-                }
-                else if (evalString.Contains('/'))
-                {
-                    string[] nums = evalString.Split("/");
-                    if (nums.Length == 2)
-                    {
-                        double result = double.Parse(nums[0]) / double.Parse(nums[1]);
-                        message = string.Format("{0:0.#######}", result);
-                    }
-                    else
-                    {
-                        message = "Goof, fix your damn calculator.";
-                    }
+                    Entity eval = expr.Evaled;
+                    string evalString = eval.ToString();
+                    message = string.Format("{0:0.#######}", (double)(Entity.Number)eval);
                 }
             }
         }
         catch
         {
         }
-        finally
+
+        if (!message.Equals(string.Empty))
         {
-            if (!message.Equals(string.Empty))
-            {
-                this.twitchClient.SendMessage(Program.TwitchChannelUsername, message);
-            }
+            this.twitchClient.SendMessage(Program.TwitchChannelUsername, message);
         }
     }
 }
