@@ -58,7 +58,7 @@ internal partial class EmoteSoundModule : GoofbotModule
         string message = e.ChatMessage.Message;
         Task delayTask = Task.Delay(SoundIntervalInMilliseconds);
 
-        foreach (string word in message.Split(new char[0], StringSplitOptions.RemoveEmptyEntries))
+        foreach (string word in message.Split(null as char[], StringSplitOptions.RemoveEmptyEntries))
         {
             if (this.emoteSoundDictionary.TryGetValue(word, out string soundFile))
             {
