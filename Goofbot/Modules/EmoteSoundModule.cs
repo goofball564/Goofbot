@@ -64,17 +64,15 @@ internal partial class EmoteSoundModule : GoofbotModule
     private async void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
     {
         string message = e.ChatMessage.Message;
-        Stopwatch stopwatch = new ();
-        stopwatch.Start();
+        Task delayTask = Task.Delay(SoundIntervalInMilliseconds);
 
         foreach (Match match in WordRegex().Matches(message))
         {
             if (this.emoteSoundDictionary.TryGetValue(match.Value, out string soundFile))
             {
-                int delay = Math.Max(0, SoundIntervalInMilliseconds - (int)stopwatch.ElapsedMilliseconds);
-                await Task.Delay(delay);
+                await delayTask;
                 new SoundPlayer(soundFile, volume: Volume);
-                stopwatch.Restart();
+                delayTask = Task.Delay(SoundIntervalInMilliseconds);
             }
         }
     }
