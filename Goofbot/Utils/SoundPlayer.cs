@@ -24,7 +24,7 @@ internal class SoundPlayer
             this.soundFile = soundFile;
             this.volume = volume;
             this.waveSource = CodecFactory.Instance.GetCodec(this.soundFile);
-            this.soundOut = new();
+            this.soundOut = new ();
             this.soundOut.Initialize(this.waveSource);
             this.soundOut.Volume = this.volume;
             this.soundOut.Stopped += this.OnStopped;
