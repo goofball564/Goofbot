@@ -16,21 +16,29 @@ internal class SoundPlayer
     private IWaveSource waveSource;
     private WasapiOut soundOut;
 
-    private int remainingTimesToLoop;
-
-    public SoundPlayer(string soundFile, float volume = DefaultVolume, int numberTimesToLoop = 1)
+    public SoundPlayer(string soundFile, float volume = DefaultVolume)
     {
         this.soundFile = soundFile;
         this.volume = volume;
-        this.remainingTimesToLoop = numberTimesToLoop;
 
-        this.Loop();
+        try
+        {
+            this.waveSource = CodecFactory.Instance.GetCodec(this.soundFile);
+        }
+        catch
+        {
+        }
+
+        this.soundOut = new ();
+        this.soundOut.Initialize(this.waveSource);
+        this.soundOut.Volume = this.volume;
+        this.soundOut.Stopped += this.OnStopped;
+        this.soundOut.Play();
     }
 
     private async void OnStopped(object sender, PlaybackStoppedEventArgs e)
     {
         await this.Dispose();
-        this.Loop();
     }
 
     private async Task Dispose()
@@ -40,30 +48,5 @@ internal class SoundPlayer
             this.waveSource.Dispose();
             this.soundOut.Dispose();
         });
-    }
-
-    private void Loop()
-    {
-        if (this.remainingTimesToLoop > 0)
-        {
-            this.remainingTimesToLoop--;
-            this.CreateSoundOut();
-        }
-    }
-
-    private void CreateSoundOut()
-    {
-        try
-        {
-            this.waveSource = CodecFactory.Instance.GetCodec(this.soundFile);
-            this.soundOut = new ();
-            this.soundOut.Initialize(this.waveSource);
-            this.soundOut.Volume = this.volume;
-            this.soundOut.Stopped += this.OnStopped;
-            this.soundOut.Play();
-        }
-        catch
-        {
-        }
     }
 }
