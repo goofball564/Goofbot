@@ -30,11 +30,10 @@ internal partial class EmoteSoundModule : GoofbotModule
     }
 
     /*
-     * Regex matches each word in a string.
-     * (A word is all non-whitespace characters between word boundaries,
-     * assuming there's at least one character).
+     * Regex used to match each word in a string.
+     * Matching is greedy, so this doesn't return parts of words.
      */
-    [GeneratedRegex("(?<=\\b)\\S+(?=\\b)")]
+    [GeneratedRegex("\\S+")]
     private static partial Regex WordRegex();
 
     private void ParseTheThing()
