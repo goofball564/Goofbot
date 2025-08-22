@@ -29,13 +29,6 @@ internal partial class EmoteSoundModule : GoofbotModule
         twitchClient.OnMessageReceived += this.Client_OnMessageReceived;
     }
 
-    /*
-     * Regex used to match each word in a string.
-     * Matching is greedy, so this doesn't return parts of words.
-     */
-    [GeneratedRegex("\\S+")]
-    private static partial Regex WordRegex();
-
     private void ParseTheThing()
     {
         string soundFile = string.Empty;
@@ -65,9 +58,9 @@ internal partial class EmoteSoundModule : GoofbotModule
         string message = e.ChatMessage.Message;
         Task delayTask = Task.Delay(SoundIntervalInMilliseconds);
 
-        foreach (Match match in WordRegex().Matches(message))
+        foreach (string word in message.Split(new char[0], StringSplitOptions.RemoveEmptyEntries))
         {
-            if (this.emoteSoundDictionary.TryGetValue(match.Value, out string soundFile))
+            if (this.emoteSoundDictionary.TryGetValue(word, out string soundFile))
             {
                 await delayTask;
                 new SoundPlayer(soundFile, volume: Volume);
