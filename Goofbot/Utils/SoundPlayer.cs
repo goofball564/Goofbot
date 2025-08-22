@@ -53,11 +53,17 @@ internal class SoundPlayer
 
     private void CreateSoundOut()
     {
-        this.waveSource = CodecFactory.Instance.GetCodec(this.soundFile);
-        this.soundOut = new ();
-        this.soundOut.Initialize(this.waveSource);
-        this.soundOut.Volume = this.volume;
-        this.soundOut.Stopped += this.OnStopped;
-        this.soundOut.Play();
+        try
+        {
+            this.waveSource = CodecFactory.Instance.GetCodec(this.soundFile);
+            this.soundOut = new ();
+            this.soundOut.Initialize(this.waveSource);
+            this.soundOut.Volume = this.volume;
+            this.soundOut.Stopped += this.OnStopped;
+            this.soundOut.Play();
+        }
+        catch
+        {
+        }
     }
 }
