@@ -142,16 +142,16 @@ internal partial class BlueGuyModule : GoofbotModule
                     message = UnknownColorString;
                 }
             }
+
+            if (colorChanged)
+            {
+                this.timer.Stop();
+                this.timer.Start();
+            }
         }
         finally
         {
             this.semaphore.Release();
-        }
-
-        if (colorChanged)
-        {
-            this.timer.Stop();
-            this.timer.Start();
         }
 
         return message;
