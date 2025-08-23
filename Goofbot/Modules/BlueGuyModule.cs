@@ -51,32 +51,31 @@ internal partial class BlueGuyModule : GoofbotModule
         this.guysFolder = Path.Combine(this.ModuleDataFolder, "Guys");
         Directory.CreateDirectory(this.guysFolder);
 
-        var guyCommandLambda = async (object module, string commandArgs, OnChatCommandReceivedArgs eventArgs) => { return await ((BlueGuyModule)module).GuyCommand(commandArgs); };
-        commandDictionary.TryAddCommand(new Command("guy", this, guyCommandLambda, 1));
+        commandDictionary.TryAddCommand(new Command("guy", this.GuyCommand, 1));
 
         this.timer.AutoReset = true;
         this.timer.Elapsed += this.GuyTimerCallback;
         this.timer.Start();
     }
 
-    public async Task<string> GuyCommand(string args)
+    public async Task<string> GuyCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs)
     {
         string message;
         bool colorChanged = false;
         await this.semaphore.WaitAsync();
         try
         {
-            args = args.Trim().ToLowerInvariant();
+            commandArgs = commandArgs.Trim().ToLowerInvariant();
 
-            if (IsColorHexCode(args))
+            if (IsColorHexCode(commandArgs))
             {
-                colorChanged = !args.Equals(this.lastColorCode);
+                colorChanged = !commandArgs.Equals(this.lastColorCode);
                 message = colorChanged ? ColorChangeString : SameColorString;
 
-                this.CreateBlueGuyImage(args);
-                this.lastColorCode = args;
+                this.CreateBlueGuyImage(commandArgs);
+                this.lastColorCode = commandArgs;
             }
-            else if (args.Equals("default") || args.Equals(DefaultColorName))
+            else if (commandArgs.Equals("default") || commandArgs.Equals(DefaultColorName))
             {
                 colorChanged = !DefaultColorName.Equals(this.lastColorCode);
                 message = colorChanged ? ColorChangeString : SameColorString;
@@ -84,7 +83,7 @@ internal partial class BlueGuyModule : GoofbotModule
                 this.lastColorCode = DefaultColorName;
                 this.RestoreDefaultBlueGuy();
             }
-            else if (args.Equals(SpeedGuy))
+            else if (commandArgs.Equals(SpeedGuy))
             {
                 colorChanged = !SpeedGuy.Equals(this.lastColorCode);
                 message = colorChanged ? ColorChangeString : SameColorString;
@@ -92,12 +91,12 @@ internal partial class BlueGuyModule : GoofbotModule
                 this.lastColorCode = SpeedGuy;
                 this.CreateBlueGuyImage(SpeedGuy);
             }
-            else if (args.Equals(string.Empty))
+            else if (commandArgs.Equals(string.Empty))
             {
                 colorChanged = false;
                 message = NoArgumentString;
             }
-            else if (args.Equals("random"))
+            else if (commandArgs.Equals("random"))
             {
                 colorChanged = true;
                 string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
@@ -118,7 +117,7 @@ internal partial class BlueGuyModule : GoofbotModule
             }
             else
             {
-                string hexColorCode = Program.ColorDictionary.GetHex(args).ToLowerInvariant();
+                string hexColorCode = Program.ColorDictionary.GetHex(commandArgs).ToLowerInvariant();
 
                 if (hexColorCode != null)
                 {
@@ -127,7 +126,7 @@ internal partial class BlueGuyModule : GoofbotModule
                     this.lastColorCode = hexColorCode;
                     this.CreateBlueGuyImage(hexColorCode);
 
-                    string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(args).Replace(" ", string.Empty) + "Guy.png";
+                    string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(commandArgs).Replace(" ", string.Empty) + "Guy.png";
                     try
                     {
                         File.Copy(OtherOutputFile, Path.Combine(this.guysFolder, colorFileName), false);
@@ -168,7 +167,7 @@ internal partial class BlueGuyModule : GoofbotModule
 
     private async void GuyTimerCallback(object source, ElapsedEventArgs e)
     {
-        string message = await this.GuyCommand("random");
+        string message = await this.GuyCommand("random", new OnChatCommandReceivedArgs());
         this.twitchClient.SendMessage(Program.TwitchChannelUsername, message);
     }
 

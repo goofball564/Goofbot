@@ -12,16 +12,15 @@ internal class MiscCommandsModule : GoofbotModule
     public MiscCommandsModule(string moduleDataFolder, CommandDictionary commandDictionary)
         : base(moduleDataFolder)
     {
-        var anticiCommandLambda = async (object module, string commandArgs, OnChatCommandReceivedArgs eventArgs) => { return await ((MiscCommandsModule)module).AnticiCommand(eventArgs); };
-        commandDictionary.TryAddCommand(new ("antici", this, anticiCommandLambda, 1));
+        commandDictionary.TryAddCommand(new ("antici", this.AnticiCommand, 1));
     }
 
-    public async Task<string> AnticiCommand(OnChatCommandReceivedArgs e)
+    public async Task<string> AnticiCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs)
     {
         int randomDelay = this.random.Next(50000) + 10000;
         await Task.Delay(randomDelay);
 
-        string username = e.Command.ChatMessage.DisplayName;
+        string username = eventArgs.Command.ChatMessage.DisplayName;
         return $"...pation! @{username}";
     }
 }

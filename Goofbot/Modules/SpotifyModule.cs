@@ -47,9 +47,7 @@ internal class SpotifyModule : GoofbotModule
         this.clientId = Convert.ToString(spotifyCredentials.client_id);
         this.clientSecret = Convert.ToString(spotifyCredentials.client_secret);
 
-        // _playlistId = Convert.ToString(spotifyCredentials.playlist_id);
-        var songCommandLambda = async (object module, string commandArgs, OnChatCommandReceivedArgs eventArgs) => { return await ((SpotifyModule)module).SongCommand(); };
-        commandDictionary.TryAddCommand(new Command("song", this, songCommandLambda, 1));
+        commandDictionary.TryAddCommand(new Command("song", this.SongCommand, 1));
     }
 
     public bool QueueMode
@@ -233,7 +231,7 @@ internal class SpotifyModule : GoofbotModule
         }
     }
 
-    private async Task<string> SongCommand()
+    private async Task<string> SongCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs)
     {
         await this.RefreshCurrentlyPlaying();
         string artists = string.Join(", ", this.CurrentlyPlayingArtistsNames);

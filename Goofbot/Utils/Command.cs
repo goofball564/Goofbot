@@ -8,18 +8,17 @@ internal class Command
 {
     private readonly string name;
     private readonly object module;
-    private readonly Func<object, string, OnChatCommandReceivedArgs, Task<string>> commandAction;
+    private readonly Func<string, OnChatCommandReceivedArgs, Task<string>> commandAction;
     private readonly TimeSpan timeout;
     private readonly bool goofOnly;
 
     private DateTime timeOfLastInvocation = DateTime.MinValue;
 
-    public Command(string name, object module, Func<object, string, OnChatCommandReceivedArgs, Task<string>> commandAction, int timeoutSeconds, bool goofOnly = false)
+    public Command(string name, Func<string, OnChatCommandReceivedArgs, Task<string>> commandAction, int timeoutSeconds, bool goofOnly = false)
     {
         this.name = name;
         this.timeout = TimeSpan.FromSeconds(timeoutSeconds);
         this.goofOnly = goofOnly;
-        this.module = module;
         this.commandAction = commandAction;
     }
 
@@ -40,7 +39,7 @@ internal class Command
         if (timeoutTime.CompareTo(invocationTime) < 0)
         {
             this.timeOfLastInvocation = invocationTime;
-            return await this.commandAction(this.module, commandArgs, eventArgs);
+            return await this.commandAction(commandArgs, eventArgs);
         }
         else
         {
