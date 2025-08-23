@@ -58,7 +58,7 @@ internal partial class BlueGuyModule : GoofbotModule
         this.timer.Start();
     }
 
-    public async Task<string> GuyCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs)
+    public async Task<string> GuyCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs = null)
     {
         string message;
         bool colorChanged = false;
@@ -166,7 +166,7 @@ internal partial class BlueGuyModule : GoofbotModule
 
     private async void GuyTimerCallback(object source, ElapsedEventArgs e)
     {
-        string message = await this.GuyCommand("random", new OnChatCommandReceivedArgs());
+        string message = await this.GuyCommand("random");
         this.twitchClient.SendMessage(Program.TwitchChannelUsername, message);
     }
 
