@@ -28,13 +28,14 @@ internal class TwitchAuthenticationManager
     private readonly SemaphoreSlim botTokensSemaphore = new (1, 1);
     private readonly SemaphoreSlim channelTokensSemaphore = new (1, 1);
 
-    private string twitchClientID;
-    private string twitchClientSecret;
+    private readonly string twitchClientID;
+    private readonly string twitchClientSecret;
+
+    private readonly TwitchClient twitchClient;
+    private readonly TwitchAPI twitchAPI;
+
     private string twitchBotAccessToken;
     private string twitchChannelAccessToken;
-
-    private TwitchClient twitchClient;
-    private TwitchAPI twitchAPI;
 
     public TwitchAuthenticationManager(string twitchClientID, string twitchClientSecret, TwitchClient twitchClient, TwitchAPI twitchAPI)
     {
@@ -46,11 +47,11 @@ internal class TwitchAuthenticationManager
 
     public async Task Initialize()
     {
-        Task botAccessTokenTask = this.RefreshTwitchAccessToken(true);
-        Task channelAccessTokenTask = this.RefreshTwitchAccessToken(false);
+        Task<string> botAccessTokenTask = this.RefreshTwitchAccessToken(true);
+        Task<string> channelAccessTokenTask = this.RefreshTwitchAccessToken(false);
 
-        await botAccessTokenTask;
-        await channelAccessTokenTask;
+        this.twitchBotAccessToken = await botAccessTokenTask;
+        this.twitchChannelAccessToken = await channelAccessTokenTask;
 
         this.twitchAPI.Settings.ClientId = this.twitchClientID;
         this.twitchAPI.Settings.AccessToken = this.twitchChannelAccessToken;
@@ -59,7 +60,7 @@ internal class TwitchAuthenticationManager
         this.twitchClient.Initialize(credentials, Program.TwitchChannelUsername);
     }
 
-    private async Task RefreshTwitchAccessToken(bool botToken)
+    private async Task<string> RefreshTwitchAccessToken(bool botToken)
     {
         string tokensFile = botToken ? "bot_tokens.json" : "channel_tokens.json";
         tokensFile = Path.Join(Program.StuffFolder, tokensFile);
@@ -77,6 +78,7 @@ internal class TwitchAuthenticationManager
 
         SemaphoreSlim semaphore = botToken ? this.botTokensSemaphore : this.channelTokensSemaphore;
         await semaphore.WaitAsync();
+        string accessToken = string.Empty;
         try
         {
             string tokensString = await this.RequestTwitchTokensWithAuthorizationCode(code);
@@ -87,11 +89,11 @@ internal class TwitchAuthenticationManager
             dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
             if (botToken)
             {
-                this.twitchBotAccessToken = Convert.ToString(tokensObject.access_token);
+                accessToken = Convert.ToString(tokensObject.access_token);
             }
             else
             {
-                this.twitchChannelAccessToken = Convert.ToString(tokensObject.access_token);
+                accessToken = Convert.ToString(tokensObject.access_token);
             }
 
             await writeAllTextTask;
@@ -100,6 +102,8 @@ internal class TwitchAuthenticationManager
         {
             semaphore.Release();
         }
+
+        return accessToken;
     }
 
     private async Task<string> RequestTokensWithRefreshToken(string refreshToken)
