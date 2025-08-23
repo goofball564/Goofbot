@@ -18,7 +18,7 @@ internal class CalculatorModule
 
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
     {
-        StringBuilder botMessage = new ();
+        string botMessage = string.Empty;
         string chatMessage = Program.RemoveSpaces(e.ChatMessage.Message.Trim());
         try
         {
@@ -26,7 +26,7 @@ internal class CalculatorModule
             if (expr.EvaluableNumerical)
             {
                 var eval = expr.Evaled;
-                botMessage.Append(string.Format("{0:0.#######}", (double)(Entity.Number)eval));
+                botMessage = string.Format("{0:0.#######}", (double)(Entity.Number)eval);
             }
         }
         catch
@@ -35,7 +35,7 @@ internal class CalculatorModule
 
         if (!(botMessage.Equals(string.Empty) || botMessage.Equals(chatMessage)))
         {
-            this.twitchClient.SendMessage(Program.TwitchChannelUsername, botMessage.ToString());
+            this.twitchClient.SendMessage(Program.TwitchChannelUsername, botMessage);
         }
     }
 }
