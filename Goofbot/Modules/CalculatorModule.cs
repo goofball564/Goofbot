@@ -1,6 +1,8 @@
 ﻿namespace Goofbot.Modules;
 
 using AngouriMath;
+using System;
+using System.Text;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 
@@ -16,28 +18,24 @@ internal class CalculatorModule
 
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
     {
-        string message = string.Empty;
+        StringBuilder botMessage = new ();
+        string chatMessage = Program.RemoveSpaces(e.ChatMessage.Message.Trim());
         try
         {
-            using (var _ = MathS.Settings.FloatToRationalIterCount.Set(0))
+            Entity expr = chatMessage;
+            if (expr.EvaluableNumerical)
             {
-                Entity expr = e.ChatMessage.Message;
-
-                if (expr.EvaluableNumerical)
-                {
-                    Entity eval = expr.Evaled;
-                    string evalString = eval.ToString();
-                    message = string.Format("{0:0.#######}", (double)(Entity.Number)eval);
-                }
+                var eval = expr.Evaled;
+                botMessage.Append(string.Format("{0:0.#######}", (double)(Entity.Number)eval));
             }
         }
         catch
         {
         }
 
-        if (!message.Equals(string.Empty))
+        if (!(botMessage.Equals(string.Empty) || botMessage.Equals(chatMessage)))
         {
-            this.twitchClient.SendMessage(Program.TwitchChannelUsername, message);
+            this.twitchClient.SendMessage(Program.TwitchChannelUsername, botMessage.ToString());
         }
     }
 }
