@@ -25,8 +25,8 @@ internal class CalculatorModule
             Entity expr = chatMessage;
             if (expr.EvaluableNumerical)
             {
-                var eval = expr.Evaled;
-                botMessage = string.Format("{0:0.#######}", (double)(Entity.Number)eval);
+                double result = (double)expr.EvalNumerical();
+                botMessage = string.Format("{0:0.#######}", result);
             }
         }
         catch
