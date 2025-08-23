@@ -161,8 +161,7 @@ internal partial class BlueGuyModule : GoofbotModule
 
     private static bool IsColorHexCode(string args)
     {
-        Match match = HexColorCodeRegex().Match(args);
-        return match.Success;
+        return HexColorCodeRegex().Match(args).Success;
     }
 
     private async void GuyTimerCallback(object source, ElapsedEventArgs e)
