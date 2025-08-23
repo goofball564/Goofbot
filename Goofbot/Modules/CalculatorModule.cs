@@ -19,7 +19,7 @@ internal class CalculatorModule
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
     {
         string botMessage = string.Empty;
-        string chatMessage = Program.RemoveSpaces(e.ChatMessage.Message.Trim());
+        string chatMessage = e.ChatMessage.Message.Trim();
         try
         {
             Entity expr = chatMessage;
