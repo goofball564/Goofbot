@@ -24,7 +24,6 @@ internal class TwitchAuthenticationManager
     private readonly HttpClient httpClient = new ();
     private readonly WebServer server = new (TwitchAppRedirectUrl);
 
-    private readonly SemaphoreSlim webServerSemaphore = new (1, 1);
     private readonly SemaphoreSlim botTokensSemaphore = new (1, 1);
     private readonly SemaphoreSlim channelTokensSemaphore = new (1, 1);
 
@@ -62,16 +61,7 @@ internal class TwitchAuthenticationManager
 
     private async Task<string> RefreshTwitchAccessToken(bool botToken)
     {
-        string code;
-        await this.webServerSemaphore.WaitAsync();
-        try
-        {
-            code = await this.RequestTwitchAuthorizationCode(botToken);
-        }
-        finally
-        {
-            this.webServerSemaphore.Release();
-        }
+        string code = await this.RequestTwitchAuthorizationCode(botToken);
 
         string accessToken;
         SemaphoreSlim semaphore = botToken ? this.botTokensSemaphore : this.channelTokensSemaphore;

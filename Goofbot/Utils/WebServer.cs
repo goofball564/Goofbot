@@ -1,56 +1,67 @@
-﻿using System;
+﻿namespace Goofbot.Utils;
+
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Net;
+using System.Threading;
 
-namespace Goofbot.Utils
+public class WebServer
 {
-    public class WebServer
+    private readonly HttpListener listener = new ();
+    private readonly SemaphoreSlim semaphore = new (1, 1);
+
+    public WebServer(string uri)
     {
-        private HttpListener _listener;
+        this.listener.Prefixes.Add(uri);
+    }
 
-        public WebServer(string uri)
+    public void Close()
+    {
+        this.listener.Close();
+    }
+
+    public async Task<string> Listen()
+    {
+        string code;
+        await this.semaphore.WaitAsync();
+        try
         {
-            _listener = new HttpListener();
-            _listener.Prefixes.Add(uri);
+            this.listener.Start();
+            code = await this.OnRequest();
+            this.listener.Stop();
+        }
+        finally
+        {
+            this.semaphore.Release();
         }
 
-        public void Close()
-        {
-            _listener.Close();
-        }
+        return code;
+    }
 
-        public async Task<string> Listen()
+    private async Task<string> OnRequest()
+    {
+        while (this.listener.IsListening)
         {
-            _listener.Start();
-            string code = await OnRequest();
-            _listener.Stop();
-            return code;
-        }
+            var ctx = await this.listener.GetContextAsync();
+            var req = ctx.Request;
+            var resp = ctx.Response;
 
-        private async Task<string> OnRequest()
-        {
-            while (_listener.IsListening)
+            using (var writer = new StreamWriter(resp.OutputStream))
             {
-                var ctx = await _listener.GetContextAsync();
-                var req = ctx.Request;
-                var resp = ctx.Response;
-
-                using (var writer = new StreamWriter(resp.OutputStream))
+                if (req.QueryString.AllKeys.Any("code".Contains))
                 {
-                    if (req.QueryString.AllKeys.Any("code".Contains))
-                    {
-                        return req.QueryString["code"];
-                    }
-                    else
-                    {
-                        writer.WriteLine("No code found in query string!");
-                        writer.Flush();
-                    }
+                    return req.QueryString["code"];
+                }
+                else
+                {
+                    writer.WriteLine("No code found in query string!");
+                    writer.Flush();
                 }
             }
-            return null;
         }
+
+        return null;
     }
 }
