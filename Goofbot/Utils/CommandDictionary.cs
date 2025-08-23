@@ -4,11 +4,10 @@ using System.Collections.Generic;
 
 internal class CommandDictionary
 {
-    private readonly Dictionary<string, Command> commandDictionary = new ();
+    private readonly Dictionary<string, Command> commandDictionary = [];
 
     public CommandDictionary()
     {
-
     }
 
     public bool TryAddCommand(Command command)
