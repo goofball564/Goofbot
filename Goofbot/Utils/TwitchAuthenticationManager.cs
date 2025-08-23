@@ -62,9 +62,6 @@ internal class TwitchAuthenticationManager
 
     private async Task<string> RefreshTwitchAccessToken(bool botToken)
     {
-        string tokensFile = botToken ? "bot_tokens.json" : "channel_tokens.json";
-        tokensFile = Path.Join(Program.StuffFolder, tokensFile);
-
         string code;
         await this.webServerSemaphore.WaitAsync();
         try
@@ -76,27 +73,19 @@ internal class TwitchAuthenticationManager
             this.webServerSemaphore.Release();
         }
 
+        string accessToken;
         SemaphoreSlim semaphore = botToken ? this.botTokensSemaphore : this.channelTokensSemaphore;
         await semaphore.WaitAsync();
-        string accessToken = string.Empty;
         try
         {
             string tokensString = await this.RequestTwitchTokensWithAuthorizationCode(code);
 
-            CancellationToken cancellationToken = new ();
-            Task writeAllTextTask = File.WriteAllTextAsync(tokensFile, tokensString, cancellationToken);
+            string tokensFile = botToken ? "bot_tokens.json" : "channel_tokens.json";
+            tokensFile = Path.Join(Program.StuffFolder, tokensFile);
+            File.WriteAllText(tokensFile, tokensString);
 
             dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);
-            if (botToken)
-            {
-                accessToken = Convert.ToString(tokensObject.access_token);
-            }
-            else
-            {
-                accessToken = Convert.ToString(tokensObject.access_token);
-            }
-
-            await writeAllTextTask;
+            accessToken = Convert.ToString(tokensObject.access_token);
         }
         finally
         {
