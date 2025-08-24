@@ -49,20 +49,20 @@ internal class ColorDictionary
             }
 
             dynamic colorNamesJson = Program.ParseJsonFile(this.colorNamesFile);
-            foreach (var color in colorNamesJson.colors)
+            foreach (dynamic color in colorNamesJson.colors)
             {
                 string colorName = Convert.ToString(color.name);
                 string colorNameLower = colorName.ToLowerInvariant();
-                string colorHex = Convert.ToString(color.hex).ToLowerInvariant();
+                string hexColorCode = Convert.ToString(color.hex).ToLowerInvariant();
 
-                if (this.colorDictionary.TryAdd(colorNameLower, colorHex))
+                if (this.colorDictionary.TryAdd(colorNameLower, hexColorCode))
                 {
                     this.colorNameList.Add(colorName);
                 }
 
-                GetHSV(colorHex, out double h, out double s, out double v);
+                GetHSV(hexColorCode, out double h, out double s, out double v);
 
-                if (v >= 0.2 && GoodSaturation(s, v) && this.saturatedColorDictionary.TryAdd(colorNameLower, colorHex))
+                if (v >= 0.2 && GoodSaturation(s, v) && this.saturatedColorDictionary.TryAdd(colorNameLower, hexColorCode))
                 {
                     this.saturatedColorNameList.Add(colorName);
                 }
@@ -74,10 +74,9 @@ internal class ColorDictionary
         }
     }
 
-    public string GetHex(string colorName)
+    public bool TryGetHex(string colorName, out string hexColorCode)
     {
-        this.colorDictionary.TryGetValue(colorName.ToLowerInvariant(), out string hex);
-        return hex;
+        return this.colorDictionary.TryGetValue(colorName.ToLowerInvariant(), out hexColorCode);
     }
 
     public string GetRandomName()
@@ -86,17 +85,17 @@ internal class ColorDictionary
         return this.colorNameList[randomIndex];
     }
 
-    public string GetRandomSaturatedName(out string hex)
+    public string GetRandomSaturatedName(out string hexColorCode)
     {
         int randomIndex = this.random.Next(0, this.saturatedColorNameList.Count);
         string colorName = this.saturatedColorNameList[randomIndex];
-        hex = this.GetHex(colorName);
-        return this.saturatedColorNameList[randomIndex];
+        this.TryGetHex(colorName, out hexColorCode);
+        return colorName;
     }
 
     private static void GetHSV(string hex, out double hue, out double saturation, out double value)
     {
-        var color = ColorTranslator.FromHtml(hex);
+        Color color = ColorTranslator.FromHtml(hex);
 
         int max = Math.Max(color.R, Math.Max(color.G, color.B));
         int min = Math.Min(color.R, Math.Min(color.G, color.B));
@@ -116,7 +115,7 @@ internal class ColorDictionary
 
     private async Task<string> RequestColorNames()
     {
-        var response = await this.httpClient.GetAsync(ColorNamesRequestUrl);
+        HttpResponseMessage response = await this.httpClient.GetAsync(ColorNamesRequestUrl);
         if (response.IsSuccessStatusCode)
         {
             return await response.Content.ReadAsStringAsync();

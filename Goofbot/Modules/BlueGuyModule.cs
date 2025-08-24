@@ -36,7 +36,7 @@ internal partial class BlueGuyModule : GoofbotModule
     private readonly System.Timers.Timer timer = new (TimeSpan.FromMinutes(20));
     private readonly TwitchClient twitchClient;
 
-    private string lastColorCode = string.Empty;
+    private string lastHexColorCode = string.Empty;
 
     public BlueGuyModule(string moduleDataFolder, CommandDictionary commandDictionary, TwitchClient twitchClient)
         : base(moduleDataFolder)
@@ -62,33 +62,32 @@ internal partial class BlueGuyModule : GoofbotModule
     {
         string message;
         bool colorChanged = false;
+        commandArgs = commandArgs.Trim().ToLowerInvariant();
         await this.semaphore.WaitAsync();
         try
         {
-            commandArgs = commandArgs.Trim().ToLowerInvariant();
-
-            if (IsColorHexCode(commandArgs))
+            if (IsHexColorCode(commandArgs))
             {
-                colorChanged = !commandArgs.Equals(this.lastColorCode);
+                colorChanged = !commandArgs.Equals(this.lastHexColorCode);
                 message = colorChanged ? ColorChangeString : SameColorString;
 
                 this.CreateBlueGuyImage(commandArgs);
-                this.lastColorCode = commandArgs;
+                this.lastHexColorCode = commandArgs;
             }
             else if (commandArgs.Equals("default") || commandArgs.Equals(DefaultColorName))
             {
-                colorChanged = !DefaultColorName.Equals(this.lastColorCode);
+                colorChanged = !DefaultColorName.Equals(this.lastHexColorCode);
                 message = colorChanged ? ColorChangeString : SameColorString;
 
-                this.lastColorCode = DefaultColorName;
+                this.lastHexColorCode = DefaultColorName;
                 this.RestoreDefaultBlueGuy();
             }
             else if (commandArgs.Equals(SpeedGuy))
             {
-                colorChanged = !SpeedGuy.Equals(this.lastColorCode);
+                colorChanged = !SpeedGuy.Equals(this.lastHexColorCode);
                 message = colorChanged ? ColorChangeString : SameColorString;
 
-                this.lastColorCode = SpeedGuy;
+                this.lastHexColorCode = SpeedGuy;
                 this.CreateBlueGuyImage(SpeedGuy);
             }
             else if (commandArgs.Equals(string.Empty))
@@ -101,29 +100,28 @@ internal partial class BlueGuyModule : GoofbotModule
                 colorChanged = true;
                 string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
 
-                this.lastColorCode = hexColorCode;
+                this.lastHexColorCode = hexColorCode;
                 this.CreateBlueGuyImage(hexColorCode);
 
-                string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", string.Empty) + "Guy.png";
+                string colorFile = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", string.Empty) + "Guy.png";
                 try
                 {
-                    File.Copy(OtherOutputFile, Path.Combine(this.guysFolder, colorFileName), false);
+                    File.Copy(OtherOutputFile, Path.Combine(this.guysFolder, colorFile), false);
                 }
-                catch (IOException)
+                catch (IOException e)
                 {
+                    Console.WriteLine(e.ToString());
                 }
 
                 message = string.Format(RandomColorString, colorName);
             }
             else
             {
-                string hexColorCode = Program.ColorDictionary.GetHex(commandArgs).ToLowerInvariant();
-
-                if (hexColorCode != null)
+                if (Program.ColorDictionary.TryGetHex(commandArgs, out string hexColorCode))
                 {
-                    colorChanged = !hexColorCode.Equals(this.lastColorCode);
+                    colorChanged = !hexColorCode.Equals(this.lastHexColorCode);
                     message = colorChanged ? ColorChangeString : SameColorString;
-                    this.lastColorCode = hexColorCode;
+                    this.lastHexColorCode = hexColorCode;
                     this.CreateBlueGuyImage(hexColorCode);
 
                     string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(commandArgs).Replace(" ", string.Empty) + "Guy.png";
@@ -131,8 +129,9 @@ internal partial class BlueGuyModule : GoofbotModule
                     {
                         File.Copy(OtherOutputFile, Path.Combine(this.guysFolder, colorFileName), false);
                     }
-                    catch (IOException)
+                    catch (IOException e)
                     {
+                        Console.WriteLine(e.ToString());
                     }
                 }
                 else
@@ -159,7 +158,7 @@ internal partial class BlueGuyModule : GoofbotModule
     [GeneratedRegex("^#[0-9A-Fa-f]{6}$")]
     private static partial Regex HexColorCodeRegex();
 
-    private static bool IsColorHexCode(string args)
+    private static bool IsHexColorCode(string args)
     {
         return HexColorCodeRegex().Match(args).Success;
     }
