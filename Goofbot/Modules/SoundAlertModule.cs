@@ -27,7 +27,7 @@ internal class SoundAlertModule
 
     private class SoundAlertModuleService : IHostedService
     {
-        public static readonly string SoundAlertFolderPath = Path.Combine(Program.StuffFolder, "SoundAlertModule");
+        public static readonly string SoundAlertFolder = Path.Combine(Program.StuffFolder, "SoundAlertModule");
 
         // You need the UserID for the User/Channel you want to get Events from.
         // You can use await _api.Helix.Users.GetUsersAsync() for that.
@@ -35,12 +35,12 @@ internal class SoundAlertModule
 
         private readonly EventSubWebsocketClient eventSubWebsocketClient = new ();
 
-        private readonly string soundAlertsCSVFilePath = Path.Join(SoundAlertFolderPath, "SoundAlerts.csv");
+        private readonly string soundAlertsCSVFile = Path.Join(SoundAlertFolder, "SoundAlerts.csv");
         private readonly SoundAlertDictionary soundAlertDictionary;
 
         public SoundAlertModuleService()
         {
-            this.soundAlertDictionary = new SoundAlertDictionary(this.soundAlertsCSVFilePath);
+            this.soundAlertDictionary = new SoundAlertDictionary(this.soundAlertsCSVFile);
 
             this.eventSubWebsocketClient.WebsocketConnected += this.OnWebsocketConnected;
             this.eventSubWebsocketClient.WebsocketDisconnected += this.OnWebsocketDisconnected;
@@ -121,7 +121,7 @@ internal class SoundAlertModule
                     // If csv[2] contains . it is a file name.
                     string redemption = csv[0];
                     string sound = csv[2];
-                    sound = Path.Join(SoundAlertModuleService.SoundAlertFolderPath, sound);
+                    sound = Path.Join(SoundAlertModuleService.SoundAlertFolder, sound);
                     string[] sounds = [sound];
                     this.soundAlertDictionary.TryAdd(redemption.ToLowerInvariant(), sounds);
                 }
@@ -130,7 +130,7 @@ internal class SoundAlertModule
                     // Otherwise, it is a folder name.
                     string redemption = csv[0];
                     string folder = csv[2];
-                    folder = Path.Join(SoundAlertModuleService.SoundAlertFolderPath, folder);
+                    folder = Path.Join(SoundAlertModuleService.SoundAlertFolder, folder);
                     string[] sounds = Directory.GetFiles(folder);
                     this.soundAlertDictionary.TryAdd(redemption.ToLowerInvariant(), sounds);
                 }

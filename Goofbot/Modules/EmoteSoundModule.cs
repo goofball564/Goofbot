@@ -12,7 +12,6 @@ using TwitchLib.Client.Events;
 
 internal partial class EmoteSoundModule : GoofbotModule
 {
-    private const string EmoteListFileName = "emotes.txt";
     private const int SoundIntervalInMilliseconds = 500;
     private const float Volume = 0.075f;
 
@@ -23,7 +22,7 @@ internal partial class EmoteSoundModule : GoofbotModule
     public EmoteSoundModule(string moduleDataFolder, TwitchClient twitchClient)
         : base(moduleDataFolder)
     {
-        this.emoteListFile = Path.Join(this.ModuleDataFolder, EmoteListFileName);
+        this.emoteListFile = Path.Join(this.ModuleDataFolder, "emotes.txt");
         this.ParseTheThing();
 
         twitchClient.OnMessageReceived += this.Client_OnMessageReceived;
