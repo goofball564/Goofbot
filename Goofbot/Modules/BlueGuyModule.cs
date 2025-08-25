@@ -9,8 +9,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using TwitchLib.Api;
-using TwitchLib.Client;
 using TwitchLib.Client.Events;
 internal partial class BlueGuyModule : GoofbotModule
 {

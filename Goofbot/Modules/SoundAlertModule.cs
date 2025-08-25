@@ -1,17 +1,7 @@
 ﻿namespace Goofbot.Modules;
-
-using System.Collections.Generic;
-using System;
 using System.IO;
 using System.Threading.Tasks;
-using System.Threading;
-using TwitchLib.Api.Core.Enums;
-using TwitchLib.EventSub.Websockets;
-using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using TwitchLib.EventSub.Websockets.Extensions;
 using Goofbot.Utils;
 
 internal class SoundAlertModule : GoofbotModule

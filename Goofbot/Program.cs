@@ -1,6 +1,5 @@
 ﻿namespace Goofbot;
 
-using AngouriMath;
 using Goofbot.Modules;
 using Goofbot.Utils;
 using ImageMagick;
@@ -8,7 +7,6 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using TwitchLib.Api;

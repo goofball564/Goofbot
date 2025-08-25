@@ -2,10 +2,6 @@
 
 using AngouriMath;
 using Goofbot.Utils;
-using System;
-using System.Text;
-using TwitchLib.Api;
-using TwitchLib.Client;
 using TwitchLib.Client.Events;
 
 internal class CalculatorModule : GoofbotModule

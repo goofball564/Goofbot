@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using CSCore.Codecs;
 using CSCore;
 using CSCore.SoundOut;
-using System;
 using System.IO;
 
 internal class SoundPlayer

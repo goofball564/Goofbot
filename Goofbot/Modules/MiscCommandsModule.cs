@@ -3,10 +3,7 @@
 using Goofbot.Utils;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Threading.Tasks;
-using TwitchLib.Api;
-using TwitchLib.Client;
 using TwitchLib.Client.Events;
 
 internal class MiscCommandsModule : GoofbotModule

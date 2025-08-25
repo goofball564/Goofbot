@@ -1,8 +1,6 @@
 ﻿namespace Goofbot.Utils;
 
 using System.IO;
-using TwitchLib.Api;
-using TwitchLib.Client;
 
 internal abstract class GoofbotModule
 {

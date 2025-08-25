@@ -2,7 +2,6 @@
 
 using System.Collections;
 using System.Collections.Generic;
-using System.Windows.Forms.VisualStyles;
 
 internal class CommandDictionary : IEnumerable<KeyValuePair<string, Command>>
 {

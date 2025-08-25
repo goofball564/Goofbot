@@ -1,16 +1,10 @@
 ﻿namespace Goofbot.Modules;
 
 using Goofbot.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Versioning;
 using System.Speech.Synthesis;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using TwitchLib.Api;
-using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 
