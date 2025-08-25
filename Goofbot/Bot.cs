@@ -16,7 +16,7 @@
         // cycle through list?
         // any configuration?
         // interface to easily modify commands?
-        // 
+        //
 
 
         private async void CommandParsingModule_OnRefreshColorsCommand(object sender, string e)
