@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 
@@ -19,8 +20,8 @@ internal partial class EmoteSoundModule : GoofbotModule
 
     private readonly Dictionary<string, string> emoteSoundDictionary = [];
 
-    public EmoteSoundModule(string moduleDataFolder, TwitchClient twitchClient)
-        : base(moduleDataFolder)
+    public EmoteSoundModule(string moduleDataFolder, CommandDictionary commandDictionary, ColorDictionary colorDictionary, TwitchClient twitchClient, TwitchAPI twitchAPI)
+        : base(moduleDataFolder, commandDictionary, colorDictionary, twitchClient, twitchAPI)
     {
         this.emoteListFile = Path.Join(this.ModuleDataFolder, "emotes.txt");
         this.ParseTheThing();

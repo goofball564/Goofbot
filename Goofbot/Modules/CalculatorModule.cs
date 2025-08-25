@@ -1,16 +1,19 @@
 ﻿namespace Goofbot.Modules;
 
 using AngouriMath;
+using Goofbot.Utils;
 using System;
 using System.Text;
+using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 
-internal class CalculatorModule
+internal class CalculatorModule : GoofbotModule
 {
     private readonly TwitchClient twitchClient;
 
-    public CalculatorModule(TwitchClient twitchClient)
+    public CalculatorModule(string moduleDataFolder, CommandDictionary commandDictionary, ColorDictionary colorDictionary, TwitchClient twitchClient, TwitchAPI twitchAPI)
+        : base(moduleDataFolder, commandDictionary, colorDictionary, twitchClient, twitchAPI)
     {
         this.twitchClient = twitchClient;
         this.twitchClient.OnMessageReceived += this.Client_OnMessageReceived;

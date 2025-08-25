@@ -35,8 +35,8 @@ internal class SpotifyModule : GoofbotModule
     private bool removedFromPlaylist = false;
     private bool addedToQueue = false;
 
-    public SpotifyModule(string moduleDataFolder, CommandDictionary commandDictionary)
-        : base(moduleDataFolder)
+    public SpotifyModule(string moduleDataFolder, CommandDictionary commandDictionary, ColorDictionary colorDictionary, TwitchClient twitchClient, TwitchAPI twitchAPI)
+        : base(moduleDataFolder, commandDictionary, colorDictionary, twitchClient, twitchAPI)
     {
         this.spotifyCredentialsFile = Path.Combine(this.ModuleDataFolder, "spotify_credentials.json");
         dynamic spotifyCredentials = Program.ParseJsonFile(this.spotifyCredentialsFile);
