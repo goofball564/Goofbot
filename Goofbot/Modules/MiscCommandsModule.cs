@@ -31,27 +31,43 @@ internal class MiscCommandsModule : GoofbotModule
 
     public async Task<string> CommandsCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
-        List<string> commands = Program.CommandDictionary.GetAllCommands();
-        commands.Sort();
+        List<string> commands = [];
 
+        foreach (var dictionaryEntry in Program.CommandDictionary)
+        {
+            string commandName = dictionaryEntry.Key;
+            string commandAccessibilityModifier = string.Empty;
+            switch (dictionaryEntry.Value.CommandAccessibilityModifier)
+            {
+                case CommandAccessibilityModifier.StreamerOnly:
+                    continue;
+                case CommandAccessibilityModifier.SubOnly:
+                    commandAccessibilityModifier = " (sub-only)";
+                    break;
+                case CommandAccessibilityModifier.ModOnly:
+                    commandAccessibilityModifier = " (mod-only)";
+                    break;
+            }
+
+            if (isReversed)
+            {
+                commands.Add($"{Program.ReverseString(commandAccessibilityModifier)}{commandName}!");
+            }
+            else
+            {
+                commands.Add($"!{commandName}{commandAccessibilityModifier}");
+            }
+        }
+
+        commands.Sort();
         string listOfCommands;
 
         if (isReversed)
         {
-            for (int i = 0; i < commands.Count; i++)
-            {
-                commands[i] += "!";
-            }
-
             listOfCommands = string.Join(" ,", commands);
         }
         else
         {
-            for (int i = 0; i < commands.Count; i++)
-            {
-                commands[i] = "!" + commands[i];
-            }
-
             listOfCommands = string.Join(", ", commands);
         }
 
