@@ -112,13 +112,17 @@ internal class Program
         string commandName = e.Command.CommandText;
         string commandArgs = e.Command.ArgumentsAsString;
 
+        bool isReversed = false;
+
         Command command;
         if (CommandDictionary.TryGetCommand(commandName, out command))
         {
-            message = await command.ExecuteCommandAsync(commandArgs, e);
+            message = await command.ExecuteCommandAsync(commandArgs, e, isReversed);
         }
         else if (CommandDictionary.TryGetCommand(ReverseString(commandName), out command))
         {
+            isReversed = true;
+
             List<string> a = e.Command.ArgumentsAsList;
             for (int i = 0; i < a.Count; i++)
             {
@@ -127,7 +131,7 @@ internal class Program
 
             string commandArgsReversed = string.Join(" ", a);
 
-            message = await command.ExecuteCommandAsync(commandArgsReversed, e);
+            message = await command.ExecuteCommandAsync(commandArgsReversed, e, isReversed);
             message = ReverseString(message);
         }
 

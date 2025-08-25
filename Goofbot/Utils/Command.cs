@@ -8,13 +8,13 @@ internal class Command
 {
     private readonly string name;
     private readonly object module;
-    private readonly Func<string, OnChatCommandReceivedArgs, Task<string>> commandAction;
+    private readonly Func<string, OnChatCommandReceivedArgs, bool, Task<string>> commandAction;
     private readonly TimeSpan timeout;
     private readonly bool goofOnly;
 
     private DateTime timeOfLastInvocation = DateTime.MinValue;
 
-    public Command(string name, Func<string, OnChatCommandReceivedArgs, Task<string>> commandAction, int timeoutSeconds, bool goofOnly = false)
+    public Command(string name, Func<string, OnChatCommandReceivedArgs, bool, Task<string>> commandAction, int timeoutSeconds, bool goofOnly = false)
     {
         this.name = name;
         this.timeout = TimeSpan.FromSeconds(timeoutSeconds);
@@ -27,7 +27,7 @@ internal class Command
         get { return this.name; }
     }
 
-    public async Task<string> ExecuteCommandAsync(string commandArgs, OnChatCommandReceivedArgs eventArgs)
+    public async Task<string> ExecuteCommandAsync(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         if (this.goofOnly && !eventArgs.Command.ChatMessage.IsBroadcaster)
         {
@@ -39,7 +39,7 @@ internal class Command
         if (timeoutTime.CompareTo(invocationTime) < 0)
         {
             this.timeOfLastInvocation = invocationTime;
-            return await this.commandAction(commandArgs, eventArgs);
+            return await this.commandAction(commandArgs, eventArgs, isReversed);
         }
         else
         {

@@ -1,6 +1,7 @@
 ﻿namespace Goofbot.Utils;
 
 using System.Collections.Generic;
+using System.Windows.Forms.VisualStyles;
 
 internal class CommandDictionary
 {
@@ -18,5 +19,16 @@ internal class CommandDictionary
     public bool TryGetCommand(string name, out Command command)
     {
         return this.commandDictionary.TryGetValue(name, out command);
+    }
+
+    public List<string> GetAllCommands()
+    {
+        List<string> commands = [];
+        foreach (string command in this.commandDictionary.Keys)
+        {
+            commands.Add(command);
+        }
+
+        return commands;
     }
 }

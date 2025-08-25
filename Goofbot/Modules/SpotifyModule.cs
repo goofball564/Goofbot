@@ -231,7 +231,7 @@ internal class SpotifyModule : GoofbotModule
         }
     }
 
-    private async Task<string> SongCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs)
+    private async Task<string> SongCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         await this.RefreshCurrentlyPlaying();
         string artists = string.Join(", ", this.CurrentlyPlayingArtistsNames);
