@@ -38,8 +38,8 @@ internal partial class BlueGuyModule : GoofbotModule
 
     private string lastHexColorCode = string.Empty;
 
-    public BlueGuyModule(string moduleDataFolder, CommandDictionary commandDictionary, ColorDictionary colorDictionary, TwitchClient twitchClient, TwitchAPI twitchAPI)
-        : base(moduleDataFolder, commandDictionary, colorDictionary, twitchClient, twitchAPI)
+    public BlueGuyModule(string moduleDataFolder)
+        : base(moduleDataFolder)
     {
         this.blueGuyGrayscaleFile = Path.Combine(this.ModuleDataFolder, "BlueGuyGrayscale.png");
         this.blueGuyColorFile = Path.Combine(this.ModuleDataFolder, "BlueGuyColor.png");
@@ -49,7 +49,7 @@ internal partial class BlueGuyModule : GoofbotModule
         this.guysFolder = Path.Combine(this.ModuleDataFolder, "Guys");
         Directory.CreateDirectory(this.guysFolder);
 
-        commandDictionary.TryAddCommand(new Command("guy", this.GuyCommand, 1));
+        Program.CommandDictionary.TryAddCommand(new Command("guy", this.GuyCommand, 1));
 
         this.timer.AutoReset = true;
         this.timer.Elapsed += this.GuyTimerCallback;
@@ -100,7 +100,7 @@ internal partial class BlueGuyModule : GoofbotModule
             else if (commandArgs.Equals("random"))
             {
                 colorChanged = true;
-                string colorName = this.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
+                string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
 
                 this.lastHexColorCode = hexColorCode;
                 this.CreateBlueGuyImage(hexColorCode);
@@ -119,7 +119,7 @@ internal partial class BlueGuyModule : GoofbotModule
             }
             else
             {
-                if (this.ColorDictionary.TryGetHex(commandArgs, out string hexColorCode))
+                if (Program.ColorDictionary.TryGetHex(commandArgs, out string hexColorCode))
                 {
                     colorChanged = !hexColorCode.Equals(this.lastHexColorCode);
                     message = colorChanged ? ColorChangeString : SameColorString;
@@ -168,7 +168,7 @@ internal partial class BlueGuyModule : GoofbotModule
     private async void GuyTimerCallback(object source, ElapsedEventArgs e)
     {
         string message = await this.GuyCommand("random");
-        this.TwitchClient.SendMessage(Program.TwitchChannelUsername, message);
+        Program.TwitchClient.SendMessage(Program.TwitchChannelUsername, message);
     }
 
     private void CreateBlueGuyImage(string hexColorCode)

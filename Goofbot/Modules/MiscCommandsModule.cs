@@ -13,11 +13,11 @@ internal class MiscCommandsModule : GoofbotModule
 {
     private readonly Random random = new ();
 
-    public MiscCommandsModule(string moduleDataFolder, CommandDictionary commandDictionary, ColorDictionary colorDictionary, TwitchClient twitchClient, TwitchAPI twitchAPI)
-        : base(moduleDataFolder, commandDictionary, colorDictionary, twitchClient, twitchAPI)
+    public MiscCommandsModule(string moduleDataFolder)
+        : base(moduleDataFolder)
     {
-        this.CommandDictionary.TryAddCommand(new ("antici", this.AnticiCommand, 1));
-        this.CommandDictionary.TryAddCommand(new ("commands", this.CommandsCommand, 1));
+        Program.CommandDictionary.TryAddCommand(new ("antici", this.AnticiCommand, 1));
+        Program.CommandDictionary.TryAddCommand(new ("commands", this.CommandsCommand, 1));
     }
 
     public async Task<string> AnticiCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
@@ -31,7 +31,7 @@ internal class MiscCommandsModule : GoofbotModule
 
     public async Task<string> CommandsCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
-        List<string> commands = this.CommandDictionary.GetAllCommands();
+        List<string> commands = Program.CommandDictionary.GetAllCommands();
         commands.Sort();
 
         string listOfCommands;

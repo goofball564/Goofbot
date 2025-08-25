@@ -8,11 +8,13 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
+using TwitchLib.EventSub.Websockets;
 
 [SupportedOSPlatform("windows")]
 internal class Program
@@ -20,7 +22,6 @@ internal class Program
     public const string TwitchBotUsername = "goofbotthebot";
     public const string TwitchChannelUsername = "goofballthecat";
 
-    private static readonly CommandDictionary CommandDictionary = new ();
     private static readonly string GoofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
     public static TwitchAuthenticationManager TwitchAuthenticationManager { get; private set; }
@@ -32,6 +33,10 @@ internal class Program
     public static TwitchClient TwitchClient { get; private set; } = new ();
 
     public static string StuffFolder { get; private set; }
+
+    public static CommandDictionary CommandDictionary { get; private set; } = new ();
+
+    public static EventSubWebsocketClient EventSubWebsocketClient { get; private set; }
 
     public static async Task Main(string[] args)
     {
@@ -52,19 +57,10 @@ internal class Program
         TwitchAuthenticationManager = new (clientID, clientSecret, TwitchClient, TwitchAPI);
         Task authenticationManagerInitializeTask = TwitchAuthenticationManager.Initialize();
 
-        // Initialize Modules
-        SpotifyModule spotifyModule = new ("SpotifyModule", CommandDictionary, ColorDictionary, TwitchClient, TwitchAPI);
-        Task spotifyModuleInitializeTask = spotifyModule.Initialize();
-
-        SoundAlertModule soundAlertModule = new ();
-        MiscCommandsModule miscCommandsModule = new ("MiscCommandsModule", CommandDictionary, ColorDictionary, TwitchClient, TwitchAPI);
-        CalculatorModule calculatorModule = new ("CalculatorModule", CommandDictionary, ColorDictionary, TwitchClient, TwitchAPI);
-        EmoteSoundModule emoteSoundModule = new ("EmoteSoundModule", CommandDictionary, ColorDictionary, TwitchClient, TwitchAPI);
-        BlueGuyModule blueGuyModule = new ("BlueGuyModule", CommandDictionary, ColorDictionary, TwitchClient, TwitchAPI);
-        TextToSpeechModule textToSpeechModule = new ("TextToSpeechModule", CommandDictionary, ColorDictionary, TwitchClient, TwitchAPI);
-
         // Initialize Magick.NET
         MagickNET.Initialize();
+
+        await authenticationManagerInitializeTask;
 
         // Subscribe to TwitchClient events
         TwitchClient.OnLog += Client_OnLog;
@@ -73,8 +69,21 @@ internal class Program
         TwitchClient.OnChatCommandReceived += Client_OnChatCommandReceived;
         TwitchClient.AddChatCommandIdentifier('!');
 
-        // Wait for everything to finish before starting the bot
-        await authenticationManagerInitializeTask;
+        // Subscribe to Twitch EventSub for Channel Point Redemption
+        ChannelPointRedemptionEventSub channelPointRedemptionEventSub = new ();
+        EventSubWebsocketClient = channelPointRedemptionEventSub.EventSubWebsocketClient;
+
+        // Initialize Modules
+        SpotifyModule spotifyModule = new ("SpotifyModule");
+        Task spotifyModuleInitializeTask = spotifyModule.Initialize();
+
+        SoundAlertModule soundAlertModule = new ("SoundAlertModule");
+        MiscCommandsModule miscCommandsModule = new ("MiscCommandsModule");
+        CalculatorModule calculatorModule = new ("CalculatorModule");
+        EmoteSoundModule emoteSoundModule = new ("EmoteSoundModule");
+        BlueGuyModule blueGuyModule = new ("BlueGuyModule");
+        TextToSpeechModule textToSpeechModule = new ("TextToSpeechModule");
+
         await spotifyModuleInitializeTask;
         await colorDictionaryTask;
 

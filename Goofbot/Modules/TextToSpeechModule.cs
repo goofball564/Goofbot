@@ -19,12 +19,12 @@ internal class TextToSpeechModule : GoofbotModule
     private readonly SpeechSynthesizer speechSynthesizer = new ();
     private readonly SemaphoreSlim speechSemaphore = new (1, 1);
 
-    public TextToSpeechModule(string moduleDataFolder, CommandDictionary commandDictionary, ColorDictionary colorDictionary, TwitchClient twitchClient, TwitchAPI twitchAPI)
-        : base(moduleDataFolder, commandDictionary, colorDictionary, twitchClient, twitchAPI)
+    public TextToSpeechModule(string moduleDataFolder)
+        : base(moduleDataFolder)
     {
         this.speechSynthesizer.SetOutputToDefaultAudioDevice();
 
-        this.CommandDictionary.TryAddCommand(new Command("tts", this.TTSCommand, 1, CommandAccessibilityModifier.SubOnly));
+        Program.CommandDictionary.TryAddCommand(new Command("tts", this.TTSCommand, 1, CommandAccessibilityModifier.SubOnly));
     }
 
     ~TextToSpeechModule()
