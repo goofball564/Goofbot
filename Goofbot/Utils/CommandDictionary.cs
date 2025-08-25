@@ -1,9 +1,10 @@
 ﻿namespace Goofbot.Utils;
 
+using System.Collections;
 using System.Collections.Generic;
 using System.Windows.Forms.VisualStyles;
 
-internal class CommandDictionary
+internal class CommandDictionary : IEnumerable<KeyValuePair<string, Command>>
 {
     private readonly Dictionary<string, Command> commandDictionary = [];
 
@@ -19,6 +20,16 @@ internal class CommandDictionary
     public bool TryGetCommand(string name, out Command command)
     {
         return this.commandDictionary.TryGetValue(name, out command);
+    }
+
+    public IEnumerator<KeyValuePair<string, Command>> GetEnumerator()
+    {
+        return this.commandDictionary.GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return this.GetEnumerator();
     }
 
     public List<string> GetAllCommands()
