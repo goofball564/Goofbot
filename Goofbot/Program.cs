@@ -1,18 +1,20 @@
 ﻿namespace Goofbot;
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
 using AngouriMath;
 using Goofbot.Modules;
 using Goofbot.Utils;
 using ImageMagick;
 using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Versioning;
+using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 
+[SupportedOSPlatform("windows")]
 internal class Program
 {
     public const string TwitchBotUsername = "goofbotthebot";
@@ -59,6 +61,7 @@ internal class Program
         CalculatorModule calculatorModule = new ("CalculatorModule", CommandDictionary, ColorDictionary, TwitchClient, TwitchAPI);
         EmoteSoundModule emoteSoundModule = new ("EmoteSoundModule", CommandDictionary, ColorDictionary, TwitchClient, TwitchAPI);
         BlueGuyModule blueGuyModule = new ("BlueGuyModule", CommandDictionary, ColorDictionary, TwitchClient, TwitchAPI);
+        TextToSpeechModule textToSpeechModule = new ("TextToSpeechModule", CommandDictionary, ColorDictionary, TwitchClient, TwitchAPI);
 
         // Initialize Magick.NET
         MagickNET.Initialize();
