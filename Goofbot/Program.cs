@@ -128,7 +128,7 @@ internal class Program
     private static async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
     {
         string message = string.Empty;
-        string commandName = e.Command.CommandText;
+        string commandName = e.Command.CommandText.ToLowerInvariant();
         string commandArgs = e.Command.ArgumentsAsString;
 
         bool isReversed = false;
