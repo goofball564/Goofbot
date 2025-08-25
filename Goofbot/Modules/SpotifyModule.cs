@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using TwitchLib.Api;
+using TwitchLib.Client;
 using TwitchLib.Client.Events;
 
 internal class SpotifyModule : GoofbotModule
