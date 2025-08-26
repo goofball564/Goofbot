@@ -16,18 +16,24 @@ using TwitchLib.EventSub.Websockets;
 /*
  * Some ideas I've had/things to do
  *
- * Sentiment analysis to react to angry messages
- * Ability to cancel/block specific users for TTS
+ * EASY
  * Ability to select Mike/Mary/Sam for TTS
+ * !yug inverts BlueGuy image
+ *
+ * MODIFY EXISTING MODULES
  * !stt reverses audio stream
+ * Ability to cancel/block specific users for TTS
+ * Add imaginary number support to calculator
+ *
+ * NEW
  * SCATTER for specific randomly chosen users
  * Timers
+ * Sentiment analysis to react to angry messages
  * Implement configurable settings
  * Interface to manage pure text commands, and migrate from Nightbot
  * Web page that shows up-to-date commands (requires a web page)
- * Add imaginary number support to calculator
  * Add ability for users to send voice messages (requires a web page)
- * !yug inverts BlueGuy image
+ *
  */
 
 [SupportedOSPlatform("windows")]
