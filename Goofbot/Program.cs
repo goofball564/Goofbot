@@ -26,6 +26,7 @@ using TwitchLib.EventSub.Websockets;
  * Web page that shows up-to-date commands (requires a web page)
  * Add imaginary number support to calculator
  * Add ability for users to send voice messages (requires a web page)
+ * !yug inverts BlueGuy image
  */
 
 [SupportedOSPlatform("windows")]
