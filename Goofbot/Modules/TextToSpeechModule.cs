@@ -34,8 +34,15 @@ internal class TextToSpeechModule : GoofbotModule
 
     public async Task<string> TTSCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
-        await this.SpeakAsync(commandArgs);
-        return string.Empty;
+        if (commandArgs.Equals(string.Empty))
+        {
+            return "Enter a message with this command to hear it read aloud by the inimitable Microsoft Sam";
+        }
+        else
+        {
+            await this.SpeakAsync(commandArgs);
+            return string.Empty;
+        }
     }
 
     public async Task<string> EmergencyStopCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
