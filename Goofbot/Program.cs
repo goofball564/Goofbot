@@ -5,7 +5,6 @@ using Goofbot.Utils;
 using ImageMagick;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
@@ -13,6 +12,20 @@ using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets;
+
+/*
+ * Some ideas I've had/things to do
+ *
+ * Sentiment analysis to react to angry messages
+ * Ability to cancel/block specific users for TTS
+ * Ability to select Mike/Mary/Sam for TTS
+ * SCATTER for specific randomly chosen users
+ * Timers
+ * Implement configurable settings
+ * Interface to manage pure text commands (and migrate from Nightbot)
+ * Web page that shows up-to-date commands
+ * Add imaginary number support to calculator
+ */
 
 [SupportedOSPlatform("windows")]
 internal class Program
