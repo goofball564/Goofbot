@@ -2,19 +2,22 @@
 
 using Goofbot.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 
 internal class MiscCommandsModule : GoofbotModule
 {
+    private const string CommandsCommandName = "commands";
+
     private readonly Random random = new ();
 
     public MiscCommandsModule(string moduleDataFolder)
         : base(moduleDataFolder)
     {
         Program.CommandDictionary.TryAddCommand(new ("antici", this.AnticiCommand, 1));
-        Program.CommandDictionary.TryAddCommand(new ("commands", this.CommandsCommand, 1));
+        Program.CommandDictionary.TryAddCommand(new (CommandsCommandName, this.CommandsCommand, 1));
     }
 
     public async Task<string> AnticiCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
@@ -28,44 +31,70 @@ internal class MiscCommandsModule : GoofbotModule
 
     public async Task<string> CommandsCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
-        List<string> commands = [];
+        List<string> commandNames = [];
 
         foreach (var dictionaryEntry in Program.CommandDictionary)
         {
-            string commandName = dictionaryEntry.Key;
-            string commandAccessibilityModifier = string.Empty;
-            switch (dictionaryEntry.Value.CommandAccessibilityModifier)
+            if (dictionaryEntry.Value.CommandAccessibilityModifier == CommandAccessibilityModifier.StreamerOnly)
             {
-                case CommandAccessibilityModifier.StreamerOnly:
-                    continue;
-                case CommandAccessibilityModifier.SubOnly:
-                    commandAccessibilityModifier = " (sub-only)";
-                    break;
-                case CommandAccessibilityModifier.ModOnly:
-                    commandAccessibilityModifier = " (mod-only)";
-                    break;
+                continue;
+            }
+
+            string commandName = dictionaryEntry.Key;
+
+            if (commandName.Equals(CommandsCommandName))
+            {
+                commandName = Program.ReverseString(commandName);
+            }
+
+            commandNames.Add(commandName);
+        }
+
+
+        commandNames.Sort();
+        if (isReversed)
+        {
+            commandNames.Reverse();
+        }
+
+        for (int i = 0; i < commandNames.Count; i++)
+        {
+            string commandAccessibilityModifier = string.Empty;
+            if (Program.CommandDictionary.TryGetCommand(commandNames[i], out Command command))
+            {
+                switch (command.CommandAccessibilityModifier)
+                {
+                    case CommandAccessibilityModifier.StreamerOnly:
+                        commandAccessibilityModifier = "streamer-only";
+                        break;
+                    case CommandAccessibilityModifier.SubOnly:
+                        commandAccessibilityModifier = "sub-only";
+                        break;
+                    case CommandAccessibilityModifier.ModOnly:
+                        commandAccessibilityModifier = "mod-only";
+                        break;
+                }
             }
 
             if (isReversed)
             {
-                commands.Add($"{Program.ReverseString(commandAccessibilityModifier)}{commandName}!");
+                commandNames[i] = commandAccessibilityModifier.Equals(string.Empty) ? $"{commandNames[i]}!" : $"){commandAccessibilityModifier}( {commandNames[i]}!";
             }
             else
             {
-                commands.Add($"!{commandName}{commandAccessibilityModifier}");
+                commandNames[i] = commandAccessibilityModifier.Equals(string.Empty) ? $"!{commandNames[i]}" : $"!{commandNames[i]} ({commandAccessibilityModifier})";
             }
         }
 
-        commands.Sort();
         string listOfCommands;
 
         if (isReversed)
         {
-            listOfCommands = string.Join(" ,", commands);
+            listOfCommands = string.Join(" ,", commandNames);
         }
         else
         {
-            listOfCommands = string.Join(", ", commands);
+            listOfCommands = string.Join(", ", commandNames);
         }
 
         return listOfCommands;
