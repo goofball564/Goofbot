@@ -22,9 +22,10 @@ using TwitchLib.EventSub.Websockets;
  * SCATTER for specific randomly chosen users
  * Timers
  * Implement configurable settings
- * Interface to manage pure text commands (and migrate from Nightbot)
- * Web page that shows up-to-date commands
+ * Interface to manage pure text commands, and migrate from Nightbot
+ * Web page that shows up-to-date commands (requires a web page)
  * Add imaginary number support to calculator
+ * Add ability for users to send voice messages (requires a web page)
  */
 
 [SupportedOSPlatform("windows")]
