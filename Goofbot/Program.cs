@@ -19,6 +19,7 @@ using TwitchLib.EventSub.Websockets;
  * Sentiment analysis to react to angry messages
  * Ability to cancel/block specific users for TTS
  * Ability to select Mike/Mary/Sam for TTS
+ * !stt reverses audio stream
  * SCATTER for specific randomly chosen users
  * Timers
  * Implement configurable settings
