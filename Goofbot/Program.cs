@@ -126,8 +126,8 @@ internal class Program
     private static async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
     {
         string message = string.Empty;
-        string commandName = e.Command.CommandText.ToLowerInvariant();
-        string commandArgs = e.Command.ArgumentsAsString;
+        string commandName = e.Command.CommandText.ToLowerInvariant().Trim();
+        string commandArgs = e.Command.ArgumentsAsString.Trim();
 
         bool isReversed = false;
 
@@ -140,13 +140,7 @@ internal class Program
         {
             isReversed = true;
 
-            List<string> a = e.Command.ArgumentsAsList;
-            for (int i = 0; i < a.Count; i++)
-            {
-                a[i] = ReverseString(a[i]);
-            }
-
-            string commandArgsReversed = string.Join(" ", a);
+            string commandArgsReversed = Program.ReverseString(commandArgs);
 
             message = await command.ExecuteCommandAsync(commandArgsReversed, e, isReversed);
             message = ReverseString(message);
