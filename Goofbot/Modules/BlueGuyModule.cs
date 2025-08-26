@@ -62,7 +62,7 @@ internal partial class BlueGuyModule : GoofbotModule
     {
         string message;
         bool colorChanged = false;
-        commandArgs = commandArgs.Trim().ToLowerInvariant();
+        commandArgs = commandArgs.ToLowerInvariant();
         await this.semaphore.WaitAsync();
         try
         {
