@@ -24,6 +24,7 @@ using TwitchLib.EventSub.Websockets;
  * !stt reverses audio stream
  * Ability to cancel/block specific users for TTS
  * Add imaginary number support to calculator
+ * Ability to unlock and re-lock sub-only commands
  *
  * NEW
  * SCATTER for specific randomly chosen users
@@ -77,22 +78,6 @@ internal class Program
         TwitchAuthenticationManager = new (clientID, clientSecret, TwitchClient, TwitchAPI);
         Task authenticationManagerInitializeTask = TwitchAuthenticationManager.Initialize();
 
-        // Initialize Magick.NET
-        MagickNET.Initialize();
-
-        await authenticationManagerInitializeTask;
-
-        // Subscribe to TwitchClient events
-        TwitchClient.OnLog += Client_OnLog;
-        TwitchClient.OnConnected += Client_OnConnected;
-        TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
-        TwitchClient.OnChatCommandReceived += Client_OnChatCommandReceived;
-        TwitchClient.AddChatCommandIdentifier('!');
-
-        // Subscribe to Twitch EventSub for Channel Point Redemption
-        ChannelPointRedemptionEventSub channelPointRedemptionEventSub = new ();
-        EventSubWebsocketClient = channelPointRedemptionEventSub.EventSubWebsocketClient;
-
         // Initialize Modules
         SpotifyModule spotifyModule = new ("SpotifyModule");
         Task spotifyModuleInitializeTask = spotifyModule.Initialize();
@@ -104,8 +89,24 @@ internal class Program
         BlueGuyModule blueGuyModule = new ("BlueGuyModule");
         TextToSpeechModule textToSpeechModule = new ("TextToSpeechModule");
 
+        // Initialize Magick.NET
+        MagickNET.Initialize();
+
+        // Subscribe to TwitchClient events
+        TwitchClient.OnLog += Client_OnLog;
+        TwitchClient.OnConnected += Client_OnConnected;
+        TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
+        TwitchClient.OnChatCommandReceived += Client_OnChatCommandReceived;
+
+        await authenticationManagerInitializeTask;
         await spotifyModuleInitializeTask;
         await colorDictionaryTask;
+
+        // Subscribe to Twitch EventSub for Channel Point Redemption
+        ChannelPointRedemptionEventSub channelPointRedemptionEventSub = new();
+        EventSubWebsocketClient = channelPointRedemptionEventSub.EventSubWebsocketClient;
+
+        TwitchClient.AddChatCommandIdentifier('!');
 
         // Start the bot
         blueGuyModule.StartTimer();
