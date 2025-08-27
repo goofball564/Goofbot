@@ -99,15 +99,15 @@ internal class Program
         BlueGuyModule blueGuyModule = new ("BlueGuyModule");
         TextToSpeechModule textToSpeechModule = new ("TextToSpeechModule");
 
-        await spotifyModuleInitializeTask;
-        await colorDictionaryTask;
-
         // Subscribe to TwitchClient events
         TwitchClient.OnLog += Client_OnLog;
         TwitchClient.OnConnected += Client_OnConnected;
         TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
         TwitchClient.OnChatCommandReceived += Client_OnChatCommandReceived;
         TwitchClient.AddChatCommandIdentifier('!');
+
+        await spotifyModuleInitializeTask;
+        await colorDictionaryTask;
 
         // Start the bot
         blueGuyModule.StartTimer();
