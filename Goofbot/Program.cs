@@ -78,7 +78,17 @@ internal class Program
         TwitchAuthenticationManager = new (clientID, clientSecret, TwitchClient, TwitchAPI);
         Task authenticationManagerInitializeTask = TwitchAuthenticationManager.Initialize();
 
-        // Initialize Modules
+        // Initialize Magick.NET
+        MagickNET.Initialize();
+
+        // Twitch API Authentication Required for EventSub
+        await authenticationManagerInitializeTask;
+
+        // Subscribe to Twitch EventSub for Channel Point Redemption
+        ChannelPointRedemptionEventSub channelPointRedemptionEventSub = new ();
+        EventSubWebsocketClient = channelPointRedemptionEventSub.EventSubWebsocketClient;
+
+        // Initialize Modules; EventSubWebsocketClient needs to be created before this
         SpotifyModule spotifyModule = new ("SpotifyModule");
         Task spotifyModuleInitializeTask = spotifyModule.Initialize();
 
@@ -89,23 +99,14 @@ internal class Program
         BlueGuyModule blueGuyModule = new ("BlueGuyModule");
         TextToSpeechModule textToSpeechModule = new ("TextToSpeechModule");
 
-        // Initialize Magick.NET
-        MagickNET.Initialize();
+        await spotifyModuleInitializeTask;
+        await colorDictionaryTask;
 
         // Subscribe to TwitchClient events
         TwitchClient.OnLog += Client_OnLog;
         TwitchClient.OnConnected += Client_OnConnected;
         TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
         TwitchClient.OnChatCommandReceived += Client_OnChatCommandReceived;
-
-        await authenticationManagerInitializeTask;
-        await spotifyModuleInitializeTask;
-        await colorDictionaryTask;
-
-        // Subscribe to Twitch EventSub for Channel Point Redemption
-        ChannelPointRedemptionEventSub channelPointRedemptionEventSub = new();
-        EventSubWebsocketClient = channelPointRedemptionEventSub.EventSubWebsocketClient;
-
         TwitchClient.AddChatCommandIdentifier('!');
 
         // Start the bot
