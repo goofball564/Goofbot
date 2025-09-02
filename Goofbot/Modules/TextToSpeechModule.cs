@@ -117,11 +117,6 @@ internal class QueuedTTS
         this.CancellationTokenSource = new ();
     }
 
-    ~QueuedTTS()
-    {
-        this.CancellationTokenSource.Dispose();
-    }
-
     public string Username { get; private set; }
 
     public string Message { get; private set; }
@@ -133,5 +128,6 @@ internal class QueuedTTS
     public async Task Execute()
     {
         await this.Action(this.Message, this.CancellationTokenSource.Token);
+        this.CancellationTokenSource.Dispose();
     }
 }
