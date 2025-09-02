@@ -15,7 +15,7 @@ internal class MiscCommandsModule : GoofbotModule
     public MiscCommandsModule(string moduleDataFolder)
         : base(moduleDataFolder)
     {
-        Program.CommandDictionary.TryAddCommand(new ("antici", this.AnticiCommand));
+        Program.CommandDictionary.TryAddCommand(new ("antici", this.AnticiCommand, timeoutSeconds: 0));
         Program.CommandDictionary.TryAddCommand(new (CommandsCommandName, this.CommandsCommand));
     }
 
