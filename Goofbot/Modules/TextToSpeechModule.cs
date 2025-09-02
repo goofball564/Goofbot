@@ -22,12 +22,6 @@ internal class TextToSpeechModule : GoofbotModule
         : base(moduleDataFolder)
     {
         this.currentTTS = new (string.Empty, string.Empty, this.SpeakSAPI5);
-
-        Program.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
-
-        Program.CommandDictionary.TryAddCommand(new Command("tts", this.TTSCommand, 1, CommandAccessibilityModifier.SubOnly));
-        Program.CommandDictionary.TryAddCommand(new Command("emergencystop", this.EmergencyStopCommand, 0, CommandAccessibilityModifier.StreamerOnly));
-
         Task runningTask = Task.Run(async () =>
         {
             while (true)
@@ -36,6 +30,11 @@ internal class TextToSpeechModule : GoofbotModule
                 await this.currentTTS.Execute();
             }
         });
+
+        Program.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
+
+        Program.CommandDictionary.TryAddCommand(new Command("tts", this.TTSCommand, 1, CommandAccessibilityModifier.SubOnly));
+        Program.CommandDictionary.TryAddCommand(new Command("emergencystop", this.EmergencyStopCommand, 0, CommandAccessibilityModifier.StreamerOnly));
     }
 
     public async Task<string> TTSCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
