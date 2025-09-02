@@ -16,8 +16,8 @@
     <PackageReference Include="CSCore" Version="1.2.1.2" />
     <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="EmbedIO" Version="3.5.2" />
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.8.0" />
-    <PackageReference Include="Magick.NET.Core" Version="14.8.0" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.8.2" />
+    <PackageReference Include="Magick.NET.Core" Version="14.8.2" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
     <PackageReference Include="SpotifyAPI.Web" Version="7.2.1" />
