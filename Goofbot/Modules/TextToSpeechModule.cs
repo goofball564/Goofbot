@@ -15,6 +15,7 @@ internal class TextToSpeechModule : GoofbotModule
 {
     private const int Volume = 60;
 
+    private readonly object queueLock = new ();
     private readonly BlockingCollection<QueuedTTS> ttsQueue = new (new ConcurrentQueue<QueuedTTS>(), 1000);
     private QueuedTTS currentTTS;
 
@@ -26,8 +27,18 @@ internal class TextToSpeechModule : GoofbotModule
         {
             while (true)
             {
-                this.currentTTS = this.ttsQueue.Take();
-                await this.currentTTS.Execute();
+                lock (this.queueLock)
+                {
+                    this.currentTTS = this.ttsQueue.Take();
+                }
+
+                try
+                {
+                    await this.currentTTS.Execute();
+                }
+                catch
+                {
+                }
             }
         });
 
@@ -53,12 +64,15 @@ internal class TextToSpeechModule : GoofbotModule
 
     public async Task<string> EmergencyStopCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
-        foreach (QueuedTTS tts in this.ttsQueue)
+        lock (this.queueLock)
         {
-            tts.CancellationTokenSource.Cancel();
-        }
+            foreach (QueuedTTS tts in this.ttsQueue)
+            {
+                tts.CancellationTokenSource.Cancel();
+            }
 
-        this.currentTTS.CancellationTokenSource.Cancel();
+            this.currentTTS.CancellationTokenSource.Cancel();
+        }
 
         return string.Empty;
     }
@@ -73,23 +87,14 @@ internal class TextToSpeechModule : GoofbotModule
 
     private async Task SpeakSAPI5(string message, CancellationToken cancellationToken)
     {
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-
-        await Task.Delay(2000);
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-
+        cancellationToken.ThrowIfCancellationRequested();
+        await Task.Delay(2000, cancellationToken);
         using (SpeechSynthesizer speechSynthesizer = this.InitializeSpeechSynthesizer())
         {
             Prompt speechPrompt = speechSynthesizer.SpeakAsync(message);
             while (!(speechPrompt.IsCompleted || cancellationToken.IsCancellationRequested))
             {
-                await Task.Delay(500);
+                await Task.Delay(500, cancellationToken);
             }
         }
     }
