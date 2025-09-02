@@ -35,6 +35,10 @@ internal class TextToSpeechModule : GoofbotModule
                 catch
                 {
                 }
+                finally
+                {
+                    this.currentTTS.Dispose();
+                }
             }
         });
 
@@ -104,7 +108,7 @@ internal class TextToSpeechModule : GoofbotModule
     }
 }
 
-internal class QueuedTTS
+internal class QueuedTTS : IDisposable
 {
     public QueuedTTS(string username, string message, Func<string, CancellationToken, Task> action)
     {
@@ -126,6 +130,10 @@ internal class QueuedTTS
     public async Task Execute()
     {
         await this.Action(this.Message, this.CancellationTokenSource.Token);
+    }
+
+    public void Dispose()
+    {
         this.CancellationTokenSource.Dispose();
     }
 }
