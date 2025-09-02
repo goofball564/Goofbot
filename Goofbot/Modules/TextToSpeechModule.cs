@@ -77,7 +77,7 @@ internal class TextToSpeechModule : GoofbotModule
         return string.Empty;
     }
 
-    private SpeechSynthesizer InitializeSpeechSynthesizer()
+    private static SpeechSynthesizer InitializeSpeechSynthesizer()
     {
         SpeechSynthesizer speechSynthesizer = new ();
         speechSynthesizer.SetOutputToDefaultAudioDevice();
