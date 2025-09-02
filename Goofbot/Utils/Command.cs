@@ -18,10 +18,18 @@ internal class Command
     public Command(string name, Func<string, OnChatCommandReceivedArgs, bool, Task<string>> commandAction, CommandAccessibilityModifier commandAccessibilityModifier = CommandAccessibilityModifier.AllChatters, bool unlisted = false, int timeoutSeconds = 1)
     {
         this.Name = name;
-        this.timeout = TimeSpan.FromSeconds(timeoutSeconds);
         this.CommandAccessibilityModifier = commandAccessibilityModifier;
         this.commandAction = commandAction;
         this.Unlisted = unlisted;
+
+        if (this.CommandAccessibilityModifier == CommandAccessibilityModifier.StreamerOnly)
+        {
+            this.timeout = TimeSpan.FromSeconds(0);
+        }
+        else
+        {
+            this.timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        }
     }
 
     public async Task<string> ExecuteCommandAsync(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
