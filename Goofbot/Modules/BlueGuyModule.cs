@@ -47,7 +47,7 @@ internal partial class BlueGuyModule : GoofbotModule
         this.guysFolder = Path.Combine(this.ModuleDataFolder, "Guys");
         Directory.CreateDirectory(this.guysFolder);
 
-        Program.CommandDictionary.TryAddCommand(new Command("guy", this.GuyCommand, 1));
+        Program.CommandDictionary.TryAddCommand(new Command("guy", this.GuyCommand));
 
         this.timer.AutoReset = true;
         this.timer.Elapsed += this.GuyTimerCallback;

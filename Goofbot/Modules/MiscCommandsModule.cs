@@ -15,8 +15,8 @@ internal class MiscCommandsModule : GoofbotModule
     public MiscCommandsModule(string moduleDataFolder)
         : base(moduleDataFolder)
     {
-        Program.CommandDictionary.TryAddCommand(new ("antici", this.AnticiCommand, 1));
-        Program.CommandDictionary.TryAddCommand(new (CommandsCommandName, this.CommandsCommand, 1));
+        Program.CommandDictionary.TryAddCommand(new ("antici", this.AnticiCommand));
+        Program.CommandDictionary.TryAddCommand(new (CommandsCommandName, this.CommandsCommand));
     }
 
     public async Task<string> AnticiCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
@@ -48,7 +48,6 @@ internal class MiscCommandsModule : GoofbotModule
 
             commandNames.Add(commandName);
         }
-
 
         commandNames.Sort();
         if (isReversed)

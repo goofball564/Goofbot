@@ -7,24 +7,21 @@ using TwitchLib.Client.Events;
 internal class Command
 {
     public readonly CommandAccessibilityModifier CommandAccessibilityModifier;
+    public readonly string Name;
+    public readonly bool Unlisted;
 
-    private readonly string name;
     private readonly Func<string, OnChatCommandReceivedArgs, bool, Task<string>> commandAction;
     private readonly TimeSpan timeout;
 
     private DateTime timeOfLastInvocation = DateTime.MinValue;
 
-    public Command(string name, Func<string, OnChatCommandReceivedArgs, bool, Task<string>> commandAction, int timeoutSeconds, CommandAccessibilityModifier commandAccessibilityModifier = CommandAccessibilityModifier.AllChatters)
+    public Command(string name, Func<string, OnChatCommandReceivedArgs, bool, Task<string>> commandAction, CommandAccessibilityModifier commandAccessibilityModifier = CommandAccessibilityModifier.AllChatters, bool unlisted = false, int timeoutSeconds = 1)
     {
-        this.name = name;
+        this.Name = name;
         this.timeout = TimeSpan.FromSeconds(timeoutSeconds);
         this.CommandAccessibilityModifier = commandAccessibilityModifier;
         this.commandAction = commandAction;
-    }
-
-    public string Name
-    {
-        get { return this.name; }
+        this.Unlisted = unlisted;
     }
 
     public async Task<string> ExecuteCommandAsync(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)

@@ -47,7 +47,7 @@ internal class SpotifyModule : GoofbotModule
         this.clientId = Convert.ToString(spotifyCredentials.client_id);
         this.clientSecret = Convert.ToString(spotifyCredentials.client_secret);
 
-        Program.CommandDictionary.TryAddCommand(new Command("song", this.SongCommand, 1));
+        Program.CommandDictionary.TryAddCommand(new Command("song", this.SongCommand));
     }
 
     public bool QueueMode

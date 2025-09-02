@@ -43,8 +43,8 @@ internal class TextToSpeechModule : GoofbotModule
 
         Program.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
 
-        Program.CommandDictionary.TryAddCommand(new Command("tts", this.TTSCommand, 1, CommandAccessibilityModifier.SubOnly));
-        Program.CommandDictionary.TryAddCommand(new Command("cancel", this.CancelCommand, 0, CommandAccessibilityModifier.StreamerOnly));
+        Program.CommandDictionary.TryAddCommand(new Command("tts", this.TTSCommand, CommandAccessibilityModifier.SubOnly));
+        Program.CommandDictionary.TryAddCommand(new Command("cancel", this.CancelCommand, CommandAccessibilityModifier.StreamerOnly));
     }
 
     public async Task<string> TTSCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
