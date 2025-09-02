@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 
-[SupportedOSPlatform("windows")]
 internal class TextToSpeechModule : GoofbotModule
 {
     private const int Volume = 60;

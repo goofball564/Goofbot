@@ -37,7 +37,6 @@ using TwitchLib.EventSub.Websockets;
  *
  */
 
-[SupportedOSPlatform("windows")]
 internal class Program
 {
     public const string TwitchBotUsername = "goofbotthebot";
