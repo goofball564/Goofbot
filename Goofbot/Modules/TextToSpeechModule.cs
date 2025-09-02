@@ -20,9 +20,7 @@ internal class TextToSpeechModule : GoofbotModule
     public TextToSpeechModule(string moduleDataFolder)
         : base(moduleDataFolder)
     {
-        this.speechSynthesizer = new ();
-        this.speechSynthesizer.SetOutputToDefaultAudioDevice();
-        this.speechSynthesizer.Volume = Volume;
+        this.InitializeSpeechSynthesizer();
 
         Program.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
 
@@ -51,11 +49,16 @@ internal class TextToSpeechModule : GoofbotModule
     public async Task<string> EmergencyStopCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         this.speechSynthesizer.Dispose();
+        this.InitializeSpeechSynthesizer();
+
+        return string.Empty;
+    }
+
+    private void InitializeSpeechSynthesizer()
+    {
         this.speechSynthesizer = new ();
         this.speechSynthesizer.SetOutputToDefaultAudioDevice();
         this.speechSynthesizer.Volume = Volume;
-
-        return string.Empty;
     }
 
     private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)
