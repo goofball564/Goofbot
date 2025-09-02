@@ -11,6 +11,8 @@ using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 [SupportedOSPlatform("windows")]
 internal class TextToSpeechModule : GoofbotModule
 {
+    private const int Volume = 60;
+
     private readonly SemaphoreSlim speechSemaphore = new (1, 1);
 
     private SpeechSynthesizer speechSynthesizer;
@@ -20,6 +22,7 @@ internal class TextToSpeechModule : GoofbotModule
     {
         this.speechSynthesizer = new ();
         this.speechSynthesizer.SetOutputToDefaultAudioDevice();
+        this.speechSynthesizer.Volume = Volume;
 
         Program.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
 
@@ -50,6 +53,7 @@ internal class TextToSpeechModule : GoofbotModule
         this.speechSynthesizer.Dispose();
         this.speechSynthesizer = new ();
         this.speechSynthesizer.SetOutputToDefaultAudioDevice();
+        this.speechSynthesizer.Volume = Volume;
 
         return string.Empty;
     }
