@@ -45,7 +45,7 @@ internal class TextToSpeechModule : GoofbotModule
         Program.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
 
         Program.CommandDictionary.TryAddCommand(new Command("tts", this.TTSCommand, 1, CommandAccessibilityModifier.SubOnly));
-        Program.CommandDictionary.TryAddCommand(new Command("emergencystop", this.EmergencyStopCommand, 0, CommandAccessibilityModifier.StreamerOnly));
+        Program.CommandDictionary.TryAddCommand(new Command("cancel", this.CancelCommand, 0, CommandAccessibilityModifier.StreamerOnly));
     }
 
     public async Task<string> TTSCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
@@ -62,14 +62,39 @@ internal class TextToSpeechModule : GoofbotModule
         }
     }
 
-    public async Task<string> EmergencyStopCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public async Task<string> CancelCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
-        foreach (QueuedTTS tts in this.ttsQueue)
+        switch (commandArgs)
         {
-            tts.CancellationTokenSource.Cancel();
-        }
+            case "all":
+                foreach (QueuedTTS tts in this.ttsQueue)
+                {
+                    tts.TryCancel();
+                }
 
-        this.currentTTS.CancellationTokenSource.Cancel();
+                this.currentTTS.TryCancel();
+
+                break;
+            case "":
+                this.currentTTS.TryCancel();
+
+                break;
+            default:
+                foreach (QueuedTTS tts in this.ttsQueue)
+                {
+                    if (tts.Username.Equals(commandArgs))
+                    {
+                        tts.TryCancel();
+                    }
+                }
+
+                if (this.currentTTS.Username.Equals(commandArgs))
+                {
+                    this.currentTTS.TryCancel();
+                }
+
+                break;
+        }
 
         return string.Empty;
     }
@@ -130,6 +155,17 @@ internal class QueuedTTS : IDisposable
     public async Task Execute()
     {
         await this.Action(this.Message, this.CancellationTokenSource.Token);
+    }
+
+    public void TryCancel()
+    {
+        try
+        {
+            this.CancellationTokenSource.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
     }
 
     public void Dispose()
