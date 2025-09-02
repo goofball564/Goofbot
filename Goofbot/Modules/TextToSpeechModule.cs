@@ -15,7 +15,6 @@ internal class TextToSpeechModule : GoofbotModule
 {
     private const int Volume = 60;
 
-    private readonly object queueLock = new ();
     private readonly BlockingCollection<QueuedTTS> ttsQueue = new (new ConcurrentQueue<QueuedTTS>(), 1000);
     private QueuedTTS currentTTS;
 
@@ -27,10 +26,7 @@ internal class TextToSpeechModule : GoofbotModule
         {
             while (true)
             {
-                lock (this.queueLock)
-                {
-                    this.currentTTS = this.ttsQueue.Take();
-                }
+                this.currentTTS = this.ttsQueue.Take();
 
                 try
                 {
@@ -64,15 +60,12 @@ internal class TextToSpeechModule : GoofbotModule
 
     public async Task<string> EmergencyStopCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
-        lock (this.queueLock)
+        foreach (QueuedTTS tts in this.ttsQueue)
         {
-            foreach (QueuedTTS tts in this.ttsQueue)
-            {
-                tts.CancellationTokenSource.Cancel();
-            }
-
-            this.currentTTS.CancellationTokenSource.Cancel();
+            tts.CancellationTokenSource.Cancel();
         }
+
+        this.currentTTS.CancellationTokenSource.Cancel();
 
         return string.Empty;
     }
@@ -89,7 +82,7 @@ internal class TextToSpeechModule : GoofbotModule
     {
         cancellationToken.ThrowIfCancellationRequested();
         await Task.Delay(2000, cancellationToken);
-        using (SpeechSynthesizer speechSynthesizer = this.InitializeSpeechSynthesizer())
+        using (SpeechSynthesizer speechSynthesizer = InitializeSpeechSynthesizer())
         {
             Prompt speechPrompt = speechSynthesizer.SpeakAsync(message);
             while (!(speechPrompt.IsCompleted || cancellationToken.IsCancellationRequested))
