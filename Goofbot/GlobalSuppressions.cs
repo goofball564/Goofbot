@@ -7,3 +7,4 @@ using System.Diagnostics.CodeAnalysis;
 
 [assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:Goofbot.Modules.PipeServerModule.Listen(System.Threading.CancellationToken)")]
 [assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:Goofbot.Modules.TextToSpeechModule.InitializeSpeechSynthesizer~System.Speech.Synthesis.SpeechSynthesizer")]
+[assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:Goofbot.Modules.TextToSpeechModule.SpeakSAPI5(System.String,System.Threading.CancellationToken)~System.Threading.Tasks.Task")]
