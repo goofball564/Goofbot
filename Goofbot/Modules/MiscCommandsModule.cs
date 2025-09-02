@@ -34,7 +34,7 @@ internal class MiscCommandsModule : GoofbotModule
 
         foreach (var dictionaryEntry in Program.CommandDictionary)
         {
-            if (dictionaryEntry.Value.CommandAccessibilityModifier == CommandAccessibilityModifier.StreamerOnly)
+            if (dictionaryEntry.Value.CommandAccessibilityModifier == CommandAccessibilityModifier.StreamerOnly || dictionaryEntry.Value.Unlisted)
             {
                 continue;
             }
