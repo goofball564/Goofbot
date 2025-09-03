@@ -16,8 +16,8 @@ internal partial class BlueGuyModule : GoofbotModule
     private const string OtherOutputFile = "R:\\temp-1.png";
     private const string ColorOutputFile = "R:\\color.png";
 
-    private const string DefaultColorName = "BlueGuy";
-    private const string SpeedGuy = "SpeedGuy";
+    private const string DefaultColorName = "blueguy";
+    private const string SpeedGuy = "speedguy";
 
     private const string ColorChangeString = "Oooooh... pretty! OhISee";
     private const string UnknownColorString = "I'm not familiar with this color birbAnalysis";
@@ -63,32 +63,21 @@ internal partial class BlueGuyModule : GoofbotModule
         string message;
         bool colorChanged = false;
         commandArgs = commandArgs.ToLowerInvariant();
+        if (commandArgs.Equals("default"))
+        {
+            commandArgs = DefaultColorName;
+        }
+
         await this.semaphore.WaitAsync();
         try
         {
-            if (IsHexColorCode(commandArgs))
+            if (IsHexColorCode(commandArgs) || commandArgs.Equals(DefaultColorName) || commandArgs.Equals(SpeedGuy))
             {
                 colorChanged = !commandArgs.Equals(this.lastHexColorCode);
                 message = colorChanged ? ColorChangeString : SameColorString;
 
-                this.CreateBlueGuyImage(commandArgs);
                 this.lastHexColorCode = commandArgs;
-            }
-            else if (commandArgs.Equals("default") || commandArgs.Equals(DefaultColorName))
-            {
-                colorChanged = !DefaultColorName.Equals(this.lastHexColorCode);
-                message = colorChanged ? ColorChangeString : SameColorString;
-
-                this.lastHexColorCode = DefaultColorName;
-                this.RestoreDefaultBlueGuy();
-            }
-            else if (commandArgs.Equals(SpeedGuy))
-            {
-                colorChanged = !SpeedGuy.Equals(this.lastHexColorCode);
-                message = colorChanged ? ColorChangeString : SameColorString;
-
-                this.lastHexColorCode = SpeedGuy;
-                this.CreateBlueGuyImage(SpeedGuy);
+                this.SetBlueGuyImage(commandArgs);
             }
             else if (commandArgs.Equals(string.Empty))
             {
@@ -97,11 +86,13 @@ internal partial class BlueGuyModule : GoofbotModule
             }
             else if (commandArgs.Equals("random"))
             {
-                colorChanged = true;
                 string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
 
+                colorChanged = true;
+                message = string.Format(RandomColorString, colorName);
+
                 this.lastHexColorCode = hexColorCode;
-                this.CreateBlueGuyImage(hexColorCode);
+                this.SetBlueGuyImage(hexColorCode);
 
                 string colorFile = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", string.Empty) + "Guy.png";
                 try
@@ -112,8 +103,6 @@ internal partial class BlueGuyModule : GoofbotModule
                 {
                     Console.WriteLine(e.ToString());
                 }
-
-                message = string.Format(RandomColorString, colorName);
             }
             else
             {
@@ -121,8 +110,9 @@ internal partial class BlueGuyModule : GoofbotModule
                 {
                     colorChanged = !hexColorCode.Equals(this.lastHexColorCode);
                     message = colorChanged ? ColorChangeString : SameColorString;
+
                     this.lastHexColorCode = hexColorCode;
-                    this.CreateBlueGuyImage(hexColorCode);
+                    this.SetBlueGuyImage(hexColorCode);
 
                     string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(commandArgs).Replace(" ", string.Empty) + "Guy.png";
                     try
@@ -169,29 +159,30 @@ internal partial class BlueGuyModule : GoofbotModule
         Program.TwitchClient.SendMessage(Program.TwitchChannelUsername, message);
     }
 
-    private void CreateBlueGuyImage(string hexColorCode)
+    private void SetBlueGuyImage(string hexColorCode)
     {
-        using (var images = new MagickImageCollection())
-        using (var grayscaleImage = new MagickImage(this.blueGuyGrayscaleFile))
-        using (var eyesImage = new MagickImage(this.blueGuyEyesFile))
+        if (hexColorCode.Equals(DefaultColorName))
         {
-            if (hexColorCode == SpeedGuy)
+            this.RestoreDefaultBlueGuy();
+        }
+        else
+        {
+            using var images = new MagickImageCollection();
+            using var grayscaleImage = new MagickImage(this.blueGuyGrayscaleFile);
+            using var eyesImage = new MagickImage(this.blueGuyEyesFile);
+            if (hexColorCode.Equals(SpeedGuy))
             {
-                using (var speedBackground = new MagickImage(this.speedGuyColorFile))
-                using (var croppedBackground = grayscaleImage.Clone())
-                {
-                    croppedBackground.Composite(speedBackground, CompositeOperator.Atop);
-                    grayscaleImage.Composite(croppedBackground, CompositeOperator.Overlay);
-                }
+                using var speedBackground = new MagickImage(this.speedGuyColorFile);
+                using var croppedBackground = grayscaleImage.Clone();
+                croppedBackground.Composite(speedBackground, CompositeOperator.Atop);
+                grayscaleImage.Composite(croppedBackground, CompositeOperator.Overlay);
             }
             else
             {
-                using (var solidColor = grayscaleImage.Clone())
-                {
-                    solidColor.Colorize(new MagickColor(hexColorCode), (Percentage)100.0);
-                    grayscaleImage.Composite(solidColor, CompositeOperator.Overlay);
-                    solidColor.Write(ColorOutputFile, MagickFormat.Png);
-                }
+                using var solidColor = grayscaleImage.Clone();
+                solidColor.Colorize(new MagickColor(hexColorCode), (Percentage)100.0);
+                grayscaleImage.Composite(solidColor, CompositeOperator.Overlay);
+                solidColor.Write(ColorOutputFile, MagickFormat.Png);
             }
 
             images.Add(grayscaleImage);
