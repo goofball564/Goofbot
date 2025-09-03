@@ -16,8 +16,8 @@ internal partial class BlueGuyModule : GoofbotModule
     private const string OtherOutputFile = "R:\\temp-1.png";
     private const string ColorOutputFile = "R:\\color.png";
 
-    private const string DefaultColorName = "BlueGuy";
-    private const string SpeedGuy = "SpeedGuy";
+    private const string DefaultColorCode = "BlueGuy";
+    private const string SpeedGuyColorCode = "SpeedGuy";
 
     private const string ColorChangeString = "Oooooh... pretty! OhISee";
     private const string UnknownColorString = "I'm not familiar with this color birbAnalysis";
@@ -34,7 +34,7 @@ internal partial class BlueGuyModule : GoofbotModule
     private readonly SemaphoreSlim semaphore = new (1, 1);
     private readonly System.Timers.Timer timer = new (TimeSpan.FromMinutes(20));
 
-    private string lastHexColorCode = string.Empty;
+    private string lastColorCode = string.Empty;
 
     public BlueGuyModule(string moduleDataFolder)
         : base(moduleDataFolder)
@@ -65,18 +65,18 @@ internal partial class BlueGuyModule : GoofbotModule
 
         if (commandArgs.Equals("default", StringComparison.OrdinalIgnoreCase))
         {
-            commandArgs = DefaultColorName;
+            commandArgs = DefaultColorCode;
         }
 
         await this.semaphore.WaitAsync();
         try
         {
-            if (IsHexColorCode(commandArgs) || commandArgs.Equals(DefaultColorName) || commandArgs.Equals(SpeedGuy))
+            if (IsHexColorCode(commandArgs) || commandArgs.Equals(DefaultColorCode) || commandArgs.Equals(SpeedGuyColorCode))
             {
-                colorChanged = !commandArgs.Equals(this.lastHexColorCode, StringComparison.OrdinalIgnoreCase);
+                colorChanged = !commandArgs.Equals(this.lastColorCode, StringComparison.OrdinalIgnoreCase);
                 message = colorChanged ? ColorChangeString : SameColorString;
 
-                this.lastHexColorCode = commandArgs;
+                this.lastColorCode = commandArgs;
                 this.SetBlueGuyImage(commandArgs);
             }
             else if (commandArgs.Equals(string.Empty))
@@ -91,7 +91,7 @@ internal partial class BlueGuyModule : GoofbotModule
                 colorChanged = true;
                 message = string.Format(RandomColorString, colorName);
 
-                this.lastHexColorCode = hexColorCode;
+                this.lastColorCode = hexColorCode;
                 this.SetBlueGuyImage(hexColorCode);
 
                 this.WriteCurrentBlueGuyImageToFile(colorName);
@@ -100,10 +100,10 @@ internal partial class BlueGuyModule : GoofbotModule
             {
                 if (Program.ColorDictionary.TryGetHex(commandArgs, out string hexColorCode))
                 {
-                    colorChanged = !hexColorCode.Equals(this.lastHexColorCode, StringComparison.OrdinalIgnoreCase);
+                    colorChanged = !hexColorCode.Equals(this.lastColorCode, StringComparison.OrdinalIgnoreCase);
                     message = colorChanged ? ColorChangeString : SameColorString;
 
-                    this.lastHexColorCode = hexColorCode;
+                    this.lastColorCode = hexColorCode;
                     this.SetBlueGuyImage(hexColorCode);
 
                     this.WriteCurrentBlueGuyImageToFile(commandArgs);
@@ -158,7 +158,7 @@ internal partial class BlueGuyModule : GoofbotModule
 
     private void SetBlueGuyImage(string hexColorCode)
     {
-        if (hexColorCode.Equals(DefaultColorName))
+        if (hexColorCode.Equals(DefaultColorCode))
         {
             this.RestoreDefaultBlueGuy();
         }
@@ -168,7 +168,7 @@ internal partial class BlueGuyModule : GoofbotModule
             using var grayscaleImage = new MagickImage(this.blueGuyGrayscaleFile);
             using var eyesImage = new MagickImage(this.blueGuyEyesFile);
 
-            if (hexColorCode.Equals(SpeedGuy))
+            if (hexColorCode.Equals(SpeedGuyColorCode))
             {
                 using var speedBackground = new MagickImage(this.speedGuyColorFile);
                 using var croppedBackground = grayscaleImage.Clone();
