@@ -94,15 +94,7 @@ internal partial class BlueGuyModule : GoofbotModule
                 this.lastHexColorCode = hexColorCode;
                 this.SetBlueGuyImage(hexColorCode);
 
-                string colorFile = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", string.Empty) + "Guy.png";
-                try
-                {
-                    File.Copy(OtherOutputFile, Path.Join(this.guysFolder, colorFile), false);
-                }
-                catch (IOException e)
-                {
-                    Console.WriteLine(e.ToString());
-                }
+                this.WriteCurrentBlueGuyImageToFile(colorName);
             }
             else
             {
@@ -114,15 +106,7 @@ internal partial class BlueGuyModule : GoofbotModule
                     this.lastHexColorCode = hexColorCode;
                     this.SetBlueGuyImage(hexColorCode);
 
-                    string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(commandArgs).Replace(" ", string.Empty) + "Guy.png";
-                    try
-                    {
-                        File.Copy(OtherOutputFile, Path.Join(this.guysFolder, colorFileName), false);
-                    }
-                    catch (IOException e)
-                    {
-                        Console.WriteLine(e.ToString());
-                    }
+                    this.WriteCurrentBlueGuyImageToFile(commandArgs);
                 }
                 else
                 {
@@ -159,6 +143,19 @@ internal partial class BlueGuyModule : GoofbotModule
         Program.TwitchClient.SendMessage(Program.TwitchChannelUsername, message);
     }
 
+    private void WriteCurrentBlueGuyImageToFile(string colorName)
+    {
+        string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName).Replace(" ", string.Empty) + "Guy.png";
+        try
+        {
+            File.Copy(OtherOutputFile, Path.Join(this.guysFolder, colorFileName), false);
+        }
+        catch (IOException e)
+        {
+            Console.WriteLine(e.ToString());
+        }
+    }
+
     private void SetBlueGuyImage(string hexColorCode)
     {
         if (hexColorCode.Equals(DefaultColorName))
@@ -170,6 +167,7 @@ internal partial class BlueGuyModule : GoofbotModule
             using var images = new MagickImageCollection();
             using var grayscaleImage = new MagickImage(this.blueGuyGrayscaleFile);
             using var eyesImage = new MagickImage(this.blueGuyEyesFile);
+
             if (hexColorCode.Equals(SpeedGuy))
             {
                 using var speedBackground = new MagickImage(this.speedGuyColorFile);
