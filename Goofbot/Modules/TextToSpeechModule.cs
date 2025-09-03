@@ -38,7 +38,7 @@ internal class TextToSpeechModule : GoofbotModule
 
         this.listOfTTSCommands.Add(this.SamCommand);
         this.listOfTTSCommands.Add(this.PaulCommand);
-        this.listOfTTSCommands.Add(this.BuddyCommand);
+        this.listOfTTSCommands.Add(this.BonziCommand);
 
         Task runningTask = Task.Run(async () =>
         {
@@ -68,7 +68,7 @@ internal class TextToSpeechModule : GoofbotModule
 
         Program.CommandDictionary.TryAddCommand(new Command("paul", this.PaulCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
         Program.CommandDictionary.TryAddCommand(new Command("sam", this.SamCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
-        Program.CommandDictionary.TryAddCommand(new Command("buddy", this.BuddyCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
+        Program.CommandDictionary.TryAddCommand(new Command("bonzi", this.BonziCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
     }
 
     public async Task<string> TTSCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
@@ -90,7 +90,10 @@ internal class TextToSpeechModule : GoofbotModule
     {
         if (commandArgs.Equals(string.Empty))
         {
-            return "Enter a message with this command to hear it read by Microsoft Sam";
+            string username = Program.TwitchBotUsername;
+            string message = "my roflcopter goes soi soi soi soi soi soi my sprinklerststststststststststststststst crotch";
+            this.ttsQueue.Add(new QueuedTTS(username, message, this.SpeakSAPI5));
+            return message;
         }
         else
         {
@@ -104,7 +107,10 @@ internal class TextToSpeechModule : GoofbotModule
     {
         if (commandArgs.Equals(string.Empty))
         {
-            return "Enter a message with this command to hear it read by DECTalk Perfect Paul";
+            string username = Program.TwitchBotUsername;
+            string message = "aeiou John Madden John Madden John Madden uuuuuuuuuuuuuuuuuuuuu ebrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbr";
+            this.ttsQueue.Add(new QueuedTTS(username, message, this.SpeakDECTalk));
+            return message;
         }
         else
         {
@@ -114,7 +120,7 @@ internal class TextToSpeechModule : GoofbotModule
         }
     }
 
-    public async Task<string> BuddyCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public async Task<string> BonziCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         if (commandArgs.Equals(string.Empty))
         {
@@ -132,11 +138,11 @@ internal class TextToSpeechModule : GoofbotModule
     {
         if (isReversed)
         {
-            return "paul! ,buddy! ,sam!";
+            return "paul! ,bonzi ,sam!";
         }
         else
         {
-            return "!sam, !buddy, !paul";
+            return "!sam, !bonzi, !paul";
         }
     }
 
