@@ -172,41 +172,33 @@ internal partial class BlueGuyModule : GoofbotModule
     private void CreateBlueGuyImage(string hexColorCode)
     {
         using (var images = new MagickImageCollection())
+        using (var first = new MagickImage(this.blueGuyGrayscaleFile))
+        using (var second = new MagickImage(this.blueGuyEyesFile))
         {
-            var first = new MagickImage(this.blueGuyGrayscaleFile);
-
             if (hexColorCode == SpeedGuy)
             {
-                var speedBackground = new MagickImage(this.speedGuyColorFile);
-
-                var croppedFlag = first.Clone();
-                croppedFlag.Composite(speedBackground, CompositeOperator.Atop);
-
-                first.Composite(croppedFlag, CompositeOperator.Overlay);
-
-                croppedFlag.Dispose();
-                speedBackground.Dispose();
+                using (var speedBackground = new MagickImage(this.speedGuyColorFile))
+                using (var croppedBackground = first.Clone())
+                {
+                    croppedBackground.Composite(speedBackground, CompositeOperator.Atop);
+                    first.Composite(croppedBackground, CompositeOperator.Overlay);
+                }
             }
             else
             {
-                var solidColor = first.Clone();
-                solidColor.Colorize(new MagickColor(hexColorCode), (Percentage)100.0);
-                first.Composite(solidColor, CompositeOperator.Overlay);
-                solidColor.Write(ColorOutputFile, MagickFormat.Png);
-                solidColor.Dispose();
+                using (var solidColor = first.Clone())
+                {
+                    solidColor.Colorize(new MagickColor(hexColorCode), (Percentage)100.0);
+                    first.Composite(solidColor, CompositeOperator.Overlay);
+                    solidColor.Write(ColorOutputFile, MagickFormat.Png);
+                }
             }
-
-            var second = new MagickImage(this.blueGuyEyesFile);
 
             images.Add(first);
             images.Add(second);
             images.Coalesce();
 
             images.Write(OutputFile, MagickFormat.Png);
-
-            images.Dispose();
-            first.Dispose();
-            second.Dispose();
         }
     }
 
