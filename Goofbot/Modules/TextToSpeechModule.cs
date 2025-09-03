@@ -155,18 +155,17 @@ internal class TextToSpeechModule : GoofbotModule
                 break;
             case "":
                 this.currentTTS.TryCancel();
-
                 break;
             default:
                 foreach (QueuedTTS tts in this.ttsQueue)
                 {
-                    if (tts.Username.Equals(commandArgs))
+                    if (tts.Username.Equals(commandArgs, StringComparison.OrdinalIgnoreCase))
                     {
                         tts.TryCancel();
                     }
                 }
 
-                if (this.currentTTS.Username.Equals(commandArgs))
+                if (this.currentTTS.Username.Equals(commandArgs, StringComparison.OrdinalIgnoreCase))
                 {
                     this.currentTTS.TryCancel();
                 }
