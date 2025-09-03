@@ -238,7 +238,7 @@ internal class SpotifyModule : GoofbotModule
         string song = this.CurrentlyPlayingSongName;
         if (song == string.Empty || artists == string.Empty)
         {
-            return "Ain't nothing playing.";
+            return "Ain't nothing playing";
         }
         else
         {
