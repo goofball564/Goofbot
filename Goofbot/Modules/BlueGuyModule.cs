@@ -172,30 +172,30 @@ internal partial class BlueGuyModule : GoofbotModule
     private void CreateBlueGuyImage(string hexColorCode)
     {
         using (var images = new MagickImageCollection())
-        using (var first = new MagickImage(this.blueGuyGrayscaleFile))
-        using (var second = new MagickImage(this.blueGuyEyesFile))
+        using (var grayscaleImage = new MagickImage(this.blueGuyGrayscaleFile))
+        using (var eyesImage = new MagickImage(this.blueGuyEyesFile))
         {
             if (hexColorCode == SpeedGuy)
             {
                 using (var speedBackground = new MagickImage(this.speedGuyColorFile))
-                using (var croppedBackground = first.Clone())
+                using (var croppedBackground = grayscaleImage.Clone())
                 {
                     croppedBackground.Composite(speedBackground, CompositeOperator.Atop);
-                    first.Composite(croppedBackground, CompositeOperator.Overlay);
+                    grayscaleImage.Composite(croppedBackground, CompositeOperator.Overlay);
                 }
             }
             else
             {
-                using (var solidColor = first.Clone())
+                using (var solidColor = grayscaleImage.Clone())
                 {
                     solidColor.Colorize(new MagickColor(hexColorCode), (Percentage)100.0);
-                    first.Composite(solidColor, CompositeOperator.Overlay);
+                    grayscaleImage.Composite(solidColor, CompositeOperator.Overlay);
                     solidColor.Write(ColorOutputFile, MagickFormat.Png);
                 }
             }
 
-            images.Add(first);
-            images.Add(second);
+            images.Add(grayscaleImage);
+            images.Add(eyesImage);
             images.Coalesce();
 
             images.Write(OutputFile, MagickFormat.Png);
