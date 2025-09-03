@@ -39,12 +39,12 @@ internal partial class BlueGuyModule : GoofbotModule
     public BlueGuyModule(string moduleDataFolder)
         : base(moduleDataFolder)
     {
-        this.blueGuyGrayscaleFile = Path.Combine(this.ModuleDataFolder, "BlueGuyGrayscale.png");
-        this.blueGuyColorFile = Path.Combine(this.ModuleDataFolder, "BlueGuyColor.png");
-        this.blueGuyEyesFile = Path.Combine(this.ModuleDataFolder, "BlueGuyEyes.png");
-        this.speedGuyColorFile = Path.Combine(this.ModuleDataFolder, "SpeedGuyColor.png");
+        this.blueGuyGrayscaleFile = Path.Join(this.ModuleDataFolder, "BlueGuyGrayscale.png");
+        this.blueGuyColorFile = Path.Join(this.ModuleDataFolder, "BlueGuyColor.png");
+        this.blueGuyEyesFile = Path.Join(this.ModuleDataFolder, "BlueGuyEyes.png");
+        this.speedGuyColorFile = Path.Join(this.ModuleDataFolder, "SpeedGuyColor.png");
 
-        this.guysFolder = Path.Combine(this.ModuleDataFolder, "Guys");
+        this.guysFolder = Path.Join(this.ModuleDataFolder, "Guys");
         Directory.CreateDirectory(this.guysFolder);
 
         Program.CommandDictionary.TryAddCommand(new Command("guy", this.GuyCommand));
@@ -106,7 +106,7 @@ internal partial class BlueGuyModule : GoofbotModule
                 string colorFile = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName.ToLowerInvariant()).Replace(" ", string.Empty) + "Guy.png";
                 try
                 {
-                    File.Copy(OtherOutputFile, Path.Combine(this.guysFolder, colorFile), false);
+                    File.Copy(OtherOutputFile, Path.Join(this.guysFolder, colorFile), false);
                 }
                 catch (IOException e)
                 {
@@ -127,7 +127,7 @@ internal partial class BlueGuyModule : GoofbotModule
                     string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(commandArgs).Replace(" ", string.Empty) + "Guy.png";
                     try
                     {
-                        File.Copy(OtherOutputFile, Path.Combine(this.guysFolder, colorFileName), false);
+                        File.Copy(OtherOutputFile, Path.Join(this.guysFolder, colorFileName), false);
                     }
                     catch (IOException e)
                     {
