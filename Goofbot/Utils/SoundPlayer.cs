@@ -41,8 +41,8 @@ internal class SoundPlayer : IDisposable
 
     public void Dispose()
     {
-        this.waveSource.Dispose();
         this.soundOut.Dispose();
+        this.waveSource.Dispose();
         this.IsDisposed = true;
     }
 
@@ -50,8 +50,7 @@ internal class SoundPlayer : IDisposable
     {
         await Task.Run(() =>
         {
-            this.waveSource.Dispose();
-            this.soundOut.Dispose();
+            this.Dispose();
         });
     }
 }
