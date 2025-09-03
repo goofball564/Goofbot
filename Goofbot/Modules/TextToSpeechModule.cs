@@ -3,7 +3,9 @@
 using Goofbot.Utils;
 using System;
 using System.Collections.Concurrent;
-using System.Runtime.Versioning;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Speech.Synthesis;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +15,15 @@ using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 internal class TextToSpeechModule : GoofbotModule
 {
     private const int Volume = 60;
+    private const string OutFile = "S:\\speak.WAV";
+    private const int PollingPeriodInMilliseconds = 500;
+    private const int DelayBeforeTTSInMilliseconds = 2000;
+
+    private readonly string decTalkExeFile;
+    private readonly string sapi4ExeFile;
+    private readonly Random random = new ();
+
+    private readonly List<Func<string, OnChatCommandReceivedArgs, bool, Task<string>>> listOfTTSCommands = [];
 
     private readonly BlockingCollection<QueuedTTS> ttsQueue = new (new ConcurrentQueue<QueuedTTS>(), 1000);
     private QueuedTTS currentTTS;
@@ -21,6 +32,14 @@ internal class TextToSpeechModule : GoofbotModule
         : base(moduleDataFolder)
     {
         this.currentTTS = new (string.Empty, string.Empty, this.SpeakSAPI5);
+
+        this.decTalkExeFile = Path.Join(this.ModuleDataFolder, "DECTalk", "say.exe");
+        this.sapi4ExeFile = Path.Join(this.ModuleDataFolder, "BonziBuddyTTS.exe");
+
+        this.listOfTTSCommands.Add(this.SamCommand);
+        this.listOfTTSCommands.Add(this.PaulCommand);
+        this.listOfTTSCommands.Add(this.BuddyCommand);
+
         Task runningTask = Task.Run(async () =>
         {
             while (true)
@@ -43,21 +62,81 @@ internal class TextToSpeechModule : GoofbotModule
 
         Program.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
 
+        Program.CommandDictionary.TryAddCommand(new Command("voices", this.VoicesCommand));
         Program.CommandDictionary.TryAddCommand(new Command("tts", this.TTSCommand, CommandAccessibilityModifier.SubOnly));
         Program.CommandDictionary.TryAddCommand(new Command("cancel", this.CancelCommand, CommandAccessibilityModifier.StreamerOnly));
+
+        Program.CommandDictionary.TryAddCommand(new Command("paul", this.PaulCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
+        Program.CommandDictionary.TryAddCommand(new Command("sam", this.SamCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
+        Program.CommandDictionary.TryAddCommand(new Command("buddy", this.BuddyCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
     }
 
     public async Task<string> TTSCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         if (commandArgs.Equals(string.Empty))
         {
-            return "Enter a message with this command to hear it read aloud by the inimitable Microsoft Sam";
+            return "Enter a message with this command to hear it read by one of Goofbot's TTS !voices";
+        }
+        else
+        {
+            // Perform the TTS with a randomly selected TTS voice
+            int randomIndex = this.random.Next(this.listOfTTSCommands.Count);
+            await this.listOfTTSCommands[randomIndex](commandArgs, eventArgs, isReversed);
+            return string.Empty;
+        }
+    }
+
+    public async Task<string> SamCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    {
+        if (commandArgs.Equals(string.Empty))
+        {
+            return "Enter a message with this command to hear it read by Microsoft Sam";
         }
         else
         {
             string username = eventArgs.Command.ChatMessage.DisplayName.ToLowerInvariant();
             this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakSAPI5));
             return string.Empty;
+        }
+    }
+
+    public async Task<string> PaulCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    {
+        if (commandArgs.Equals(string.Empty))
+        {
+            return "Enter a message with this command to hear it read by DECTalk Perfect Paul";
+        }
+        else
+        {
+            string username = eventArgs.Command.ChatMessage.DisplayName.ToLowerInvariant();
+            this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakDECTalk));
+            return string.Empty;
+        }
+    }
+
+    public async Task<string> BuddyCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    {
+        if (commandArgs.Equals(string.Empty))
+        {
+            return "Enter a message with this command to hear it read by BonziBuddy";
+        }
+        else
+        {
+            string username = eventArgs.Command.ChatMessage.DisplayName.ToLowerInvariant();
+            this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakSAPI4));
+            return string.Empty;
+        }
+    }
+
+    public async Task<string> VoicesCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    {
+        if (isReversed)
+        {
+            return "paul! ,buddy! ,sam!";
+        }
+        else
+        {
+            return "!sam, !buddy, !paul";
         }
     }
 
@@ -109,14 +188,118 @@ internal class TextToSpeechModule : GoofbotModule
     private async Task SpeakSAPI5(string message, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        await Task.Delay(2000, cancellationToken);
+        await Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         using (SpeechSynthesizer speechSynthesizer = InitializeSpeechSynthesizer())
         {
             Prompt speechPrompt = speechSynthesizer.SpeakAsync(message);
             while (!(speechPrompt.IsCompleted || cancellationToken.IsCancellationRequested))
             {
-                await Task.Delay(500, cancellationToken);
+                await Task.Delay(PollingPeriodInMilliseconds, cancellationToken);
             }
+        }
+    }
+
+    private async Task SpeakSAPI4(string message, CancellationToken cancellationToken)
+    {
+        // Cancel if cancellation requested before starting
+        cancellationToken.ThrowIfCancellationRequested();
+        Task delayTask = Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
+
+        try
+        {
+            File.Delete(OutFile);
+        }
+        catch
+        {
+        }
+
+        // Run EXE to generate TTS and output it to OutFile
+        using (var process = new Process
+        {
+            StartInfo =
+            {
+                FileName = this.sapi4ExeFile, ArgumentList = { OutFile, message },
+                UseShellExecute = false, CreateNoWindow = false,
+            },
+            EnableRaisingEvents = true,
+        })
+        {
+            process.Start();
+            await process.WaitForExitAsync(cancellationToken);
+            Console.WriteLine("Done waiting for the program");
+        }
+
+        // Wait for a delay before starting to speak, but check if cancelled before speaking
+        await delayTask;
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Play TTS from sound file, but stop if cancelled
+        using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4)))
+        {
+            while (!(soundPlayer.IsDisposed || cancellationToken.IsCancellationRequested))
+            {
+                await Task.Delay(PollingPeriodInMilliseconds, cancellationToken);
+            }
+        }
+
+        try
+        {
+            File.Delete(OutFile);
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task SpeakDECTalk(string message, CancellationToken cancellationToken)
+    {
+        // Cancel if cancellation requested before starting
+        cancellationToken.ThrowIfCancellationRequested();
+        Task delayTask = Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
+
+        try
+        {
+            File.Delete(OutFile);
+        }
+        catch
+        {
+        }
+
+        // Run EXE to generate TTS and output it to OutFile
+        using (var process = new Process
+        {
+            StartInfo =
+            {
+                FileName = this.decTalkExeFile, ArgumentList = { "-w", OutFile, message },
+                UseShellExecute = false, CreateNoWindow = true,
+            },
+            EnableRaisingEvents = true,
+        })
+        {
+            process.Start();
+            await process.WaitForExitAsync(cancellationToken);
+        }
+
+        // Wait for a delay before starting to speak, but check if cancelled before speaking
+        await delayTask;
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Play TTS from sound file, but stop if cancelled
+        using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4)))
+        {
+            while (!(soundPlayer.IsDisposed || cancellationToken.IsCancellationRequested))
+            {
+                await Task.Delay(PollingPeriodInMilliseconds, cancellationToken);
+            }
+        }
+
+        try
+        {
+            File.Delete(OutFile);
+        }
+        catch
+        {
         }
     }
 
