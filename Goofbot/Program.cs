@@ -70,7 +70,7 @@ internal class Program
         ColorDictionary = new (colorNamesFile);
         Task colorDictionaryTask = Task.Run(async () => { await ColorDictionary.Initialize(); });
 
-        // Initialize TwitchClient and TwitchAPI, authenticate with twitch
+        // Initialize TwitchClient and TwitchAPI, authenticate with Twitch
         string twitchAppCredentialsFile = Path.Join(StuffFolder, "twitch_credentials.json");
         dynamic twitchAppCredentials = ParseJsonFile(twitchAppCredentialsFile);
         string clientID = twitchAppCredentials.client_id;
