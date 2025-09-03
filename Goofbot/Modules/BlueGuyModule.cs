@@ -156,9 +156,9 @@ internal partial class BlueGuyModule : GoofbotModule
         }
     }
 
-    private void SetBlueGuyImage(string hexColorCode)
+    private void SetBlueGuyImage(string colorCode)
     {
-        if (hexColorCode.Equals(DefaultColorCode))
+        if (colorCode.Equals(DefaultColorCode))
         {
             this.RestoreDefaultBlueGuy();
         }
@@ -168,7 +168,7 @@ internal partial class BlueGuyModule : GoofbotModule
             using var grayscaleImage = new MagickImage(this.blueGuyGrayscaleFile);
             using var eyesImage = new MagickImage(this.blueGuyEyesFile);
 
-            if (hexColorCode.Equals(SpeedGuyColorCode))
+            if (colorCode.Equals(SpeedGuyColorCode))
             {
                 using var speedBackground = new MagickImage(this.speedGuyColorFile);
                 using var croppedBackground = grayscaleImage.Clone();
@@ -177,8 +177,9 @@ internal partial class BlueGuyModule : GoofbotModule
             }
             else
             {
+                // colorCode is a hex color code
                 using var solidColor = grayscaleImage.Clone();
-                solidColor.Colorize(new MagickColor(hexColorCode), (Percentage)100.0);
+                solidColor.Colorize(new MagickColor(colorCode), (Percentage)100.0);
                 grayscaleImage.Composite(solidColor, CompositeOperator.Overlay);
                 solidColor.Write(ColorOutputFile, MagickFormat.Png);
             }
