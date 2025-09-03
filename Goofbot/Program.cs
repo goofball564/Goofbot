@@ -22,7 +22,8 @@ using TwitchLib.EventSub.Websockets;
  *
  * MODIFY EXISTING MODULES
  * !stt reverses audio stream
- * Ability to cancel/block specific users for TTS
+ * DONE---Ability to cancel specific users for TTS
+ * Ability to block specific users for TTS
  * Add imaginary number support to calculator
  * Ability to unlock and re-lock sub-only commands
  *
