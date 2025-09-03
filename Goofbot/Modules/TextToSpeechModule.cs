@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.Speech.Synthesis;
 using System.Threading;
@@ -88,16 +89,16 @@ internal class TextToSpeechModule : GoofbotModule
 
     public async Task<string> SamCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
+        string username = eventArgs.Command.ChatMessage.DisplayName;
+
         if (commandArgs.Equals(string.Empty))
         {
-            string username = Program.TwitchBotUsername;
             string message = "my roflcopter goes soi soi soi soi soi soi my sprinklerststststststststststststststst crotch";
             this.ttsQueue.Add(new QueuedTTS(username, message, this.SpeakSAPI5));
             return message;
         }
         else
         {
-            string username = eventArgs.Command.ChatMessage.DisplayName;
             this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakSAPI5));
             return string.Empty;
         }
@@ -105,16 +106,16 @@ internal class TextToSpeechModule : GoofbotModule
 
     public async Task<string> PaulCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
+        string username = eventArgs.Command.ChatMessage.DisplayName;
+
         if (commandArgs.Equals(string.Empty))
         {
-            string username = Program.TwitchBotUsername;
             string message = "aeiou John Madden John Madden John Madden uuuuuuuuuuuuuuuuuuuuu ebrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbr";
             this.ttsQueue.Add(new QueuedTTS(username, message, this.SpeakDECTalk));
             return message;
         }
         else
         {
-            string username = eventArgs.Command.ChatMessage.DisplayName.ToLowerInvariant();
             this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakDECTalk));
             return string.Empty;
         }
@@ -122,13 +123,17 @@ internal class TextToSpeechModule : GoofbotModule
 
     public async Task<string> BonziCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
+
+        string username = eventArgs.Command.ChatMessage.DisplayName;
+
         if (commandArgs.Equals(string.Empty))
         {
-            return "Enter a message with this command to hear it read by BonziBuddy";
+            string message = "What did the beaver say to the tree? It's been nice gnawing you!";
+            this.ttsQueue.Add(new QueuedTTS(username, message, this.SpeakSAPI4));
+            return message;
         }
         else
         {
-            string username = eventArgs.Command.ChatMessage.DisplayName.ToLowerInvariant();
             this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakSAPI4));
             return string.Empty;
         }
