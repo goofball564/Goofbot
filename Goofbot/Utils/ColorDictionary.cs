@@ -93,9 +93,9 @@ internal class ColorDictionary
         return colorName;
     }
 
-    private static void GetHSV(string hex, out double hue, out double saturation, out double value)
+    private static void GetHSV(string hexColorCode, out double hue, out double saturation, out double value)
     {
-        Color color = ColorTranslator.FromHtml(hex);
+        Color color = ColorTranslator.FromHtml(hexColorCode);
 
         int max = Math.Max(color.R, Math.Max(color.G, color.B));
         int min = Math.Min(color.R, Math.Min(color.G, color.B));
