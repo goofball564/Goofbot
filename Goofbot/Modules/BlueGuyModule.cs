@@ -16,8 +16,8 @@ internal partial class BlueGuyModule : GoofbotModule
     private const string OtherOutputFile = "R:\\temp-1.png";
     private const string ColorOutputFile = "R:\\color.png";
 
-    private const string DefaultColorName = "blueguy";
-    private const string SpeedGuy = "speedguy";
+    private const string DefaultColorName = "BlueGuy";
+    private const string SpeedGuy = "SpeedGuy";
 
     private const string ColorChangeString = "Oooooh... pretty! OhISee";
     private const string UnknownColorString = "I'm not familiar with this color birbAnalysis";
@@ -62,8 +62,8 @@ internal partial class BlueGuyModule : GoofbotModule
     {
         string message;
         bool colorChanged = false;
-        commandArgs = commandArgs.ToLowerInvariant();
-        if (commandArgs.Equals("default"))
+
+        if (commandArgs.Equals("default", StringComparison.OrdinalIgnoreCase))
         {
             commandArgs = DefaultColorName;
         }
@@ -73,7 +73,7 @@ internal partial class BlueGuyModule : GoofbotModule
         {
             if (IsHexColorCode(commandArgs) || commandArgs.Equals(DefaultColorName) || commandArgs.Equals(SpeedGuy))
             {
-                colorChanged = !commandArgs.Equals(this.lastHexColorCode);
+                colorChanged = !commandArgs.Equals(this.lastHexColorCode, StringComparison.OrdinalIgnoreCase);
                 message = colorChanged ? ColorChangeString : SameColorString;
 
                 this.lastHexColorCode = commandArgs;
@@ -108,7 +108,7 @@ internal partial class BlueGuyModule : GoofbotModule
             {
                 if (Program.ColorDictionary.TryGetHex(commandArgs, out string hexColorCode))
                 {
-                    colorChanged = !hexColorCode.Equals(this.lastHexColorCode);
+                    colorChanged = !hexColorCode.Equals(this.lastHexColorCode, StringComparison.OrdinalIgnoreCase);
                     message = colorChanged ? ColorChangeString : SameColorString;
 
                     this.lastHexColorCode = hexColorCode;
