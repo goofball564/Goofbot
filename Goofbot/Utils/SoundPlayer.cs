@@ -19,7 +19,6 @@ internal class SoundPlayer : IDisposable
 
     public SoundPlayer(string soundFile, float volume = DefaultVolume)
     {
-        this.IsDisposed = true;
         if (File.Exists(soundFile))
         {
             this.IsDisposed = false;
@@ -34,10 +33,7 @@ internal class SoundPlayer : IDisposable
         }
     }
 
-    public bool IsDisposed
-    {
-        get; private set;
-    }
+    public bool IsDisposed { get; private set; } = true;
 
     public void Dispose()
     {
