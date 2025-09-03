@@ -94,7 +94,7 @@ internal class TextToSpeechModule : GoofbotModule
         }
         else
         {
-            string username = eventArgs.Command.ChatMessage.DisplayName.ToLowerInvariant();
+            string username = eventArgs.Command.ChatMessage.DisplayName;
             this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakSAPI5));
             return string.Empty;
         }
