@@ -202,105 +202,14 @@ internal class TextToSpeechModule : GoofbotModule
 
     private async Task SpeakSAPI4(string message, CancellationToken cancellationToken)
     {
-        // Cancel if cancellation requested before starting
-        cancellationToken.ThrowIfCancellationRequested();
-        Task delayTask = Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
-
-        try
-        {
-            File.Delete(OutFile);
-        }
-        catch
-        {
-        }
-
-        // Run EXE to generate TTS and output it to OutFile
-        using (var process = new Process
-        {
-            StartInfo =
-            {
-                FileName = this.sapi4ExeFile, ArgumentList = { OutFile, message },
-                UseShellExecute = false, CreateNoWindow = false,
-            },
-            EnableRaisingEvents = true,
-        })
-        {
-            process.Start();
-            await process.WaitForExitAsync(cancellationToken);
-            Console.WriteLine("Done waiting for the program");
-        }
-
-        // Wait for a delay before starting to speak, but check if cancelled before speaking
-        await delayTask;
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Play TTS from sound file, but stop if cancelled
-        using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4)))
-        {
-            while (!(soundPlayer.IsDisposed || cancellationToken.IsCancellationRequested))
-            {
-                await Task.Delay(PollingPeriodInMilliseconds, cancellationToken);
-            }
-        }
-
-        try
-        {
-            File.Delete(OutFile);
-        }
-        catch
-        {
-        }
+        string[] argumentList = { OutFile, message };
+        await this.RunProcessThatGeneratesWavThenPlayWav(message, cancellationToken, this.sapi4ExeFile, argumentList);
     }
 
     private async Task SpeakDECTalk(string message, CancellationToken cancellationToken)
     {
-        // Cancel if cancellation requested before starting
-        cancellationToken.ThrowIfCancellationRequested();
-        Task delayTask = Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
-
-        try
-        {
-            File.Delete(OutFile);
-        }
-        catch
-        {
-        }
-
-        // Run EXE to generate TTS and output it to OutFile
-        using (var process = new Process
-        {
-            StartInfo =
-            {
-                FileName = this.decTalkExeFile, ArgumentList = { "-w", OutFile, message },
-                UseShellExecute = false, CreateNoWindow = true,
-            },
-            EnableRaisingEvents = true,
-        })
-        {
-            process.Start();
-            await process.WaitForExitAsync(cancellationToken);
-        }
-
-        // Wait for a delay before starting to speak, but check if cancelled before speaking
-        await delayTask;
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Play TTS from sound file, but stop if cancelled
-        using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4)))
-        {
-            while (!(soundPlayer.IsDisposed || cancellationToken.IsCancellationRequested))
-            {
-                await Task.Delay(PollingPeriodInMilliseconds, cancellationToken);
-            }
-        }
-
-        try
-        {
-            File.Delete(OutFile);
-        }
-        catch
-        {
-        }
+        string[] argumentList = { "-w", OutFile, message };
+        await this.RunProcessThatGeneratesWavThenPlayWav(message, cancellationToken, this.decTalkExeFile, argumentList);
     }
 
     private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)
@@ -311,6 +220,46 @@ internal class TextToSpeechModule : GoofbotModule
             string username = e.Notification.Payload.Event.UserName.ToLowerInvariant();
 
             this.ttsQueue.Add(new QueuedTTS(username, message, this.SpeakSAPI5));
+        }
+    }
+
+    private async Task RunProcessThatGeneratesWavThenPlayWav(string message, CancellationToken cancellationToken, string exeFile, string[] argumentList)
+    {
+        // Cancel if cancellation requested before starting
+        cancellationToken.ThrowIfCancellationRequested();
+        Task delayTask = Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
+
+        // Run EXE to generate TTS and output it to OutFile
+        using (var process = new Process
+        {
+            StartInfo =
+            {
+                FileName = exeFile,
+                UseShellExecute = false, CreateNoWindow = false,
+            },
+            EnableRaisingEvents = true,
+        })
+        {
+            foreach (string argument in argumentList)
+            {
+                process.StartInfo.ArgumentList.Add(argument);
+            }
+
+            process.Start();
+            await process.WaitForExitAsync(cancellationToken);
+        }
+
+        // Wait for a delay before starting to speak, but check if cancelled before speaking
+        await delayTask;
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Play TTS from sound file, but stop if cancelled
+        using (SoundPlayer soundPlayer = new(OutFile, volume: (float)(Volume / 171.4)))
+        {
+            while (!(soundPlayer.IsDisposed || cancellationToken.IsCancellationRequested))
+            {
+                await Task.Delay(PollingPeriodInMilliseconds, cancellationToken);
+            }
         }
     }
 }
