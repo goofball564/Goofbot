@@ -84,7 +84,7 @@ internal partial class BlueGuyModule : GoofbotModule
                 colorChanged = false;
                 message = NoArgumentString;
             }
-            else if (commandArgs.Equals("random"))
+            else if (commandArgs.Equals("random", StringComparison.OrdinalIgnoreCase))
             {
                 string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
 
