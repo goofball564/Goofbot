@@ -254,7 +254,7 @@ internal class TextToSpeechModule : GoofbotModule
         cancellationToken.ThrowIfCancellationRequested();
 
         // Play TTS from sound file, but stop if cancelled
-        using (SoundPlayer soundPlayer = new(OutFile, volume: (float)(Volume / 171.4)))
+        using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4)))
         {
             while (!(soundPlayer.IsDisposed || cancellationToken.IsCancellationRequested))
             {
