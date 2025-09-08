@@ -195,6 +195,17 @@ internal class TextToSpeechModule : GoofbotModule
         return speechSynthesizer;
     }
 
+    private static void TryDeleteFile(string file)
+    {
+        try
+        {
+            File.Delete(file);
+        }
+        catch
+        {
+        }
+    }
+
     private async Task SpeakSAPI5(string message, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -241,13 +252,7 @@ internal class TextToSpeechModule : GoofbotModule
             cancellationToken.ThrowIfCancellationRequested();
             Task delayTask = Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
 
-            try
-            {
-                File.Delete(OutFile);
-            }
-            catch
-            {
-            }
+            TryDeleteFile(OutFile);
 
             // Run EXE to generate TTS and output it to OutFile
             using (var process = new Process
@@ -276,7 +281,7 @@ internal class TextToSpeechModule : GoofbotModule
             cancellationToken.ThrowIfCancellationRequested();
 
             // Play TTS from sound file, but stop if cancelled
-            using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4)))
+            using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4), cancellationToken: cancellationToken))
             {
                 while (!(soundPlayer.IsDisposed || cancellationToken.IsCancellationRequested))
                 {
@@ -284,13 +289,7 @@ internal class TextToSpeechModule : GoofbotModule
                 }
             }
 
-            try
-            {
-                File.Delete(OutFile);
-            }
-            catch
-            {
-            }
+            TryDeleteFile(OutFile);
         });
     }
 }
