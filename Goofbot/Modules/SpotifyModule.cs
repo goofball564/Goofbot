@@ -16,8 +16,6 @@ internal class SpotifyModule : GoofbotModule
     private readonly string clientSecret;
 
     private readonly CachedApiResponses cachedApiResponses;
-    private readonly ThreadSafeObject<string> currentlyPlayingSongName = new ();
-    private readonly ThreadSafeObject<List<SimpleArtist>> currentlyPlayingArtistsNames = new ();
 
     private EmbedIOAuthServer server;
     private SpotifyClient spotify;
@@ -34,32 +32,6 @@ internal class SpotifyModule : GoofbotModule
         this.clientSecret = Convert.ToString(spotifyCredentials.client_secret);
 
         Program.CommandDictionary.TryAddCommand(new Command("song", this.SongCommand));
-    }
-
-    public string CurrentlyPlayingSongName
-    {
-        get
-        {
-            return this.currentlyPlayingSongName.Value;
-        }
-    }
-
-    public List<string> CurrentlyPlayingArtistsNames
-    {
-        get
-        {
-            var artistsNamesAsString = new List<string>();
-            var artistsAsSimpleArtist = this.currentlyPlayingArtistsNames.Value;
-            if (artistsAsSimpleArtist != null)
-            {
-                foreach (var artist in artistsAsSimpleArtist)
-                {
-                    artistsNamesAsString.Add(artist.Name);
-                }
-            }
-
-            return artistsNamesAsString;
-        }
     }
 
     public async Task Initialize()
