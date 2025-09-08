@@ -210,7 +210,7 @@ internal class TextToSpeechModule : GoofbotModule
         await Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        using (SemaphoreSlim semaphore = new (0, 1))
+        using (SemaphoreSlim semaphore = new (0, 2))
         using (SpeechSynthesizer speechSynthesizer = InitializeSpeechSynthesizer())
         {
             speechSynthesizer.SpeakCompleted += (sender, e) => semaphore.Release();
