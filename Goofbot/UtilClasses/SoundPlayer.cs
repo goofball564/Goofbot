@@ -22,16 +22,14 @@ internal class SoundPlayer : IDisposable
     private readonly WasapiOut soundOut;
     private readonly CancellationToken? cancellationToken;
 
-    private volatile bool isDisposed = true;
-
     public SoundPlayer(string soundFile, float volume = DefaultVolume, CancellationToken? cancellationToken = null, bool playImmediately = true)
     {
+        this.IsDisposed = true;
+
         if (File.Exists(soundFile))
         {
-            this.isDisposed = false;
-
+            this.IsDisposed = false;
             this.soundFile = soundFile;
-
             this.volume = volume;
 
             this.waveSource = CodecFactory.Instance.GetCodec(this.soundFile);
@@ -51,10 +49,7 @@ internal class SoundPlayer : IDisposable
         }
     }
 
-    public bool IsDisposed
-    {
-        get { return this.isDisposed;  }
-    }
+    public bool IsDisposed { get; private set; }
 
     public void Play()
     {
@@ -83,7 +78,7 @@ internal class SoundPlayer : IDisposable
                 {
                 }
 
-                this.isDisposed = true;
+                this.IsDisposed = true;
                 this.Disposed.Invoke(this, new EventArgs());
             }
         }
