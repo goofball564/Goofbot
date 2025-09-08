@@ -10,6 +10,8 @@ using System.Threading;
 
 internal class SoundPlayer : IDisposable
 {
+    public EventHandler Disposed;
+
     private const float DefaultVolume = 0.15f;
 
     private readonly string soundFile;
@@ -74,6 +76,7 @@ internal class SoundPlayer : IDisposable
                 }
 
                 this.isDisposed = true;
+                this.Disposed.Invoke(this, new EventArgs());
             }
         }
     }
