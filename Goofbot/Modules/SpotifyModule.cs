@@ -17,7 +17,6 @@ internal class SpotifyModule : GoofbotModule
     private readonly string spotifyCredentialsFile;
     private readonly string clientId;
     private readonly string clientSecret;
-    // private readonly string playlistId;
 
     private readonly CachedApiResponses cachedApiResponses;
 
@@ -27,9 +26,6 @@ internal class SpotifyModule : GoofbotModule
 
     private EmbedIOAuthServer server;
     private SpotifyClient spotify;
-
-    private bool removedFromPlaylist = false;
-    private bool addedToQueue = false;
 
     public SpotifyModule(string moduleDataFolder)
         : base(moduleDataFolder)
