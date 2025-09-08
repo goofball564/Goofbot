@@ -6,6 +6,7 @@ using SpotifyAPI.Web.Auth;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 
@@ -16,6 +17,7 @@ internal class SpotifyModule : GoofbotModule
     private readonly string clientSecret;
 
     private readonly CachedApiResponses cachedApiResponses;
+    private readonly SemaphoreSlim semaphore = new (1, 1);
 
     private EmbedIOAuthServer server;
     private SpotifyClient spotify;
@@ -69,33 +71,44 @@ internal class SpotifyModule : GoofbotModule
 
     private async Task<string> SongCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
-        await this.cachedApiResponses.RefreshCachedApiResponses(this.spotify);
-        var context = this.cachedApiResponses.Context;
-        var queue = this.cachedApiResponses.Queue;
+        string message = string.Empty;
+        await this.semaphore.WaitAsync();
+        try
+        {
+            await this.cachedApiResponses.RefreshCachedApiResponses(this.spotify);
+            var context = this.cachedApiResponses.Context;
+            var queue = this.cachedApiResponses.Queue;
 
-        string currentlyPlayingSongName;
-        List<SimpleArtist> currentlyPlayingArtists;
-        if (context != null && context.IsPlaying)
-        {
-            var currentlyPlaying = GetCurrentlyPlaying(queue);
-            currentlyPlayingSongName = currentlyPlaying?.Name;
-            currentlyPlayingArtists = currentlyPlaying?.Artists;
+            string currentlyPlayingSongName;
+            List<SimpleArtist> currentlyPlayingArtists;
+            if (context != null && context.IsPlaying)
+            {
+                var currentlyPlaying = GetCurrentlyPlaying(queue);
+                currentlyPlayingSongName = currentlyPlaying?.Name;
+                currentlyPlayingArtists = currentlyPlaying?.Artists;
+            }
+            else
+            {
+                currentlyPlayingSongName = string.Empty;
+                currentlyPlayingArtists = [];
+            }
+
+            string currentlyPlayingArtistNames = string.Join(", ", currentlyPlayingArtists);
+            if (currentlyPlayingSongName.Equals(string.Empty) || currentlyPlayingArtistNames.Equals(string.Empty))
+            {
+                message = "Ain't nothing playing";
+            }
+            else
+            {
+                message = currentlyPlayingSongName + " by " + currentlyPlayingArtistNames;
+            }
         }
-        else
+        finally
         {
-            currentlyPlayingSongName = string.Empty;
-            currentlyPlayingArtists = [];
+            this.semaphore.Release();
         }
 
-        string currentlyPlayingArtistNames = string.Join(", ", currentlyPlayingArtists);
-        if (currentlyPlayingSongName.Equals(string.Empty) || currentlyPlayingArtistNames.Equals(string.Empty))
-        {
-            return "Ain't nothing playing";
-        }
-        else
-        {
-            return currentlyPlayingSongName + " by " + currentlyPlayingArtistNames;
-        }
+        return message;
     }
 
     private async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
@@ -116,54 +129,15 @@ internal class SpotifyModule : GoofbotModule
         await this.server.Stop();
     }
 
-    public class ThreadSafeObject<T>
-    {
-        private readonly object lockObject = new ();
-        private T value;
-
-        public T Value
-        {
-            get
-            {
-                lock (this.lockObject)
-                {
-                    return this.value;
-                }
-            }
-
-            set
-            {
-                lock (this.lockObject)
-                {
-                    this.value = value;
-                }
-            }
-        }
-    }
-
     private class CachedApiResponses
     {
         private readonly TimeSpan callAgainTimeout = TimeSpan.FromSeconds(6);
-        private readonly ThreadSafeObject<CurrentlyPlayingContext> contextCached = new ();
-        private readonly ThreadSafeObject<QueueResponse> queueCached = new ();
-
+        private readonly SemaphoreSlim semaphore = new (1, 1);
         private DateTime timeOfLastCall = DateTime.MinValue;
 
-        public CurrentlyPlayingContext Context
-        {
-            get
-            {
-                return this.contextCached.Value;
-            }
-        }
+        public CurrentlyPlayingContext Context { get; private set; }
 
-        public QueueResponse Queue
-        {
-            get
-            {
-                return this.queueCached.Value;
-            }
-        }
+        public QueueResponse Queue { get; private set; }
 
         public async Task<bool> RefreshCachedApiResponses(SpotifyClient spotify)
         {
@@ -171,12 +145,20 @@ internal class SpotifyModule : GoofbotModule
             DateTime timeoutTime = this.timeOfLastCall.Add(this.callAgainTimeout);
             if (timeoutTime.CompareTo(now) < 0)
             {
-                this.timeOfLastCall = now;
-                var context = spotify.Player.GetCurrentPlayback();
-                var queue = spotify.Player.GetQueue();
+                await this.semaphore.WaitAsync();
+                try
+                {
+                    this.timeOfLastCall = now;
+                    var getCurrentContextTask = spotify.Player.GetCurrentPlayback();
+                    var getQueueTask = spotify.Player.GetQueue();
 
-                this.contextCached.Value = await context;
-                this.queueCached.Value = await queue;
+                    this.Context = await getCurrentContextTask;
+                    this.Queue = await getQueueTask;
+                }
+                finally
+                {
+                    this.semaphore.Release();
+                }
             }
 
             return true;
