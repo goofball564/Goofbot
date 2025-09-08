@@ -11,8 +11,6 @@ using TwitchLib.Client.Events;
 
 internal class SpotifyModule : GoofbotModule
 {
-    private const int QueueModeLoopInterval = 12000;
-    private const double QueueModeRemainingDurationThreshold = 60;
 
     private readonly string spotifyCredentialsFile;
     private readonly string clientId;
