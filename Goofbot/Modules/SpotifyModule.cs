@@ -41,14 +41,6 @@ internal class SpotifyModule : GoofbotModule
         Program.CommandDictionary.TryAddCommand(new Command("song", this.SongCommand));
     }
 
-    public string CurrentlyPlayingId
-    {
-        get
-        {
-            return this.currentlyPlayingId.Value;
-        }
-    }
-
     public string CurrentlyPlayingSongName
     {
         get
