@@ -11,7 +11,6 @@ using TwitchLib.Client.Events;
 
 internal class SpotifyModule : GoofbotModule
 {
-
     private readonly string spotifyCredentialsFile;
     private readonly string clientId;
     private readonly string clientSecret;
@@ -96,39 +95,34 @@ internal class SpotifyModule : GoofbotModule
         }
     }
 
-    private async Task<bool> RefreshCurrentlyPlaying()
+    private async Task<string> SongCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         await this.cachedApiResponses.RefreshCachedApiResponses(this.spotify);
         var context = this.cachedApiResponses.Context;
         var queue = this.cachedApiResponses.Queue;
 
+        string currentlyPlayingSongName;
+        List<SimpleArtist> currentlyPlayingArtists;
         if (context != null && context.IsPlaying)
         {
             var currentlyPlaying = GetCurrentlyPlaying(queue);
-            this.currentlyPlayingSongName.Value = currentlyPlaying?.Name;
-            this.currentlyPlayingArtistsNames.Value = currentlyPlaying?.Artists;
+            currentlyPlayingSongName = currentlyPlaying?.Name;
+            currentlyPlayingArtists = currentlyPlaying?.Artists;
         }
         else
         {
-            this.currentlyPlayingSongName.Value = string.Empty;
-            this.currentlyPlayingArtistsNames.Value = [];
+            currentlyPlayingSongName = string.Empty;
+            currentlyPlayingArtists = [];
         }
 
-        return true;
-    }
-
-    private async Task<string> SongCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
-    {
-        await this.RefreshCurrentlyPlaying();
-        string artists = string.Join(", ", this.CurrentlyPlayingArtistsNames);
-        string song = this.CurrentlyPlayingSongName;
-        if (song == string.Empty || artists == string.Empty)
+        string currentlyPlayingArtistNames = string.Join(", ", currentlyPlayingArtists);
+        if (currentlyPlayingSongName.Equals(string.Empty) || currentlyPlayingArtistNames.Equals(string.Empty))
         {
             return "Ain't nothing playing";
         }
         else
         {
-            return song + " by " + artists;
+            return currentlyPlayingSongName + " by " + currentlyPlayingArtistNames;
         }
     }
 
