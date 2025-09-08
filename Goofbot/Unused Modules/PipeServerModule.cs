@@ -3,7 +3,6 @@
 using Goofbot.Utils;
 using System;
 using System.IO.Pipes;
-using System.Runtime.Versioning;
 using System.Text;
 using System.Threading;
 

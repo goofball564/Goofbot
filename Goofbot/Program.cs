@@ -6,7 +6,6 @@ using ImageMagick;
 using Newtonsoft.Json;
 using System;
 using System.IO;
-using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Client;
