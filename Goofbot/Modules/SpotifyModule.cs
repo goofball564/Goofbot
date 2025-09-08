@@ -20,7 +20,6 @@ internal class SpotifyModule : GoofbotModule
 
     private readonly CachedApiResponses cachedApiResponses;
 
-    private readonly ThreadSafeObject<string> currentlyPlayingId = new ();
     private readonly ThreadSafeObject<string> currentlyPlayingSongName = new ();
     private readonly ThreadSafeObject<List<SimpleArtist>> currentlyPlayingArtistsNames = new ();
 
@@ -92,13 +91,11 @@ internal class SpotifyModule : GoofbotModule
         if (context != null && context.IsPlaying)
         {
             var currentlyPlaying = GetCurrentlyPlaying(queue);
-            this.currentlyPlayingId.Value = currentlyPlaying?.Id;
             this.currentlyPlayingSongName.Value = currentlyPlaying?.Name;
             this.currentlyPlayingArtistsNames.Value = currentlyPlaying?.Artists;
         }
         else
         {
-            this.currentlyPlayingId.Value = string.Empty;
             this.currentlyPlayingSongName.Value = string.Empty;
             this.currentlyPlayingArtistsNames.Value = [];
         }
