@@ -17,7 +17,6 @@ internal class TextToSpeechModule : GoofbotModule
 {
     private const int Volume = 60;
     private const string OutFile = "S:\\speak.WAV";
-    private const int PollingPeriodInMilliseconds = 500;
     private const int DelayBeforeTTSInMilliseconds = 2000;
 
     private readonly string decTalkExeFile;
