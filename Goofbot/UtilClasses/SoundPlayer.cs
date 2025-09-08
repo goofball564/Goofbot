@@ -9,6 +9,7 @@ using System;
 
 internal class SoundPlayer : IDisposable
 {
+    private object lockObject = new ();
     private const float DefaultVolume = 0.15f;
 
     private readonly string soundFile;
@@ -17,11 +18,13 @@ internal class SoundPlayer : IDisposable
     private IWaveSource waveSource;
     private WasapiOut soundOut;
 
+    private volatile bool isDisposed = true;
+
     public SoundPlayer(string soundFile, float volume = DefaultVolume)
     {
         if (File.Exists(soundFile))
         {
-            this.IsDisposed = false;
+            this.isDisposed = false;
             this.soundFile = soundFile;
             this.volume = volume;
             this.waveSource = CodecFactory.Instance.GetCodec(this.soundFile);
@@ -33,13 +36,36 @@ internal class SoundPlayer : IDisposable
         }
     }
 
-    public bool IsDisposed { get; private set; } = true;
+    public bool IsDisposed
+    {
+        get { return this.isDisposed;  }
+    }
 
     public void Dispose()
     {
-        this.soundOut.Dispose();
-        this.waveSource.Dispose();
-        this.IsDisposed = true;
+        lock (this.lockObject)
+        {
+            if (!this.IsDisposed)
+            {
+                try
+                {
+                    this.soundOut.Dispose();
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    this.waveSource.Dispose();
+                }
+                catch
+                {
+                }
+
+                this.isDisposed = true;
+            }
+        }
     }
 
     private async void OnStopped(object sender, PlaybackStoppedEventArgs e)
