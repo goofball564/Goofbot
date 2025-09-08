@@ -10,12 +10,12 @@ using System.Threading;
 
 internal class SoundPlayer : IDisposable
 {
-    private object lockObject = new ();
     private const float DefaultVolume = 0.15f;
 
     private readonly string soundFile;
     private readonly float volume;
 
+    private object lockObject = new ();
     private IWaveSource waveSource;
     private WasapiOut soundOut;
     private CancellationToken? cancellationToken;
