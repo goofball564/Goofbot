@@ -6,6 +6,7 @@ using CSCore;
 using CSCore.SoundOut;
 using System.IO;
 using System;
+using System.Threading;
 
 internal class SoundPlayer : IDisposable
 {
@@ -17,21 +18,30 @@ internal class SoundPlayer : IDisposable
 
     private IWaveSource waveSource;
     private WasapiOut soundOut;
+    private CancellationToken? cancellationToken;
 
     private volatile bool isDisposed = true;
 
-    public SoundPlayer(string soundFile, float volume = DefaultVolume)
+    public SoundPlayer(string soundFile, float volume = DefaultVolume, CancellationToken? cancellationToken = null)
     {
         if (File.Exists(soundFile))
         {
             this.isDisposed = false;
+
             this.soundFile = soundFile;
+
             this.volume = volume;
+
             this.waveSource = CodecFactory.Instance.GetCodec(this.soundFile);
+
             this.soundOut = new ();
             this.soundOut.Initialize(this.waveSource);
             this.soundOut.Volume = this.volume;
             this.soundOut.Stopped += this.OnStopped;
+
+            this.cancellationToken = cancellationToken;
+            this.cancellationToken?.Register(this.Dispose);
+
             this.soundOut.Play();
         }
     }
