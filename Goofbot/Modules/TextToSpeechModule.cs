@@ -214,7 +214,7 @@ internal class TextToSpeechModule : GoofbotModule
         using (SemaphoreSlim semaphore = new (0, 1))
         using (SpeechSynthesizer speechSynthesizer = InitializeSpeechSynthesizer())
         {
-            speechSynthesizer.SpeakCompleted += (object sender, SpeakCompletedEventArgs e) => semaphore.Release();
+            speechSynthesizer.SpeakCompleted += (sender, e) => semaphore.Release();
             cancellationToken.Register(() => semaphore.Release());
             Prompt speechPrompt = speechSynthesizer.SpeakAsync(message);
             await semaphore.WaitAsync();
@@ -285,7 +285,7 @@ internal class TextToSpeechModule : GoofbotModule
             using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4), cancellationToken: cancellationToken, playImmediately: false))
             {
                 // Wait for Disposal because SoundPlayer disposes itself when it finishes playing or it's cancelled
-                soundPlayer.Disposed += (object sender, EventArgs e) => { semaphore.Release(); };
+                soundPlayer.Disposed += (sender, e) => semaphore.Release();
                 soundPlayer.Play();
                 await semaphore.WaitAsync();
             }
