@@ -15,10 +15,10 @@ internal class SoundPlayer : IDisposable
     private readonly string soundFile;
     private readonly float volume;
 
-    private object lockObject = new ();
-    private IWaveSource waveSource;
-    private WasapiOut soundOut;
-    private CancellationToken? cancellationToken;
+    private readonly object lockObject = new ();
+    private readonly IWaveSource waveSource;
+    private readonly WasapiOut soundOut;
+    private readonly CancellationToken? cancellationToken;
 
     private volatile bool isDisposed = true;
 
