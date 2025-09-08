@@ -218,7 +218,7 @@ internal class TextToSpeechModule : GoofbotModule
 
     private async Task SpeakDECTalk(string message, CancellationToken cancellationToken)
     {
-        string[] argumentList = { "-w", OutFile, message };
+        string[] argumentList = { "-w", OutFile, "-pre", "[:phon on]", message };
         await this.RunProcessThatGeneratesWavThenPlayWav(message, cancellationToken, this.decTalkExeFile, argumentList);
     }
 
@@ -233,44 +233,65 @@ internal class TextToSpeechModule : GoofbotModule
         }
     }
 
-    private async Task RunProcessThatGeneratesWavThenPlayWav(string message, CancellationToken cancellationToken, string exeFile, string[] argumentList)
+    private async Task RunProcessThatGeneratesWavThenPlayWav(string message, CancellationToken cancellationToken, string exeFile, string[] argumentList, bool useShellExecute = false, bool createNoWindow = false)
     {
-        // Cancel if cancellation requested before starting
-        cancellationToken.ThrowIfCancellationRequested();
-        Task delayTask = Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
-
-        // Run EXE to generate TTS and output it to OutFile
-        using (var process = new Process
+        await Task.Run(async () =>
         {
-            StartInfo =
+            // Cancel if cancellation requested before starting
+            cancellationToken.ThrowIfCancellationRequested();
+            Task delayTask = Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
+
+            try
+            {
+                File.Delete(OutFile);
+            }
+            catch
+            {
+            }
+
+            // Run EXE to generate TTS and output it to OutFile
+            using (var process = new Process
+            {
+                StartInfo =
             {
                 FileName = exeFile,
-                UseShellExecute = false, CreateNoWindow = false,
+                UseShellExecute = useShellExecute,
+                CreateNoWindow = createNoWindow,
+                WorkingDirectory = Path.GetDirectoryName(exeFile),
             },
-            EnableRaisingEvents = true,
-        })
-        {
-            foreach (string argument in argumentList)
+                EnableRaisingEvents = true,
+            })
             {
-                process.StartInfo.ArgumentList.Add(argument);
+                foreach (string argument in argumentList)
+                {
+                    process.StartInfo.ArgumentList.Add(argument);
+                }
+
+                process.Start();
+                await process.WaitForExitAsync(cancellationToken);
             }
 
-            process.Start();
-            await process.WaitForExitAsync(cancellationToken);
-        }
+            // Wait for a delay before starting to speak, but check if cancelled before speaking
+            await delayTask;
+            cancellationToken.ThrowIfCancellationRequested();
 
-        // Wait for a delay before starting to speak, but check if cancelled before speaking
-        await delayTask;
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Play TTS from sound file, but stop if cancelled
-        using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4)))
-        {
-            while (!(soundPlayer.IsDisposed || cancellationToken.IsCancellationRequested))
+            // Play TTS from sound file, but stop if cancelled
+            using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4)))
             {
-                await Task.Delay(PollingPeriodInMilliseconds, cancellationToken);
+                while (!(soundPlayer.IsDisposed || cancellationToken.IsCancellationRequested))
+                {
+                    await Task.Delay(PollingPeriodInMilliseconds, cancellationToken);
+                }
             }
-        }
+
+            try
+            {
+                File.Delete(OutFile);
+            }
+            catch
+            {
+            }
+        });
     }
 }
 
