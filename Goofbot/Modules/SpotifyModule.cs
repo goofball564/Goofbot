@@ -17,9 +17,8 @@ internal class SpotifyModule : GoofbotModule
     private readonly string spotifyCredentialsFile;
     private readonly string clientId;
     private readonly string clientSecret;
-    private readonly string playlistId;
+    // private readonly string playlistId;
 
-    private readonly VolumeControlModule volumeControlModule;
     private readonly CachedApiResponses cachedApiResponses;
 
     private readonly ThreadSafeObject<string> currentlyPlayingId = new ();
@@ -28,9 +27,6 @@ internal class SpotifyModule : GoofbotModule
 
     private EmbedIOAuthServer server;
     private SpotifyClient spotify;
-
-    private volatile bool queueMode = false;
-    private volatile bool farmMode = true;
 
     private bool removedFromPlaylist = false;
     private bool addedToQueue = false;
@@ -41,50 +37,12 @@ internal class SpotifyModule : GoofbotModule
         this.spotifyCredentialsFile = Path.Join(this.ModuleDataFolder, "spotify_credentials.json");
         dynamic spotifyCredentials = Program.ParseJsonFile(this.spotifyCredentialsFile);
 
-        this.volumeControlModule = new VolumeControlModule();
         this.cachedApiResponses = new CachedApiResponses();
 
         this.clientId = Convert.ToString(spotifyCredentials.client_id);
         this.clientSecret = Convert.ToString(spotifyCredentials.client_secret);
 
         Program.CommandDictionary.TryAddCommand(new Command("song", this.SongCommand));
-    }
-
-    public bool QueueMode
-    {
-        get
-        {
-            return this.queueMode;
-        }
-
-        set
-        {
-            if (value == true)
-            {
-                this.volumeControlModule.SpotifyVolume = 0.07f;
-                this.volumeControlModule.DarkSoulsVolume = 0.22f;
-            }
-            else
-            {
-                this.volumeControlModule.SpotifyVolume = 0.05f;
-                this.volumeControlModule.DarkSoulsVolume = 0.27f;
-            }
-
-            this.queueMode = value;
-        }
-    }
-
-    public bool FarmMode
-    {
-        get
-        {
-            return this.farmMode;
-        }
-
-        set
-        {
-            this.farmMode = value;
-        }
     }
 
     public string CurrentlyPlayingId
@@ -272,7 +230,7 @@ internal class SpotifyModule : GoofbotModule
     // the next song is queued up by the bot from a queue playlist,
     // (and then deleted from the playlist; the bot consumes the playlist)
     // rather than letting spotify continue to do whatever it was doing
-    private async Task QueueModeLoop()
+    /*private async Task QueueModeLoop()
     {
         while (true)
         {
@@ -339,7 +297,7 @@ internal class SpotifyModule : GoofbotModule
                 }
             }
         }
-    }
+    }*/
 
     private async Task RemoveFirstSongFromPlaylist(FullPlaylist playlist, string playlistId)
     {
