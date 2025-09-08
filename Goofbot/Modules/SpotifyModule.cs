@@ -79,18 +79,13 @@ internal class SpotifyModule : GoofbotModule
             var context = this.cachedApiResponses.Context;
             var queue = this.cachedApiResponses.Queue;
 
-            string currentlyPlayingSongName;
-            List<SimpleArtist> currentlyPlayingArtists;
+            string currentlyPlayingSongName = string.Empty;
+            List<SimpleArtist> currentlyPlayingArtists = [];
             if (context != null && context.IsPlaying)
             {
                 var currentlyPlaying = GetCurrentlyPlaying(queue);
                 currentlyPlayingSongName = currentlyPlaying?.Name;
                 currentlyPlayingArtists = currentlyPlaying?.Artists;
-            }
-            else
-            {
-                currentlyPlayingSongName = string.Empty;
-                currentlyPlayingArtists = [];
             }
 
             string currentlyPlayingArtistNames = string.Join(", ", currentlyPlayingArtists);
