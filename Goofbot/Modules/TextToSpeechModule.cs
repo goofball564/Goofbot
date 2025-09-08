@@ -281,12 +281,12 @@ internal class TextToSpeechModule : GoofbotModule
             cancellationToken.ThrowIfCancellationRequested();
 
             // Play TTS from sound file, but stop if cancelled
-            using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4), cancellationToken: cancellationToken))
+            using (SemaphoreSlim semaphore = new (0, 1))
+            using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4), cancellationToken: cancellationToken, playImmediately: false))
             {
-                while (!(soundPlayer.IsDisposed || cancellationToken.IsCancellationRequested))
-                {
-                    await Task.Delay(PollingPeriodInMilliseconds, cancellationToken);
-                }
+                soundPlayer.Disposed += (object sender, EventArgs e) => { semaphore.Release(); };
+                soundPlayer.Play();
+                await semaphore.WaitAsync();
             }
 
             TryDeleteFile(OutFile);
