@@ -114,25 +114,6 @@ internal class SpotifyModule : GoofbotModule
         return true;
     }
 
-    private static double? GetRemainingDuration(QueueResponse? queue, CurrentlyPlayingContext? context)
-    {
-        if (queue == null || context == null)
-        {
-            return null;
-        }
-
-        if (queue.CurrentlyPlaying is FullTrack track)
-        {
-            int duration = track.DurationMs;
-            int remainingDuration = duration - context.ProgressMs;
-            return remainingDuration / 1000.0;
-        }
-        else
-        {
-            return null;
-        }
-    }
-
     private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
     {
         if (queue == null)
@@ -141,41 +122,6 @@ internal class SpotifyModule : GoofbotModule
         }
 
         if (queue.CurrentlyPlaying is FullTrack track)
-        {
-            return track;
-        }
-        else
-        {
-            return null;
-        }
-    }
-
-    private static FullTrack? GetNextInQueue(QueueResponse? queue)
-    {
-        if (queue == null)
-        {
-            return null;
-        }
-
-        if (queue.Queue[0] is FullTrack track)
-        {
-            return track;
-        }
-        else
-        {
-            return null;
-        }
-    }
-
-    private static FullTrack? GetFirstInPlaylist(FullPlaylist? playlist)
-    {
-        if (playlist == null || playlist.Tracks == null || playlist.Tracks.Items == null)
-        {
-            return null;
-        }
-
-        var playableItem = playlist.Tracks.Items[0].Track;
-        if (playableItem is FullTrack track)
         {
             return track;
         }
@@ -294,13 +240,6 @@ internal class SpotifyModule : GoofbotModule
             }
         }
     }*/
-
-    private async Task RemoveFirstSongFromPlaylist(FullPlaylist playlist, string playlistId)
-    {
-        IList<int>? indicesToRemove = [0,];
-        string? snapshotId = playlist.SnapshotId;
-        await this.spotify.Playlists.RemoveItems(playlistId, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
-    }
 
     public class ThreadSafeObject<T>
     {
