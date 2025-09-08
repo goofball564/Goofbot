@@ -19,7 +19,6 @@ internal class SpotifyModule : GoofbotModule
     private readonly string clientSecret;
 
     private readonly CachedApiResponses cachedApiResponses;
-
     private readonly ThreadSafeObject<string> currentlyPlayingSongName = new ();
     private readonly ThreadSafeObject<List<SimpleArtist>> currentlyPlayingArtistsNames = new ();
 
@@ -82,7 +81,24 @@ internal class SpotifyModule : GoofbotModule
         BrowserUtil.Open(request.ToUri());
     }
 
-    public async Task<bool> RefreshCurrentlyPlaying()
+    private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
+    {
+        if (queue == null)
+        {
+            return null;
+        }
+
+        if (queue.CurrentlyPlaying is FullTrack track)
+        {
+            return track;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    private async Task<bool> RefreshCurrentlyPlaying()
     {
         await this.cachedApiResponses.RefreshCachedApiResponses(this.spotify);
         var context = this.cachedApiResponses.Context;
@@ -101,23 +117,6 @@ internal class SpotifyModule : GoofbotModule
         }
 
         return true;
-    }
-
-    private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
-    {
-        if (queue == null)
-        {
-            return null;
-        }
-
-        if (queue.CurrentlyPlaying is FullTrack track)
-        {
-            return track;
-        }
-        else
-        {
-            return null;
-        }
     }
 
     private async Task<string> SongCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
