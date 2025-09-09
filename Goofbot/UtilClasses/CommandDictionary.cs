@@ -30,15 +30,4 @@ internal class CommandDictionary : IEnumerable<KeyValuePair<string, Command>>
     {
         return this.GetEnumerator();
     }
-
-    public List<string> GetAllCommands()
-    {
-        List<string> commands = [];
-        foreach (string command in this.commandDictionary.Keys)
-        {
-            commands.Add(command);
-        }
-
-        return commands;
-    }
 }
