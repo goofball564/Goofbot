@@ -22,6 +22,8 @@ internal class SoundPlayer : IDisposable
     private readonly WasapiOut soundOut;
     private readonly CancellationToken? cancellationToken;
 
+    private bool isDisposed = false;
+
     public SoundPlayer(string soundFile, float volume = DefaultVolume, CancellationToken? cancellationToken = null, bool playImmediately = true)
     {
         try
@@ -53,8 +55,6 @@ internal class SoundPlayer : IDisposable
         }
     }
 
-    public bool IsDisposed { get; private set; } = false;
-
     public void Play()
     {
         try
@@ -71,7 +71,7 @@ internal class SoundPlayer : IDisposable
     {
         lock (this.lockObject)
         {
-            if (!this.IsDisposed)
+            if (!this.isDisposed)
             {
                 try
                 {
@@ -89,7 +89,7 @@ internal class SoundPlayer : IDisposable
                 {
                 }
 
-                this.IsDisposed = true;
+                this.isDisposed = true;
                 this.Disposed.Invoke(this, new EventArgs());
             }
         }
