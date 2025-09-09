@@ -14,9 +14,6 @@ internal class SoundPlayer : IDisposable
 
     private const float DefaultVolume = 0.15f;
 
-    private readonly string soundFile;
-    private readonly float volume;
-
     private readonly object lockObject = new ();
     private readonly IWaveSource waveSource;
     private readonly WasapiOut soundOut;
@@ -28,14 +25,11 @@ internal class SoundPlayer : IDisposable
     {
         try
         {
-            this.soundFile = soundFile;
-            this.volume = volume;
-
-            this.waveSource = CodecFactory.Instance.GetCodec(this.soundFile);
+            this.waveSource = CodecFactory.Instance.GetCodec(soundFile);
 
             this.soundOut = new ();
             this.soundOut.Initialize(this.waveSource);
-            this.soundOut.Volume = this.volume;
+            this.soundOut.Volume = volume;
             this.soundOut.Stopped += this.OnStopped;
 
             this.cancellationToken = cancellationToken;
