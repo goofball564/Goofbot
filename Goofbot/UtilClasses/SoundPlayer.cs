@@ -24,9 +24,7 @@ internal class SoundPlayer : IDisposable
 
     public SoundPlayer(string soundFile, float volume = DefaultVolume, CancellationToken? cancellationToken = null, bool playImmediately = true)
     {
-        this.IsDisposed = false;
-
-        if (File.Exists(soundFile))
+        try
         {
             this.soundFile = soundFile;
             this.volume = volume;
@@ -46,7 +44,7 @@ internal class SoundPlayer : IDisposable
                 this.Play();
             }
         }
-        else
+        catch
         {
             if (playImmediately)
             {
@@ -55,7 +53,7 @@ internal class SoundPlayer : IDisposable
         }
     }
 
-    public bool IsDisposed { get; private set; }
+    public bool IsDisposed { get; private set; } = false;
 
     public void Play()
     {
