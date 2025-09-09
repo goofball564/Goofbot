@@ -24,11 +24,10 @@ internal class SoundPlayer : IDisposable
 
     public SoundPlayer(string soundFile, float volume = DefaultVolume, CancellationToken? cancellationToken = null, bool playImmediately = true)
     {
-        this.IsDisposed = true;
+        this.IsDisposed = false;
 
         if (File.Exists(soundFile))
         {
-            this.IsDisposed = false;
             this.soundFile = soundFile;
             this.volume = volume;
 
@@ -47,13 +46,27 @@ internal class SoundPlayer : IDisposable
                 this.Play();
             }
         }
+        else
+        {
+            if (playImmediately)
+            {
+                this.Dispose();
+            }
+        }
     }
 
     public bool IsDisposed { get; private set; }
 
     public void Play()
     {
-        this.soundOut.Play();
+        try
+        {
+            this.soundOut.Play();
+        }
+        catch
+        {
+            this.Dispose();
+        }
     }
 
     public void Dispose()
