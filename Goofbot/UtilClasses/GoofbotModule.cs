@@ -20,7 +20,7 @@ internal abstract class GoofbotModule : IDisposable
         Directory.CreateDirectory(this.moduleDataFolder);
 
         SqliteConnectionStringBuilder connectionStringBuilder = [];
-        connectionStringBuilder.DataSource = ModuleDatabaseFile;
+        connectionStringBuilder.DataSource = Path.Join(this.moduleDataFolder, ModuleDatabaseFile);
 
         this.sqliteConnection = new SqliteConnection(connectionStringBuilder.ConnectionString);
         this.sqliteConnection.Open();
