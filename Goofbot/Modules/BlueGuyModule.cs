@@ -55,6 +55,13 @@ internal partial class BlueGuyModule : GoofbotModule
         this.cancellationToken.Register(this.StopTimer);
     }
 
+    public override void Dispose()
+    {
+        this.semaphore.Dispose();
+        this.timer.Dispose();
+        base.Dispose();
+    }
+
     public void StartTimer()
     {
         this.timer.Start();
