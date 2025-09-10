@@ -5,6 +5,7 @@ using Goofbot.Utils;
 using ImageMagick;
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Client;
@@ -16,9 +17,11 @@ internal class Bot
     public readonly string TwitchBotUsername;
     public readonly string TwitchChannelUsername;
 
-    public readonly TwitchAPI TwitchAPI = new ();
-    public readonly TwitchClient TwitchClient = new ();
-    public readonly CommandDictionary CommandDictionary = new ();
+    public readonly TwitchAPI TwitchAPI;
+    public readonly TwitchClient TwitchClient;
+    public readonly CommandDictionary CommandDictionary;
+
+    private readonly CancellationTokenSource cancellationTokenSource;
 
     private readonly string goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
@@ -34,6 +37,11 @@ internal class Bot
     {
         this.TwitchBotUsername = twitchBotUsername;
         this.TwitchChannelUsername = twitchChannelUsername;
+
+        this.TwitchAPI = new ();
+        this.TwitchClient = new ();
+        this.CommandDictionary = new ();
+        this.cancellationTokenSource = new ();
 
         // Get location of bot data folder
         string stuffLocationFile = Path.Join(this.goofbotAppDataFolder, "stufflocation.txt");
