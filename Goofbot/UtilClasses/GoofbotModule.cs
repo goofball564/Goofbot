@@ -1,8 +1,9 @@
 ﻿namespace Goofbot.Utils;
 
+using System;
 using System.IO;
 
-internal abstract class GoofbotModule
+internal abstract class GoofbotModule : IDisposable
 {
     protected readonly string moduleDataFolder;
 
@@ -12,4 +13,8 @@ internal abstract class GoofbotModule
 
     }
 
+    public virtual void Dispose()
+    {
+
+    }
 }
