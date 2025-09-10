@@ -12,7 +12,7 @@ using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets;
 
-internal class Bot
+internal class Bot : IDisposable
 {
     public readonly string TwitchBotUsername;
     public readonly string TwitchChannelUsername;
@@ -115,6 +115,17 @@ internal class Bot
 
         // Start timers after bot has connected
         this.blueGuyModule.StartTimer();
+    }
+
+    public void Dispose()
+    {
+        this.spotifyModule.Dispose();
+        this.soundAlertModule.Dispose();
+        this.miscCommandsModule.Dispose();
+        this.calculatorModule.Dispose();
+        this.emoteSoundModule.Dispose();
+        this.blueGuyModule.Dispose();
+        this.textToSpeechModule.Dispose();
     }
 
     private void Client_OnLog(object sender, OnLogArgs e)
