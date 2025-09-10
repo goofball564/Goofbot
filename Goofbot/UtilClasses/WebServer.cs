@@ -5,8 +5,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Net;
 using System.Threading;
+using System;
 
-public class WebServer
+public class WebServer : IDisposable
 {
     private readonly HttpListener listener = new ();
     private readonly SemaphoreSlim semaphore = new (1, 1);
@@ -14,6 +15,11 @@ public class WebServer
     public WebServer(string uri)
     {
         this.listener.Prefixes.Add(uri);
+    }
+
+    public void Dispose()
+    {
+        this.semaphore.Dispose();
     }
 
     public void Close()

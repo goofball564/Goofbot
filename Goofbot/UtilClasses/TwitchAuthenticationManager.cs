@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Client.Models;
 
-internal class TwitchAuthenticationManager
+internal class TwitchAuthenticationManager : IDisposable
 {
     public const string TwitchAppRedirectUrl = "http://localhost:3000/";
     public const string TwitchAuthorizationCodeRequestUrlBase = "https://id.twitch.tv/oauth2/authorize";
@@ -37,6 +37,14 @@ internal class TwitchAuthenticationManager
         this.bot = bot;
         this.twitchClientID = twitchClientID;
         this.twitchClientSecret = twitchClientSecret;
+    }
+
+    public void Dispose()
+    {
+        this.botTokensSemaphore.Dispose();
+        this.channelTokensSemaphore.Dispose();
+        this.httpClient.Dispose();
+        this.server.Dispose();
     }
 
     public async Task InitializeAsync()

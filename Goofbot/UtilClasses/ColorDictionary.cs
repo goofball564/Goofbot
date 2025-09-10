@@ -8,7 +8,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-internal class ColorDictionary
+internal class ColorDictionary : IDisposable
 {
     public const string ColorNamesRequestUrl = "https://api.color.pizza/v1/";
 
@@ -26,6 +26,12 @@ internal class ColorDictionary
     public ColorDictionary(string colorNamesFile)
     {
         this.colorNamesFile = colorNamesFile;
+    }
+
+    public void Dispose()
+    {
+        this.httpClient.Dispose();
+        this.semaphore.Dispose();
     }
 
     public async Task InitializeAsync(bool forceRedownload = false)

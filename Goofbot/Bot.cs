@@ -126,6 +126,10 @@ internal class Bot : IDisposable
         this.emoteSoundModule.Dispose();
         this.blueGuyModule.Dispose();
         this.textToSpeechModule.Dispose();
+
+        this.cancellationTokenSource.Dispose();
+        this.TwitchAuthenticationManager.Dispose();
+        this.ColorDictionary.Dispose();
     }
 
     private void Client_OnLog(object sender, OnLogArgs e)
