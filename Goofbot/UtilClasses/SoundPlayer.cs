@@ -32,7 +32,6 @@ internal class SoundPlayer : IDisposable
             this.soundOut.Stopped += this.OnStopped;
 
             this.cancellationToken = cancellationToken;
-            this.cancellationToken?.Register(this.Dispose);
 
             if (playImmediately)
             {
@@ -50,6 +49,7 @@ internal class SoundPlayer : IDisposable
 
     public void Play()
     {
+        this.cancellationToken?.Register(this.Dispose);
         try
         {
             this.soundOut.Play();
