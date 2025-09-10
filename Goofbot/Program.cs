@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 /*
@@ -37,7 +38,10 @@ internal class Program
     public static async Task Main()
     {
         Bot bot = new (TwitchBotUsername, TwitchChannelUsername);
-        await bot.InitializeAsync();
+        await bot.Start();
+
+        // Let the bot do its thing
+        await Task.Delay(Timeout.Infinite);
     }
 
     public static dynamic ParseJsonFile(string file)

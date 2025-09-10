@@ -5,7 +5,6 @@ using Goofbot.Utils;
 using ImageMagick;
 using System;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Client;
@@ -23,13 +22,13 @@ internal class Bot
 
     private readonly string goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
-    private readonly SpotifyModule spotifyModule; // = new(this, "SpotifyModule");
-    private readonly SoundAlertModule soundAlertModule; // = new(this, "SoundAlertModule");
-    private readonly MiscCommandsModule miscCommandsModule; // = new(this, "MiscCommandsModule");
-    private readonly CalculatorModule calculatorModule; // = new(this, "CalculatorModule");
-    private readonly EmoteSoundModule emoteSoundModule; // = new(this, "EmoteSoundModule");
-    private readonly BlueGuyModule blueGuyModule; // = new(this, "BlueGuyModule");
-    private readonly TextToSpeechModule textToSpeechModule; // = new(this, "TextToSpeechModule");
+    private readonly SpotifyModule spotifyModule;
+    private readonly SoundAlertModule soundAlertModule;
+    private readonly MiscCommandsModule miscCommandsModule;
+    private readonly CalculatorModule calculatorModule;
+    private readonly EmoteSoundModule emoteSoundModule;
+    private readonly BlueGuyModule blueGuyModule;
+    private readonly TextToSpeechModule textToSpeechModule;
 
     public Bot(string twitchBotUsername, string twitchChannelUsername)
     {
@@ -60,8 +59,7 @@ internal class Bot
         // Initialize Magick.NET
         MagickNET.Initialize();
 
-        // Initialize Modules
-        // EventSubWebsocketClient needs to be created before this
+        // Instantiate modules
         this.spotifyModule = new (this, "SpotifyModule");
         this.soundAlertModule = new (this, "SoundAlertModule");
         this.miscCommandsModule = new (this, "MiscCommandsModule");
@@ -79,7 +77,7 @@ internal class Bot
 
     public EventSubWebsocketClient EventSubWebsocketClient { get; private set; }
 
-    public async Task InitializeAsync()
+    public async Task Start()
     {
         Task colorDictionaryTask = this.ColorDictionary.InitializeAsync();
         Task authenticationManagerInitializeTask = this.TwitchAuthenticationManager.InitializeAsync();
@@ -100,13 +98,15 @@ internal class Bot
         // Requires TwitchClient to be initialized
         this.TwitchClient.AddChatCommandIdentifier('!');
 
+        // Finish everything else before starting the bot
         await spotifyModuleInitializeTask;
         await colorDictionaryTask;
 
         // Start the bot
         this.TwitchClient.Connect();
+
+        // Start timers after bot has connected
         this.blueGuyModule.StartTimer();
-        await Task.Delay(Timeout.Infinite);
     }
 
     private void Client_OnLog(object sender, OnLogArgs e)
