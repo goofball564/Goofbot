@@ -2,7 +2,6 @@
 
 using Goofbot.Utils;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 

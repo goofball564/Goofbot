@@ -5,7 +5,6 @@ using Goofbot.Utils;
 using ImageMagick;
 using System;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Client;

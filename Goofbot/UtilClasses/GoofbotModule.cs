@@ -3,7 +3,6 @@
 using Microsoft.Data.Sqlite;
 using System;
 using System.IO;
-using System.Threading;
 
 internal abstract class GoofbotModule : IDisposable
 {

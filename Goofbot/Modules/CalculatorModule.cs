@@ -2,7 +2,6 @@
 
 using AngouriMath;
 using Goofbot.Utils;
-using System.Threading;
 using TwitchLib.Client.Events;
 
 internal class CalculatorModule : GoofbotModule
