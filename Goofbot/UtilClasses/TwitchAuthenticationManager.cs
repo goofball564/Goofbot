@@ -8,8 +8,6 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using TwitchLib.Api;
-using TwitchLib.Client;
 using TwitchLib.Client.Models;
 
 internal class TwitchAuthenticationManager

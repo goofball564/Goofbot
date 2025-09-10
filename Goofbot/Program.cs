@@ -1,16 +1,8 @@
 ﻿namespace Goofbot;
-
-using Goofbot.Modules;
-using Goofbot.Utils;
-using ImageMagick;
 using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using TwitchLib.Api;
-using TwitchLib.Client;
-using TwitchLib.Client.Events;
-using TwitchLib.EventSub.Websockets;
 
 /*
  * Some ideas I've had/things to do

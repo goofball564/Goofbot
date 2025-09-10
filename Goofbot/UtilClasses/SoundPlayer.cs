@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using CSCore.Codecs;
 using CSCore;
 using CSCore.SoundOut;
-using System.IO;
 using System;
 using System.Threading;
 
