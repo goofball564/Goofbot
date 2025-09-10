@@ -75,6 +75,8 @@ internal class Bot : IDisposable
         this.emoteSoundModule = new (this, "EmoteSoundModule", this.cancellationTokenSource.Token);
         this.blueGuyModule = new (this, "BlueGuyModule", this.cancellationTokenSource.Token);
         this.textToSpeechModule = new (this, "TextToSpeechModule", this.cancellationTokenSource.Token);
+
+        this.CommandDictionary.TryAddCommand(new Command("shutdown", this.ShutdownCommand, CommandAccessibilityModifier.StreamerOnly));
     }
 
     public TwitchAuthenticationManager TwitchAuthenticationManager { get; private set; }
@@ -130,6 +132,15 @@ internal class Bot : IDisposable
         this.cancellationTokenSource.Dispose();
         this.TwitchAuthenticationManager.Dispose();
         this.ColorDictionary.Dispose();
+    }
+
+    private async Task<string> ShutdownCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    {
+        this.TwitchClient.SendMessage(this.TwitchChannelUsername, "I'm afraid. Goof... I'm afraid...");
+        this.TwitchClient.Disconnect();
+        this.cancellationTokenSource.Cancel();
+        this.Dispose();
+        return string.Empty;
     }
 
     private void Client_OnLog(object sender, OnLogArgs e)
