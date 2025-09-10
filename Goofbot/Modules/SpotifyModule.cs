@@ -22,8 +22,8 @@ internal class SpotifyModule : GoofbotModule
     private EmbedIOAuthServer server;
     private SpotifyClient spotify;
 
-    public SpotifyModule(Bot bot, string moduleDataFolder)
-        : base(bot, moduleDataFolder)
+    public SpotifyModule(Bot bot, string moduleDataFolder, CancellationToken cancellationToken)
+        : base(bot, moduleDataFolder, cancellationToken)
     {
         this.spotifyCredentialsFile = Path.Join(this.moduleDataFolder, "spotify_credentials.json");
         dynamic spotifyCredentials = Program.ParseJsonFile(this.spotifyCredentialsFile);

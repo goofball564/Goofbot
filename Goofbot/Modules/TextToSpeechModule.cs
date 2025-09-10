@@ -27,8 +27,8 @@ internal class TextToSpeechModule : GoofbotModule
     private readonly BlockingCollection<QueuedTTS> ttsQueue = new (new ConcurrentQueue<QueuedTTS>(), 1000);
     private QueuedTTS currentTTS;
 
-    public TextToSpeechModule(Bot bot, string moduleDataFolder)
-        : base(bot, moduleDataFolder)
+    public TextToSpeechModule(Bot bot, string moduleDataFolder, CancellationToken cancellationToken)
+        : base(bot, moduleDataFolder, cancellationToken)
     {
         this.currentTTS = new (string.Empty, string.Empty, this.SpeakSAPI5);
 

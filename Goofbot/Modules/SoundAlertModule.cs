@@ -1,16 +1,17 @@
 ﻿namespace Goofbot.Modules;
+using Goofbot.Utils;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
-using Goofbot.Utils;
 
 internal class SoundAlertModule : GoofbotModule
 {
     private readonly string soundAlertsCSVFile;
     private readonly SoundAlertDictionary soundAlertDictionary;
 
-    public SoundAlertModule(Bot bot, string moduleDataFolder)
-        : base(bot, moduleDataFolder)
+    public SoundAlertModule(Bot bot, string moduleDataFolder, CancellationToken cancellationToken)
+        : base(bot, moduleDataFolder, cancellationToken)
     {
         this.soundAlertsCSVFile = Path.Join(this.moduleDataFolder, "SoundAlerts.csv");
         this.soundAlertDictionary = new SoundAlertDictionary(this.soundAlertsCSVFile);

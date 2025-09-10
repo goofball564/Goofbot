@@ -2,12 +2,13 @@
 
 using AngouriMath;
 using Goofbot.Utils;
+using System.Threading;
 using TwitchLib.Client.Events;
 
 internal class CalculatorModule : GoofbotModule
 {
-    public CalculatorModule(Bot bot, string moduleDataFolder)
-        : base(bot, moduleDataFolder)
+    public CalculatorModule(Bot bot, string moduleDataFolder, CancellationToken cancellationToken)
+        : base(bot, moduleDataFolder, cancellationToken)
     {
         this.bot.TwitchClient.OnMessageReceived += this.Client_OnMessageReceived;
     }

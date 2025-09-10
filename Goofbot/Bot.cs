@@ -68,13 +68,13 @@ internal class Bot : IDisposable
         MagickNET.Initialize();
 
         // Instantiate modules
-        this.spotifyModule = new (this, "SpotifyModule");
-        this.soundAlertModule = new (this, "SoundAlertModule");
-        this.miscCommandsModule = new (this, "MiscCommandsModule");
-        this.calculatorModule = new (this, "CalculatorModule");
-        this.emoteSoundModule = new (this, "EmoteSoundModule");
-        this.blueGuyModule = new (this, "BlueGuyModule");
-        this.textToSpeechModule = new (this, "TextToSpeechModule");
+        this.spotifyModule = new (this, "SpotifyModule", this.cancellationTokenSource.Token);
+        this.soundAlertModule = new (this, "SoundAlertModule", this.cancellationTokenSource.Token);
+        this.miscCommandsModule = new (this, "MiscCommandsModule", this.cancellationTokenSource.Token);
+        this.calculatorModule = new (this, "CalculatorModule", this.cancellationTokenSource.Token);
+        this.emoteSoundModule = new (this, "EmoteSoundModule", this.cancellationTokenSource.Token);
+        this.blueGuyModule = new (this, "BlueGuyModule", this.cancellationTokenSource.Token);
+        this.textToSpeechModule = new (this, "TextToSpeechModule", this.cancellationTokenSource.Token);
     }
 
     public TwitchAuthenticationManager TwitchAuthenticationManager { get; private set; }

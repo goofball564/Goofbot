@@ -3,6 +3,7 @@
 using Goofbot.Utils;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 
@@ -12,8 +13,8 @@ internal class MiscCommandsModule : GoofbotModule
 
     private readonly Random random = new ();
 
-    public MiscCommandsModule(Bot bot, string moduleDataFolder)
-        : base(bot, moduleDataFolder)
+    public MiscCommandsModule(Bot bot, string moduleDataFolder, CancellationToken cancellationToken)
+        : base(bot, moduleDataFolder, cancellationToken)
     {
         this.bot.CommandDictionary.TryAddCommand(new ("antici", this.AnticiCommand, timeoutSeconds: 0));
         this.bot.CommandDictionary.TryAddCommand(new (CommandsCommandName, this.CommandsCommand));

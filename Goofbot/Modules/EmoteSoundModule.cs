@@ -4,6 +4,7 @@ using Goofbot.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 
@@ -16,8 +17,8 @@ internal partial class EmoteSoundModule : GoofbotModule
 
     private readonly Dictionary<string, string> emoteSoundDictionary = [];
 
-    public EmoteSoundModule(Bot bot, string moduleDataFolder)
-        : base(bot, moduleDataFolder)
+    public EmoteSoundModule(Bot bot, string moduleDataFolder, CancellationToken cancellationToken)
+        : base(bot, moduleDataFolder, cancellationToken)
     {
         this.emoteListFile = Path.Join(this.moduleDataFolder, "emotes.txt");
         this.ParseTheThing();

@@ -36,8 +36,8 @@ internal partial class BlueGuyModule : GoofbotModule
 
     private string lastColorCode = string.Empty;
 
-    public BlueGuyModule(Bot bot, string moduleDataFolder)
-        : base(bot, moduleDataFolder)
+    public BlueGuyModule(Bot bot, string moduleDataFolder, CancellationToken cancellationToken)
+        : base(bot, moduleDataFolder, cancellationToken)
     {
         this.blueGuyGrayscaleFile = Path.Join(this.moduleDataFolder, "BlueGuyGrayscale.png");
         this.blueGuyColorFile = Path.Join(this.moduleDataFolder, "BlueGuyColor.png");
