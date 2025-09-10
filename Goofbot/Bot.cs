@@ -98,7 +98,7 @@ internal class Bot : IDisposable
 
         // Subscribe to Twitch EventSub for Channel Point Redemption
         // Requires TwitchAPI to be initialized
-        ChannelPointRedemptionEventSub channelPointRedemptionEventSub = new (this);
+        ChannelPointRedemptionEventSub channelPointRedemptionEventSub = new (this, this.cancellationTokenSource.Token);
         this.EventSubWebsocketClient = channelPointRedemptionEventSub.EventSubWebsocketClient;
 
         // Requires EventSubWebsocketClient to be initialized
@@ -137,9 +137,14 @@ internal class Bot : IDisposable
     private async Task<string> ShutdownCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         this.TwitchClient.SendMessage(this.TwitchChannelUsername, "I'm afraid. Goof... I'm afraid...");
+
+        this.TwitchClient.OnLog -= this.Client_OnLog;
+        this.TwitchClient.OnConnected -= this.Client_OnConnected;
+        this.TwitchClient.OnIncorrectLogin -= this.Client_OnIncorrectLogin;
+        this.TwitchClient.OnChatCommandReceived -= this.Client_OnChatCommandReceived;
+
         this.TwitchClient.Disconnect();
         this.cancellationTokenSource.Cancel();
-        this.Dispose();
         return string.Empty;
     }
 

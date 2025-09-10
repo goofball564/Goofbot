@@ -21,6 +21,12 @@ internal class SoundAlertModule : GoofbotModule
     public void Initialize()
     {
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
+        this.cancellationToken.Register(this.OnCancellation);
+    }
+
+    private void OnCancellation()
+    {
+        this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd -= this.OnChannelPointsCustomRewardRedemptionAdd;
     }
 
     private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)

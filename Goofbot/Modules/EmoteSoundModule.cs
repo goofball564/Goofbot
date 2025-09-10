@@ -24,6 +24,12 @@ internal partial class EmoteSoundModule : GoofbotModule
         this.ParseTheThing();
 
         this.bot.TwitchClient.OnMessageReceived += this.Client_OnMessageReceived;
+        cancellationToken.Register(this.OnCancellation);
+    }
+
+    private void OnCancellation()
+    {
+        this.bot.TwitchClient.OnMessageReceived -= this.Client_OnMessageReceived;
     }
 
     private void ParseTheThing()

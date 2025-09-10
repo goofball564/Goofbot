@@ -11,6 +11,12 @@ internal class CalculatorModule : GoofbotModule
         : base(bot, moduleDataFolder, cancellationToken)
     {
         this.bot.TwitchClient.OnMessageReceived += this.Client_OnMessageReceived;
+        cancellationToken.Register(this.OnCancellation);
+    }
+
+    private void OnCancellation()
+    {
+        this.bot.TwitchClient.OnMessageReceived -= this.Client_OnMessageReceived;
     }
 
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)

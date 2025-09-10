@@ -71,6 +71,12 @@ internal class TextToSpeechModule : GoofbotModule
     public void Initialize()
     {
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
+        this.cancellationToken.Register(this.OnCancelled);
+    }
+
+    private void OnCancelled()
+    {
+        this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd -= this.OnChannelPointsCustomRewardRedemptionAdd;
     }
 
     public override void Dispose()
