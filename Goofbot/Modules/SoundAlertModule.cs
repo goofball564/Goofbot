@@ -12,7 +12,7 @@ internal class SoundAlertModule : GoofbotModule
     public SoundAlertModule(string moduleDataFolder)
         : base(moduleDataFolder)
     {
-        this.soundAlertsCSVFile = Path.Join(this.ModuleDataFolder, "SoundAlerts.csv");
+        this.soundAlertsCSVFile = Path.Join(this.moduleDataFolder, "SoundAlerts.csv");
         this.soundAlertDictionary = new SoundAlertDictionary(this.soundAlertsCSVFile);
         Program.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
     }

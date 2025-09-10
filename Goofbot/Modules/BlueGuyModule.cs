@@ -39,12 +39,12 @@ internal partial class BlueGuyModule : GoofbotModule
     public BlueGuyModule(string moduleDataFolder)
         : base(moduleDataFolder)
     {
-        this.blueGuyGrayscaleFile = Path.Join(this.ModuleDataFolder, "BlueGuyGrayscale.png");
-        this.blueGuyColorFile = Path.Join(this.ModuleDataFolder, "BlueGuyColor.png");
-        this.blueGuyEyesFile = Path.Join(this.ModuleDataFolder, "BlueGuyEyes.png");
-        this.speedGuyColorFile = Path.Join(this.ModuleDataFolder, "SpeedGuyColor.png");
+        this.blueGuyGrayscaleFile = Path.Join(this.moduleDataFolder, "BlueGuyGrayscale.png");
+        this.blueGuyColorFile = Path.Join(this.moduleDataFolder, "BlueGuyColor.png");
+        this.blueGuyEyesFile = Path.Join(this.moduleDataFolder, "BlueGuyEyes.png");
+        this.speedGuyColorFile = Path.Join(this.moduleDataFolder, "SpeedGuyColor.png");
 
-        this.guysFolder = Path.Join(this.ModuleDataFolder, "Guys");
+        this.guysFolder = Path.Join(this.moduleDataFolder, "Guys");
         Directory.CreateDirectory(this.guysFolder);
 
         Program.CommandDictionary.TryAddCommand(new Command("guy", this.GuyCommand));

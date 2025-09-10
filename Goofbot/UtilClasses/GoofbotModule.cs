@@ -4,10 +4,12 @@ using System.IO;
 
 internal abstract class GoofbotModule
 {
+    protected readonly string moduleDataFolder;
+
     protected GoofbotModule(string moduleDataFolder)
     {
-        this.ModuleDataFolder = Path.Join(Program.StuffFolder, moduleDataFolder);
+        this.moduleDataFolder = Path.Join(Program.StuffFolder, moduleDataFolder);
+
     }
 
-    protected string ModuleDataFolder { get; private set; }
 }

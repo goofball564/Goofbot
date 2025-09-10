@@ -32,8 +32,8 @@ internal class TextToSpeechModule : GoofbotModule
     {
         this.currentTTS = new (string.Empty, string.Empty, this.SpeakSAPI5);
 
-        this.decTalkExeFile = Path.Join(this.ModuleDataFolder, "DECTalk", "say.exe");
-        this.sapi4ExeFile = Path.Join(this.ModuleDataFolder, "BonziBuddyTTS.exe");
+        this.decTalkExeFile = Path.Join(this.moduleDataFolder, "DECTalk", "say.exe");
+        this.sapi4ExeFile = Path.Join(this.moduleDataFolder, "BonziBuddyTTS.exe");
 
         this.listOfTTSCommands.Add(this.SamCommand);
         this.listOfTTSCommands.Add(this.PaulCommand);

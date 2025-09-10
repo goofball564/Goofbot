@@ -19,7 +19,7 @@ internal partial class EmoteSoundModule : GoofbotModule
     public EmoteSoundModule(string moduleDataFolder)
         : base(moduleDataFolder)
     {
-        this.emoteListFile = Path.Join(this.ModuleDataFolder, "emotes.txt");
+        this.emoteListFile = Path.Join(this.moduleDataFolder, "emotes.txt");
         this.ParseTheThing();
 
         Program.TwitchClient.OnMessageReceived += this.Client_OnMessageReceived;
@@ -40,7 +40,7 @@ internal partial class EmoteSoundModule : GoofbotModule
             }
             else
             {
-                this.emoteSoundDictionary.TryAdd(line, Path.Join(this.ModuleDataFolder, soundFile));
+                this.emoteSoundDictionary.TryAdd(line, Path.Join(this.moduleDataFolder, soundFile));
             }
         }
     }
