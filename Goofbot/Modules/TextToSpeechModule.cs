@@ -43,16 +43,15 @@ internal class TextToSpeechModule : GoofbotModule
         {
             while (true)
             {
-                try
+                using (this.currentTTS = this.ttsQueue.Take())
                 {
-                    using (this.currentTTS = this.ttsQueue.Take())
+                    try
                     {
                         await this.currentTTS.Execute();
                     }
-                }
-                catch
-                {
-                    break;
+                    catch
+                    {
+                    }
                 }
             }
         });
@@ -169,7 +168,12 @@ internal class TextToSpeechModule : GoofbotModule
         switch (commandArgs)
         {
             case "all":
-                this.CancelAll();
+                foreach (QueuedTTS tts in this.ttsQueue)
+                {
+                    tts.TryCancel();
+                }
+
+                this.currentTTS.TryCancel();
                 break;
             case "":
                 this.currentTTS.TryCancel();
@@ -211,22 +215,6 @@ internal class TextToSpeechModule : GoofbotModule
         catch
         {
         }
-    }
-
-    private void CancelAll()
-    {
-        foreach (QueuedTTS tts in this.ttsQueue)
-        {
-            tts.TryCancel();
-        }
-
-        this.currentTTS.TryCancel();
-    }
-
-    private void StopTTS()
-    {
-        this.ttsQueue.CompleteAdding();
-        this.CancelAll();
     }
 
     private async Task SpeakSAPI5(string message, CancellationToken cancellationToken)
