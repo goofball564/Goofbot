@@ -6,10 +6,10 @@ using TwitchLib.Client.Events;
 
 internal class CalculatorModule : GoofbotModule
 {
-    public CalculatorModule(string moduleDataFolder)
-        : base(moduleDataFolder)
+    public CalculatorModule(Bot bot, string moduleDataFolder)
+        : base(bot, moduleDataFolder)
     {
-        Program.TwitchClient.OnMessageReceived += this.Client_OnMessageReceived;
+        this.bot.TwitchClient.OnMessageReceived += this.Client_OnMessageReceived;
     }
 
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
@@ -31,7 +31,7 @@ internal class CalculatorModule : GoofbotModule
 
         if (!(botMessage.Equals(string.Empty) || botMessage.Equals(chatMessage)))
         {
-            Program.TwitchClient.SendMessage(Program.TwitchChannelUsername, botMessage);
+            this.bot.TwitchClient.SendMessage(this.bot.TwitchChannelUsername, botMessage);
         }
     }
 }

@@ -15,9 +15,9 @@ internal class ChannelPointRedemptionEventSub
 {
     public readonly EventSubWebsocketClient EventSubWebsocketClient;
 
-    public ChannelPointRedemptionEventSub()
+    public ChannelPointRedemptionEventSub(Bot bot)
     {
-        ChannelPointRedemptionEventSubService service = new ();
+        ChannelPointRedemptionEventSubService service = new (bot);
         this.EventSubWebsocketClient = service.EventSubWebsocketClient;
 
         var builder = Host.CreateApplicationBuilder();
@@ -30,13 +30,15 @@ internal class ChannelPointRedemptionEventSub
     private class ChannelPointRedemptionEventSubService : IHostedService
     {
         public readonly EventSubWebsocketClient EventSubWebsocketClient = new ();
+        private readonly Bot bot;
 
         // You need the UserID for the User/Channel you want to get Events from.
         // You can use await _api.Helix.Users.GetUsersAsync() for that.
         private const string UserId = "600829895";
 
-        public ChannelPointRedemptionEventSubService()
+        public ChannelPointRedemptionEventSubService(Bot bot)
         {
+            this.bot = bot;
             this.EventSubWebsocketClient.WebsocketConnected += this.OnWebsocketConnected;
             this.EventSubWebsocketClient.WebsocketDisconnected += this.OnWebsocketDisconnected;
             this.EventSubWebsocketClient.WebsocketReconnected += this.OnWebsocketReconnected;
@@ -61,7 +63,7 @@ internal class ChannelPointRedemptionEventSub
             {
                 // subscribe to topics
                 var condition = new Dictionary<string, string> { { "broadcaster_user_id", UserId } };
-                await Program.TwitchAPI.Helix.EventSub.CreateEventSubSubscriptionAsync("channel.channel_points_custom_reward_redemption.add", "1", condition, EventSubTransportMethod.Websocket, this.EventSubWebsocketClient.SessionId);
+                await this.bot.TwitchAPI.Helix.EventSub.CreateEventSubSubscriptionAsync("channel.channel_points_custom_reward_redemption.add", "1", condition, EventSubTransportMethod.Websocket, this.EventSubWebsocketClient.SessionId);
             }
         }
 

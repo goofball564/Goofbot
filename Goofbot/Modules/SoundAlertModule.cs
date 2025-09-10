@@ -9,12 +9,16 @@ internal class SoundAlertModule : GoofbotModule
     private readonly string soundAlertsCSVFile;
     private readonly SoundAlertDictionary soundAlertDictionary;
 
-    public SoundAlertModule(string moduleDataFolder)
-        : base(moduleDataFolder)
+    public SoundAlertModule(Bot bot, string moduleDataFolder)
+        : base(bot, moduleDataFolder)
     {
         this.soundAlertsCSVFile = Path.Join(this.moduleDataFolder, "SoundAlerts.csv");
         this.soundAlertDictionary = new SoundAlertDictionary(this.soundAlertsCSVFile);
-        Program.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
+    }
+
+    public void Initialize()
+    {
+        this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
     }
 
     private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)

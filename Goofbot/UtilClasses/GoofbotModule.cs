@@ -7,13 +7,16 @@ using System.IO;
 internal abstract class GoofbotModule : IDisposable
 {
     protected readonly string moduleDataFolder;
+    protected readonly Bot bot;
     protected readonly SqliteConnection sqliteConnection;
 
     private const string ModuleDatabaseFile = "data.db";
 
-    protected GoofbotModule(string moduleDataFolder)
+    protected GoofbotModule(Bot bot, string moduleDataFolder)
     {
-        this.moduleDataFolder = Path.Join(Program.StuffFolder, moduleDataFolder);
+        this.bot = bot;
+
+        this.moduleDataFolder = Path.Join(this.bot.StuffFolder, moduleDataFolder);
         Directory.CreateDirectory(this.moduleDataFolder);
 
         SqliteConnectionStringBuilder connectionStringBuilder = [];

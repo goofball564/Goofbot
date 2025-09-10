@@ -27,24 +27,21 @@ internal class TwitchAuthenticationManager
     private readonly SemaphoreSlim botTokensSemaphore = new (1, 1);
     private readonly SemaphoreSlim channelTokensSemaphore = new (1, 1);
 
+    private readonly Bot bot;
     private readonly string twitchClientID;
     private readonly string twitchClientSecret;
-
-    private readonly TwitchClient twitchClient;
-    private readonly TwitchAPI twitchAPI;
 
     private string twitchBotAccessToken;
     private string twitchChannelAccessToken;
 
-    public TwitchAuthenticationManager(string twitchClientID, string twitchClientSecret, TwitchClient twitchClient, TwitchAPI twitchAPI)
+    public TwitchAuthenticationManager(Bot bot, string twitchClientID, string twitchClientSecret)
     {
+        this.bot = bot;
         this.twitchClientID = twitchClientID;
         this.twitchClientSecret = twitchClientSecret;
-        this.twitchClient = twitchClient;
-        this.twitchAPI = twitchAPI;
     }
 
-    public async Task Initialize()
+    public async Task InitializeAsync()
     {
         Task<string> botAccessTokenTask = this.RefreshTwitchAccessToken(true);
         Task<string> channelAccessTokenTask = this.RefreshTwitchAccessToken(false);
@@ -52,11 +49,11 @@ internal class TwitchAuthenticationManager
         this.twitchBotAccessToken = await botAccessTokenTask;
         this.twitchChannelAccessToken = await channelAccessTokenTask;
 
-        this.twitchAPI.Settings.ClientId = this.twitchClientID;
-        this.twitchAPI.Settings.AccessToken = this.twitchChannelAccessToken;
+        this.bot.TwitchAPI.Settings.ClientId = this.twitchClientID;
+        this.bot.TwitchAPI.Settings.AccessToken = this.twitchChannelAccessToken;
 
-        var credentials = new ConnectionCredentials(Program.TwitchBotUsername, this.twitchBotAccessToken);
-        this.twitchClient.Initialize(credentials, Program.TwitchChannelUsername);
+        var credentials = new ConnectionCredentials(this.bot.TwitchBotUsername, this.twitchBotAccessToken);
+        this.bot.TwitchClient.Initialize(credentials, this.bot.TwitchChannelUsername);
     }
 
     private async Task<string> RefreshTwitchAccessToken(bool botToken)
@@ -71,7 +68,7 @@ internal class TwitchAuthenticationManager
             string tokensString = await this.RequestTwitchTokensWithAuthorizationCode(code);
 
             string tokensFile = botToken ? "bot_tokens.json" : "channel_tokens.json";
-            tokensFile = Path.Join(Program.StuffFolder, tokensFile);
+            tokensFile = Path.Join(this.bot.StuffFolder, tokensFile);
             File.WriteAllText(tokensFile, tokensString);
 
             dynamic tokensObject = JsonConvert.DeserializeObject(tokensString);

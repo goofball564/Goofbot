@@ -39,87 +39,24 @@ using TwitchLib.EventSub.Websockets;
 
 internal class Program
 {
-    public const string TwitchBotUsername = "goofbotthebot";
-    public const string TwitchChannelUsername = "goofballthecat";
+    private const string TwitchBotUsername = "goofbotthebot";
+    private const string TwitchChannelUsername = "goofballthecat";
 
-    private static readonly string GoofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
-
-    public static TwitchAuthenticationManager TwitchAuthenticationManager { get; private set; }
-
-    public static ColorDictionary ColorDictionary { get; private set; }
-
-    public static TwitchAPI TwitchAPI { get; private set; } = new ();
-
-    public static TwitchClient TwitchClient { get; private set; } = new ();
-
-    public static string StuffFolder { get; private set; }
-
-    public static CommandDictionary CommandDictionary { get; private set; } = new ();
-
-    public static EventSubWebsocketClient EventSubWebsocketClient { get; private set; }
-
-    public static async Task Main(string[] args)
+    public static async Task Main()
     {
-        // Get location of bot data folder
-        string stuffLocationFile = Path.Join(GoofbotAppDataFolder, "stufflocation.txt");
-        StuffFolder = File.ReadAllText(stuffLocationFile).Trim();
-
-        // Create color dictionary
-        string colorNamesFile = Path.Join(StuffFolder, "color_names.json");
-        ColorDictionary = new (colorNamesFile);
-        Task colorDictionaryTask = Task.Run(async () => { await ColorDictionary.Initialize(); });
-
-        // Initialize TwitchClient and TwitchAPI, authenticate with Twitch
-        string twitchAppCredentialsFile = Path.Join(StuffFolder, "twitch_credentials.json");
-        dynamic twitchAppCredentials = ParseJsonFile(twitchAppCredentialsFile);
-        string clientID = twitchAppCredentials.client_id;
-        string clientSecret = twitchAppCredentials.client_secret;
-        TwitchAuthenticationManager = new (clientID, clientSecret, TwitchClient, TwitchAPI);
-        Task authenticationManagerInitializeTask = TwitchAuthenticationManager.Initialize();
-
-        // Initialize Magick.NET
-        MagickNET.Initialize();
-
-        // Twitch API Authentication Required for EventSub
-        await authenticationManagerInitializeTask;
-
-        // Subscribe to Twitch EventSub for Channel Point Redemption
-        ChannelPointRedemptionEventSub channelPointRedemptionEventSub = new ();
-        EventSubWebsocketClient = channelPointRedemptionEventSub.EventSubWebsocketClient;
-
-        // Initialize Modules; EventSubWebsocketClient needs to be created before this
-        SpotifyModule spotifyModule = new ("SpotifyModule");
-        Task spotifyModuleInitializeTask = spotifyModule.Initialize();
-
-        SoundAlertModule soundAlertModule = new ("SoundAlertModule");
-        MiscCommandsModule miscCommandsModule = new ("MiscCommandsModule");
-        CalculatorModule calculatorModule = new ("CalculatorModule");
-        EmoteSoundModule emoteSoundModule = new ("EmoteSoundModule");
-        BlueGuyModule blueGuyModule = new ("BlueGuyModule");
-        TextToSpeechModule textToSpeechModule = new ("TextToSpeechModule");
-
-        // Subscribe to TwitchClient events
-        TwitchClient.OnLog += Client_OnLog;
-        TwitchClient.OnConnected += Client_OnConnected;
-        TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
-        TwitchClient.OnChatCommandReceived += Client_OnChatCommandReceived;
-        TwitchClient.AddChatCommandIdentifier('!');
-
-        await spotifyModuleInitializeTask;
-        await colorDictionaryTask;
-
-        // Start the bot
-        blueGuyModule.StartTimer();
-        TwitchClient.Connect();
-        while (true)
-        {
-            Console.ReadLine();
-        }
+        Bot bot = new (TwitchBotUsername, TwitchChannelUsername);
+        await bot.InitializeAsync();
     }
 
-    public static dynamic ParseJsonFile(string filename)
+    public static dynamic ParseJsonFile(string file)
     {
-        string jsonString = File.ReadAllText(filename);
+        string jsonString = File.ReadAllText(file);
+        return JsonConvert.DeserializeObject(jsonString);
+    }
+
+    public static async Task<dynamic> ParseJsonFileAsync(string file)
+    {
+        string jsonString = await File.ReadAllTextAsync(file);
         return JsonConvert.DeserializeObject(jsonString);
     }
 
@@ -133,49 +70,5 @@ internal class Program
     public static string RemoveSpaces(string str)
     {
         return str.Replace(" ", string.Empty);
-    }
-
-    private static void Client_OnLog(object sender, OnLogArgs e)
-    {
-        Console.WriteLine($"{e.DateTime}: {e.BotUsername} - {e.Data}");
-    }
-
-    private static void Client_OnConnected(object sender, OnConnectedArgs e)
-    {
-        Console.WriteLine($"Connected to {e.AutoJoinChannel}");
-        TwitchClient.SendMessage(TwitchChannelUsername, "Goofbot is activated and at your service MrDestructoid");
-    }
-
-    private static async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
-    {
-        string message = string.Empty;
-        string commandName = e.Command.CommandText.ToLowerInvariant().Trim();
-        string commandArgs = e.Command.ArgumentsAsString.Trim();
-
-        bool isReversed = false;
-
-        Command command;
-        if (CommandDictionary.TryGetCommand(commandName, out command))
-        {
-            message = await command.ExecuteCommandAsync(commandArgs, e, isReversed);
-        }
-        else if (CommandDictionary.TryGetCommand(ReverseString(commandName), out command))
-        {
-            isReversed = true;
-
-            string commandArgsReversed = Program.ReverseString(commandArgs);
-
-            message = await command.ExecuteCommandAsync(commandArgsReversed, e, isReversed);
-            message = ReverseString(message);
-        }
-
-        if (!message.Equals(string.Empty))
-        {
-            TwitchClient.SendMessage(TwitchChannelUsername, message);
-        }
-    }
-
-    private static void Client_OnIncorrectLogin(object sender, OnIncorrectLoginArgs e)
-    {
     }
 }

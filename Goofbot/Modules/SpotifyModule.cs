@@ -22,8 +22,8 @@ internal class SpotifyModule : GoofbotModule
     private EmbedIOAuthServer server;
     private SpotifyClient spotify;
 
-    public SpotifyModule(string moduleDataFolder)
-        : base(moduleDataFolder)
+    public SpotifyModule(Bot bot, string moduleDataFolder)
+        : base(bot, moduleDataFolder)
     {
         this.spotifyCredentialsFile = Path.Join(this.moduleDataFolder, "spotify_credentials.json");
         dynamic spotifyCredentials = Program.ParseJsonFile(this.spotifyCredentialsFile);
@@ -33,10 +33,10 @@ internal class SpotifyModule : GoofbotModule
         this.clientId = Convert.ToString(spotifyCredentials.client_id);
         this.clientSecret = Convert.ToString(spotifyCredentials.client_secret);
 
-        Program.CommandDictionary.TryAddCommand(new Command("song", this.SongCommand));
+        this.bot.CommandDictionary.TryAddCommand(new Command("song", this.SongCommand));
     }
 
-    public async Task Initialize()
+    public async Task InitializeAsync()
     {
         // Make sure "http://localhost:5543/callback" is in your spotify application as redirect uri!
         this.server = new EmbedIOAuthServer(new Uri("http://localhost:5543/callback"), 5543);

@@ -36,8 +36,8 @@ internal partial class BlueGuyModule : GoofbotModule
 
     private string lastColorCode = string.Empty;
 
-    public BlueGuyModule(string moduleDataFolder)
-        : base(moduleDataFolder)
+    public BlueGuyModule(Bot bot, string moduleDataFolder)
+        : base(bot, moduleDataFolder)
     {
         this.blueGuyGrayscaleFile = Path.Join(this.moduleDataFolder, "BlueGuyGrayscale.png");
         this.blueGuyColorFile = Path.Join(this.moduleDataFolder, "BlueGuyColor.png");
@@ -47,7 +47,7 @@ internal partial class BlueGuyModule : GoofbotModule
         this.guysFolder = Path.Join(this.moduleDataFolder, "Guys");
         Directory.CreateDirectory(this.guysFolder);
 
-        Program.CommandDictionary.TryAddCommand(new Command("guy", this.GuyCommand));
+        this.bot.CommandDictionary.TryAddCommand(new Command("guy", this.GuyCommand));
 
         this.timer.AutoReset = true;
         this.timer.Elapsed += this.GuyTimerCallback;
@@ -86,7 +86,7 @@ internal partial class BlueGuyModule : GoofbotModule
             }
             else if (commandArgs.Equals("random", StringComparison.OrdinalIgnoreCase))
             {
-                string colorName = Program.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
+                string colorName = this.bot.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
 
                 colorChanged = true;
                 message = string.Format(RandomColorString, colorName);
@@ -98,7 +98,7 @@ internal partial class BlueGuyModule : GoofbotModule
             }
             else
             {
-                if (Program.ColorDictionary.TryGetHex(commandArgs, out string hexColorCode))
+                if (this.bot.ColorDictionary.TryGetHex(commandArgs, out string hexColorCode))
                 {
                     colorChanged = !hexColorCode.Equals(this.lastColorCode, StringComparison.OrdinalIgnoreCase);
                     message = colorChanged ? ColorChangeString : SameColorString;
@@ -140,7 +140,7 @@ internal partial class BlueGuyModule : GoofbotModule
     private async void GuyTimerCallback(object source, ElapsedEventArgs e)
     {
         string message = await this.GuyCommand("random");
-        Program.TwitchClient.SendMessage(Program.TwitchChannelUsername, message);
+        this.bot.TwitchClient.SendMessage(this.bot.TwitchChannelUsername, message);
     }
 
     private void WriteCurrentBlueGuyImageToFile(string colorName)

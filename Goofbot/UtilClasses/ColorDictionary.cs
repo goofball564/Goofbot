@@ -28,12 +28,12 @@ internal class ColorDictionary
         this.colorNamesFile = colorNamesFile;
     }
 
-    public async Task Initialize(bool forceRedownload = false)
+    public async Task InitializeAsync(bool forceRedownload = false)
     {
-        await this.Refresh(forceRedownload);
+        await this.RefreshAsync(forceRedownload);
     }
 
-    public async Task Refresh(bool forceRedownload = false)
+    public async Task RefreshAsync(bool forceRedownload = false)
     {
         await this.semaphore.WaitAsync();
         try
@@ -45,28 +45,31 @@ internal class ColorDictionary
 
             if (forceRedownload || !File.Exists(this.colorNamesFile))
             {
-                await this.RefreshColorNamesFile();
+                await this.RefreshColorNamesFileAsync();
             }
 
-            dynamic colorNamesJson = Program.ParseJsonFile(this.colorNamesFile);
-            foreach (dynamic color in colorNamesJson.colors)
+            dynamic colorNamesJson = await Program.ParseJsonFileAsync(this.colorNamesFile);
+            await Task.Run(() =>
             {
-                string colorName = Convert.ToString(color.name);
-                string colorNameLower = colorName.ToLowerInvariant();
-                string hexColorCode = Convert.ToString(color.hex).ToLowerInvariant();
-
-                if (this.colorDictionary.TryAdd(colorNameLower, hexColorCode))
+                foreach (dynamic color in colorNamesJson.colors)
                 {
-                    this.colorNameList.Add(colorName);
-                }
+                    string colorName = Convert.ToString(color.name);
+                    string colorNameLower = colorName.ToLowerInvariant();
+                    string hexColorCode = Convert.ToString(color.hex).ToLowerInvariant();
 
-                GetHSV(hexColorCode, out double h, out double s, out double v);
+                    if (this.colorDictionary.TryAdd(colorNameLower, hexColorCode))
+                    {
+                        this.colorNameList.Add(colorName);
+                    }
 
-                if (v >= 0.2 && GoodSaturation(s, v) && this.saturatedColorDictionary.TryAdd(colorNameLower, hexColorCode))
-                {
-                    this.saturatedColorNameList.Add(colorName);
+                    GetHSV(hexColorCode, out double h, out double s, out double v);
+
+                    if (v >= 0.2 && GoodSaturation(s, v) && this.saturatedColorDictionary.TryAdd(colorNameLower, hexColorCode))
+                    {
+                        this.saturatedColorNameList.Add(colorName);
+                    }
                 }
-            }
+            });
         }
         finally
         {
@@ -113,7 +116,7 @@ internal class ColorDictionary
         return saturation >= ((100 - value) / 2.0) + 30.0;
     }
 
-    private async Task<string> RequestColorNames()
+    private async Task<string> RequestColorNamesAsync()
     {
         HttpResponseMessage response = await this.httpClient.GetAsync(ColorNamesRequestUrl);
         if (response.IsSuccessStatusCode)
@@ -126,12 +129,12 @@ internal class ColorDictionary
         }
     }
 
-    private async Task RefreshColorNamesFile()
+    private async Task RefreshColorNamesFileAsync()
     {
-        string colorNamesString = await this.RequestColorNames();
-        if (colorNamesString != string.Empty)
+        string colorNamesString = await this.RequestColorNamesAsync();
+        if (!colorNamesString.Equals(string.Empty))
         {
-            File.WriteAllText(this.colorNamesFile, colorNamesString);
+            await File.WriteAllTextAsync(this.colorNamesFile, colorNamesString);
         }
     }
 }

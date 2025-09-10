@@ -12,11 +12,11 @@ internal class MiscCommandsModule : GoofbotModule
 
     private readonly Random random = new ();
 
-    public MiscCommandsModule(string moduleDataFolder)
-        : base(moduleDataFolder)
+    public MiscCommandsModule(Bot bot, string moduleDataFolder)
+        : base(bot, moduleDataFolder)
     {
-        Program.CommandDictionary.TryAddCommand(new ("antici", this.AnticiCommand, timeoutSeconds: 0));
-        Program.CommandDictionary.TryAddCommand(new (CommandsCommandName, this.CommandsCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ("antici", this.AnticiCommand, timeoutSeconds: 0));
+        this.bot.CommandDictionary.TryAddCommand(new (CommandsCommandName, this.CommandsCommand));
     }
 
     public async Task<string> AnticiCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
@@ -32,7 +32,7 @@ internal class MiscCommandsModule : GoofbotModule
     {
         List<string> commandNames = [];
 
-        foreach (var dictionaryEntry in Program.CommandDictionary)
+        foreach (var dictionaryEntry in this.bot.CommandDictionary)
         {
             if (dictionaryEntry.Value.CommandAccessibilityModifier == CommandAccessibilityModifier.StreamerOnly || dictionaryEntry.Value.Unlisted)
             {
@@ -58,7 +58,7 @@ internal class MiscCommandsModule : GoofbotModule
         for (int i = 0; i < commandNames.Count; i++)
         {
             string commandAccessibilityModifier = string.Empty;
-            if (Program.CommandDictionary.TryGetCommand(commandNames[i], out Command command))
+            if (this.bot.CommandDictionary.TryGetCommand(commandNames[i], out Command command))
             {
                 switch (command.CommandAccessibilityModifier)
                 {

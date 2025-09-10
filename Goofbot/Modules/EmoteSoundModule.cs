@@ -16,13 +16,13 @@ internal partial class EmoteSoundModule : GoofbotModule
 
     private readonly Dictionary<string, string> emoteSoundDictionary = [];
 
-    public EmoteSoundModule(string moduleDataFolder)
-        : base(moduleDataFolder)
+    public EmoteSoundModule(Bot bot, string moduleDataFolder)
+        : base(bot, moduleDataFolder)
     {
         this.emoteListFile = Path.Join(this.moduleDataFolder, "emotes.txt");
         this.ParseTheThing();
 
-        Program.TwitchClient.OnMessageReceived += this.Client_OnMessageReceived;
+        this.bot.TwitchClient.OnMessageReceived += this.Client_OnMessageReceived;
     }
 
     private void ParseTheThing()

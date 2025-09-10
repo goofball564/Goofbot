@@ -27,8 +27,8 @@ internal class TextToSpeechModule : GoofbotModule
     private readonly BlockingCollection<QueuedTTS> ttsQueue = new (new ConcurrentQueue<QueuedTTS>(), 1000);
     private QueuedTTS currentTTS;
 
-    public TextToSpeechModule(string moduleDataFolder)
-        : base(moduleDataFolder)
+    public TextToSpeechModule(Bot bot, string moduleDataFolder)
+        : base(bot, moduleDataFolder)
     {
         this.currentTTS = new (string.Empty, string.Empty, this.SpeakSAPI5);
 
@@ -59,15 +59,18 @@ internal class TextToSpeechModule : GoofbotModule
             }
         });
 
-        Program.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
+        this.bot.CommandDictionary.TryAddCommand(new Command("voices", this.VoicesCommand));
+        this.bot.CommandDictionary.TryAddCommand(new Command("tts", this.TTSCommand, CommandAccessibilityModifier.SubOnly));
+        this.bot.CommandDictionary.TryAddCommand(new Command("cancel", this.CancelCommand, CommandAccessibilityModifier.StreamerOnly));
 
-        Program.CommandDictionary.TryAddCommand(new Command("voices", this.VoicesCommand));
-        Program.CommandDictionary.TryAddCommand(new Command("tts", this.TTSCommand, CommandAccessibilityModifier.SubOnly));
-        Program.CommandDictionary.TryAddCommand(new Command("cancel", this.CancelCommand, CommandAccessibilityModifier.StreamerOnly));
+        this.bot.CommandDictionary.TryAddCommand(new Command("paul", this.PaulCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new Command("sam", this.SamCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new Command("bonzi", this.BonziCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
+    }
 
-        Program.CommandDictionary.TryAddCommand(new Command("paul", this.PaulCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
-        Program.CommandDictionary.TryAddCommand(new Command("sam", this.SamCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
-        Program.CommandDictionary.TryAddCommand(new Command("bonzi", this.BonziCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
+    public void Initialize()
+    {
+        this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
     }
 
     public async Task<string> TTSCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
