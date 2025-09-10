@@ -39,22 +39,20 @@ internal class TextToSpeechModule : GoofbotModule
         this.listOfTTSCommands.Add(this.PaulCommand);
         this.listOfTTSCommands.Add(this.BonziCommand);
 
-        Task runningTask = Task.Run(async () =>
+        Task backgroundThread = Task.Run(async () =>
         {
             while (true)
             {
-                this.currentTTS = this.ttsQueue.Take();
-
                 try
                 {
-                    await this.currentTTS.Execute();
+                    using (this.currentTTS = this.ttsQueue.Take())
+                    {
+                        await this.currentTTS.Execute();
+                    }
                 }
                 catch
                 {
-                }
-                finally
-                {
-                    this.currentTTS.Dispose();
+                    break;
                 }
             }
         });
@@ -66,11 +64,28 @@ internal class TextToSpeechModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new Command("paul", this.PaulCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new Command("sam", this.SamCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new Command("bonzi", this.BonziCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
+
+        this.cancellationToken.Register(this.StopTTS);
     }
 
     public void Initialize()
     {
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
+    }
+
+    public override void Dispose()
+    {
+        this.ttsQueue.CompleteAdding();
+
+        foreach (QueuedTTS tts in this.ttsQueue)
+        {
+            tts.Dispose();
+        }
+
+        this.currentTTS.Dispose();
+        this.ttsQueue.Dispose();
+
+        base.Dispose();
     }
 
     public async Task<string> TTSCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
@@ -156,13 +171,7 @@ internal class TextToSpeechModule : GoofbotModule
         switch (commandArgs)
         {
             case "all":
-                foreach (QueuedTTS tts in this.ttsQueue)
-                {
-                    tts.TryCancel();
-                }
-
-                this.currentTTS.TryCancel();
-
+                this.CancelAll();
                 break;
             case "":
                 this.currentTTS.TryCancel();
@@ -204,6 +213,22 @@ internal class TextToSpeechModule : GoofbotModule
         catch
         {
         }
+    }
+
+    private void CancelAll()
+    {
+        foreach (QueuedTTS tts in this.ttsQueue)
+        {
+            tts.TryCancel();
+        }
+
+        this.currentTTS.TryCancel();
+    }
+
+    private void StopTTS()
+    {
+        this.ttsQueue.CompleteAdding();
+        this.CancelAll();
     }
 
     private async Task SpeakSAPI5(string message, CancellationToken cancellationToken)
@@ -335,4 +360,6 @@ internal class QueuedTTS : IDisposable
     {
         this.CancellationTokenSource.Dispose();
     }
+
+
 }

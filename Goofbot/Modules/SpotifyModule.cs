@@ -36,6 +36,14 @@ internal class SpotifyModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new Command("song", this.SongCommand));
     }
 
+    public override void Dispose()
+    {
+        this.cachedApiResponses.Dispose();
+        this.semaphore.Dispose();
+        this.server.Dispose();
+        base.Dispose();
+    }
+
     public async Task InitializeAsync()
     {
         // Make sure "http://localhost:5543/callback" is in your spotify application as redirect uri!
@@ -124,7 +132,7 @@ internal class SpotifyModule : GoofbotModule
         await this.server.Stop();
     }
 
-    private class CachedApiResponses
+    private class CachedApiResponses : IDisposable
     {
         private readonly TimeSpan callAgainTimeout = TimeSpan.FromSeconds(6);
         private readonly SemaphoreSlim semaphore = new (1, 1);
@@ -157,6 +165,11 @@ internal class SpotifyModule : GoofbotModule
             }
 
             return true;
+        }
+
+        public void Dispose()
+        {
+            this.semaphore.Dispose();
         }
     }
 }

@@ -51,11 +51,18 @@ internal partial class BlueGuyModule : GoofbotModule
 
         this.timer.AutoReset = true;
         this.timer.Elapsed += this.GuyTimerCallback;
+
+        this.cancellationToken.Register(this.StopTimer);
     }
 
     public void StartTimer()
     {
         this.timer.Start();
+    }
+
+    public void StopTimer()
+    {
+        this.timer.Stop();
     }
 
     public async Task<string> GuyCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs = null, bool isReversed = false)

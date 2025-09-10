@@ -1,4 +1,5 @@
 ﻿namespace Goofbot.Modules;
+
 using Goofbot.Utils;
 using System.IO;
 using System.Threading;
@@ -27,7 +28,7 @@ internal class SoundAlertModule : GoofbotModule
         string reward = e.Notification.Payload.Event.Reward.Title.ToLowerInvariant();
         string sound = this.soundAlertDictionary.TryGetRandomFromList(reward);
 
-        await Task.Delay(1000);
-        new SoundPlayer(sound);
+        await Task.Delay(1000, this.cancellationToken);
+        new SoundPlayer(sound, cancellationToken: this.cancellationToken);
     }
 }
