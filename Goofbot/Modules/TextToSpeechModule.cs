@@ -143,7 +143,7 @@ internal class TextToSpeechModule : GoofbotModule
     {
         if (isReversed)
         {
-            return "paul! ,bonzi ,sam!";
+            return "paul! ,bonzi! ,sam!";
         }
         else
         {
