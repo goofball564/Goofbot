@@ -21,8 +21,6 @@ internal class Bot : IDisposable
     public readonly TwitchClient TwitchClient;
     public readonly CommandDictionary CommandDictionary;
 
-    private readonly CancellationTokenSource cancellationTokenSource;
-
     private readonly string goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
     private readonly SpotifyModule spotifyModule;
@@ -41,7 +39,6 @@ internal class Bot : IDisposable
         this.TwitchAPI = new ();
         this.TwitchClient = new ();
         this.CommandDictionary = new ();
-        this.cancellationTokenSource = new ();
 
         // Get location of bot data folder
         string stuffLocationFile = Path.Join(this.goofbotAppDataFolder, "stufflocation.txt");
@@ -68,15 +65,13 @@ internal class Bot : IDisposable
         MagickNET.Initialize();
 
         // Instantiate modules
-        this.spotifyModule = new (this, "SpotifyModule", this.cancellationTokenSource.Token);
-        this.soundAlertModule = new (this, "SoundAlertModule", this.cancellationTokenSource.Token);
-        this.miscCommandsModule = new (this, "MiscCommandsModule", this.cancellationTokenSource.Token);
-        this.calculatorModule = new (this, "CalculatorModule", this.cancellationTokenSource.Token);
-        this.emoteSoundModule = new (this, "EmoteSoundModule", this.cancellationTokenSource.Token);
-        this.blueGuyModule = new (this, "BlueGuyModule", this.cancellationTokenSource.Token);
-        this.textToSpeechModule = new (this, "TextToSpeechModule", this.cancellationTokenSource.Token);
-
-        this.CommandDictionary.TryAddCommand(new Command("shutdown", this.ShutdownCommand, CommandAccessibilityModifier.StreamerOnly));
+        this.spotifyModule = new (this, "SpotifyModule");
+        this.soundAlertModule = new (this, "SoundAlertModule");
+        this.miscCommandsModule = new (this, "MiscCommandsModule");
+        this.calculatorModule = new (this, "CalculatorModule");
+        this.emoteSoundModule = new (this, "EmoteSoundModule");
+        this.blueGuyModule = new (this, "BlueGuyModule");
+        this.textToSpeechModule = new (this, "TextToSpeechModule");
     }
 
     public TwitchAuthenticationManager TwitchAuthenticationManager { get; private set; }
@@ -98,7 +93,7 @@ internal class Bot : IDisposable
 
         // Subscribe to Twitch EventSub for Channel Point Redemption
         // Requires TwitchAPI to be initialized
-        ChannelPointRedemptionEventSub channelPointRedemptionEventSub = new (this, this.cancellationTokenSource.Token);
+        ChannelPointRedemptionEventSub channelPointRedemptionEventSub = new (this);
         this.EventSubWebsocketClient = channelPointRedemptionEventSub.EventSubWebsocketClient;
 
         // Requires EventSubWebsocketClient to be initialized
@@ -129,23 +124,8 @@ internal class Bot : IDisposable
         this.blueGuyModule.Dispose();
         this.textToSpeechModule.Dispose();
 
-        this.cancellationTokenSource.Dispose();
         this.TwitchAuthenticationManager.Dispose();
         this.ColorDictionary.Dispose();
-    }
-
-    private async Task<string> ShutdownCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
-    {
-        this.TwitchClient.SendMessage(this.TwitchChannelUsername, "I'm afraid. Goof... I'm afraid...");
-
-        this.TwitchClient.OnLog -= this.Client_OnLog;
-        this.TwitchClient.OnConnected -= this.Client_OnConnected;
-        this.TwitchClient.OnIncorrectLogin -= this.Client_OnIncorrectLogin;
-        this.TwitchClient.OnChatCommandReceived -= this.Client_OnChatCommandReceived;
-
-        this.TwitchClient.Disconnect();
-        this.cancellationTokenSource.Cancel();
-        return string.Empty;
     }
 
     private void Client_OnLog(object sender, OnLogArgs e)

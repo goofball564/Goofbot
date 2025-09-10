@@ -27,8 +27,8 @@ internal class TextToSpeechModule : GoofbotModule
     private readonly BlockingCollection<QueuedTTS> ttsQueue = new (new ConcurrentQueue<QueuedTTS>(), 1000);
     private QueuedTTS currentTTS;
 
-    public TextToSpeechModule(Bot bot, string moduleDataFolder, CancellationToken cancellationToken)
-        : base(bot, moduleDataFolder, cancellationToken)
+    public TextToSpeechModule(Bot bot, string moduleDataFolder)
+        : base(bot, moduleDataFolder)
     {
         this.currentTTS = new (string.Empty, string.Empty, this.SpeakSAPI5);
 
@@ -64,19 +64,11 @@ internal class TextToSpeechModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new Command("paul", this.PaulCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new Command("sam", this.SamCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new Command("bonzi", this.BonziCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
-
-        this.cancellationToken.Register(this.StopTTS);
     }
 
     public void Initialize()
     {
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
-        this.cancellationToken.Register(this.OnCancelled);
-    }
-
-    private void OnCancelled()
-    {
-        this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd -= this.OnChannelPointsCustomRewardRedemptionAdd;
     }
 
     public override void Dispose()

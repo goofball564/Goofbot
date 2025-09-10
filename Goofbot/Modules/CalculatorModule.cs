@@ -7,16 +7,10 @@ using TwitchLib.Client.Events;
 
 internal class CalculatorModule : GoofbotModule
 {
-    public CalculatorModule(Bot bot, string moduleDataFolder, CancellationToken cancellationToken)
-        : base(bot, moduleDataFolder, cancellationToken)
+    public CalculatorModule(Bot bot, string moduleDataFolder)
+        : base(bot, moduleDataFolder)
     {
         this.bot.TwitchClient.OnMessageReceived += this.Client_OnMessageReceived;
-        cancellationToken.Register(this.OnCancellation);
-    }
-
-    private void OnCancellation()
-    {
-        this.bot.TwitchClient.OnMessageReceived -= this.Client_OnMessageReceived;
     }
 
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)

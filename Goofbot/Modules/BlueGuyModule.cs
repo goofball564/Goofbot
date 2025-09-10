@@ -36,8 +36,8 @@ internal partial class BlueGuyModule : GoofbotModule
 
     private string lastColorCode = string.Empty;
 
-    public BlueGuyModule(Bot bot, string moduleDataFolder, CancellationToken cancellationToken)
-        : base(bot, moduleDataFolder, cancellationToken)
+    public BlueGuyModule(Bot bot, string moduleDataFolder)
+        : base(bot, moduleDataFolder)
     {
         this.blueGuyGrayscaleFile = Path.Join(this.moduleDataFolder, "BlueGuyGrayscale.png");
         this.blueGuyColorFile = Path.Join(this.moduleDataFolder, "BlueGuyColor.png");
@@ -51,8 +51,6 @@ internal partial class BlueGuyModule : GoofbotModule
 
         this.timer.AutoReset = true;
         this.timer.Elapsed += this.GuyTimerCallback;
-
-        this.cancellationToken.Register(this.StopTimer);
     }
 
     public override void Dispose()

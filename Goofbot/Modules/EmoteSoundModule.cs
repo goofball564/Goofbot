@@ -17,14 +17,13 @@ internal partial class EmoteSoundModule : GoofbotModule
 
     private readonly Dictionary<string, string> emoteSoundDictionary = [];
 
-    public EmoteSoundModule(Bot bot, string moduleDataFolder, CancellationToken cancellationToken)
-        : base(bot, moduleDataFolder, cancellationToken)
+    public EmoteSoundModule(Bot bot, string moduleDataFolder)
+        : base(bot, moduleDataFolder)
     {
         this.emoteListFile = Path.Join(this.moduleDataFolder, "emotes.txt");
         this.ParseTheThing();
 
         this.bot.TwitchClient.OnMessageReceived += this.Client_OnMessageReceived;
-        cancellationToken.Register(this.OnCancellation);
     }
 
     private void OnCancellation()
@@ -59,15 +58,15 @@ internal partial class EmoteSoundModule : GoofbotModule
     private async void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
     {
         string message = e.ChatMessage.Message;
-        Task delayTask = Task.Delay(SoundIntervalInMilliseconds, this.cancellationToken);
+        Task delayTask = Task.Delay(SoundIntervalInMilliseconds);
 
         foreach (string word in message.Split(null as char[], StringSplitOptions.RemoveEmptyEntries))
         {
             if (this.emoteSoundDictionary.TryGetValue(word, out string soundFile))
             {
                 await delayTask;
-                new SoundPlayer(soundFile, volume: Volume, cancellationToken: this.cancellationToken);
-                delayTask = Task.Delay(SoundIntervalInMilliseconds, this.cancellationToken);
+                new SoundPlayer(soundFile, volume: Volume);
+                delayTask = Task.Delay(SoundIntervalInMilliseconds);
             }
         }
     }

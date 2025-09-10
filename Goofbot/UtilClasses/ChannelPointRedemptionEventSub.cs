@@ -15,9 +15,7 @@ internal class ChannelPointRedemptionEventSub
 {
     public readonly EventSubWebsocketClient EventSubWebsocketClient;
 
-    private readonly IHost app;
-
-    public ChannelPointRedemptionEventSub(Bot bot, CancellationToken cancellationToken)
+    public ChannelPointRedemptionEventSub(Bot bot)
     {
         ChannelPointRedemptionEventSubService service = new (bot);
         this.EventSubWebsocketClient = service.EventSubWebsocketClient;
@@ -25,15 +23,8 @@ internal class ChannelPointRedemptionEventSub
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddTwitchLibEventSubWebsockets();
         builder.Services.AddSingleton<IHostedService>(provider => service);
-        this.app = builder.Build();
-        this.app.Start();
-
-        cancellationToken.Register(this.Stop);
-    }
-
-    private async void Stop()
-    {
-        await this.app.StopAsync();
+        var app = builder.Build();
+        app.Start();
     }
 
     private class ChannelPointRedemptionEventSubService : IHostedService

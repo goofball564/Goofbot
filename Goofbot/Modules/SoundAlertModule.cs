@@ -11,8 +11,8 @@ internal class SoundAlertModule : GoofbotModule
     private readonly string soundAlertsCSVFile;
     private readonly SoundAlertDictionary soundAlertDictionary;
 
-    public SoundAlertModule(Bot bot, string moduleDataFolder, CancellationToken cancellationToken)
-        : base(bot, moduleDataFolder, cancellationToken)
+    public SoundAlertModule(Bot bot, string moduleDataFolder)
+        : base(bot, moduleDataFolder)
     {
         this.soundAlertsCSVFile = Path.Join(this.moduleDataFolder, "SoundAlerts.csv");
         this.soundAlertDictionary = new SoundAlertDictionary(this.soundAlertsCSVFile);
@@ -21,12 +21,6 @@ internal class SoundAlertModule : GoofbotModule
     public void Initialize()
     {
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
-        this.cancellationToken.Register(this.OnCancellation);
-    }
-
-    private void OnCancellation()
-    {
-        this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd -= this.OnChannelPointsCustomRewardRedemptionAdd;
     }
 
     private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)
@@ -34,7 +28,7 @@ internal class SoundAlertModule : GoofbotModule
         string reward = e.Notification.Payload.Event.Reward.Title.ToLowerInvariant();
         string sound = this.soundAlertDictionary.TryGetRandomFromList(reward);
 
-        await Task.Delay(1000, this.cancellationToken);
-        new SoundPlayer(sound, cancellationToken: this.cancellationToken);
+        await Task.Delay(1000);
+        new SoundPlayer(sound);
     }
 }
