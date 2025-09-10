@@ -121,7 +121,6 @@ internal class TextToSpeechModule : GoofbotModule
 
     public async Task<string> BonziCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
-
         string username = eventArgs.Command.ChatMessage.DisplayName;
 
         if (commandArgs.Equals(string.Empty))
