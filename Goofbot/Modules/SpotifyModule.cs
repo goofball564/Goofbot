@@ -138,21 +138,6 @@ internal class SpotifyModule : GoofbotModule
             this.server.Dispose();
         }
 
-        private async Task RefreshCachedApiResponsesAsync()
-        {
-            DateTime now = DateTime.UtcNow;
-            DateTime timeoutTime = this.timeOfLastCall.Add(this.callAgainTimeout);
-            if (timeoutTime.CompareTo(now) < 0)
-            {
-                this.timeOfLastCall = now;
-                var getCurrentContextTask = this.spotify.Player.GetCurrentPlayback();
-                var getQueueTask = this.spotify.Player.GetQueue();
-
-                this.context = await getCurrentContextTask;
-                this.queue = await getQueueTask;
-            }
-        }
-
         private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
         {
             if (queue == null)
@@ -167,6 +152,21 @@ internal class SpotifyModule : GoofbotModule
             else
             {
                 return null;
+            }
+        }
+
+        private async Task RefreshCachedApiResponsesAsync()
+        {
+            DateTime now = DateTime.UtcNow;
+            DateTime timeoutTime = this.timeOfLastCall.Add(this.callAgainTimeout);
+            if (timeoutTime.CompareTo(now) < 0)
+            {
+                this.timeOfLastCall = now;
+                var getCurrentContextTask = this.spotify.Player.GetCurrentPlayback();
+                var getQueueTask = this.spotify.Player.GetQueue();
+
+                this.context = await getCurrentContextTask;
+                this.queue = await getQueueTask;
             }
         }
 
