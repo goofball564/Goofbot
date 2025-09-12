@@ -12,164 +12,180 @@ using TwitchLib.Client.Events;
 
 internal class SpotifyModule : GoofbotModule
 {
-    private readonly string spotifyCredentialsFile;
-    private readonly string clientId;
-    private readonly string clientSecret;
-
-    private readonly CachedApiResponses cachedApiResponses;
-    private readonly SemaphoreSlim semaphore = new (1, 1);
-
-    private EmbedIOAuthServer server;
-    private SpotifyClient spotify;
+    private readonly SpotifyAPI spotifyAPI;
 
     public SpotifyModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
-        this.spotifyCredentialsFile = Path.Join(this.moduleDataFolder, "spotify_credentials.json");
-        dynamic spotifyCredentials = Program.ParseJsonFile(this.spotifyCredentialsFile);
+        string spotifyCredentialsFile = Path.Join(this.moduleDataFolder, "spotify_credentials.json");
+        dynamic spotifyCredentials = Program.ParseJsonFile(spotifyCredentialsFile);
+        string clientID = Convert.ToString(spotifyCredentials.client_id);
+        string clientSecret = Convert.ToString(spotifyCredentials.client_secret);
 
-        this.cachedApiResponses = new CachedApiResponses();
-
-        this.clientId = Convert.ToString(spotifyCredentials.client_id);
-        this.clientSecret = Convert.ToString(spotifyCredentials.client_secret);
+        this.spotifyAPI = new SpotifyAPI(clientID, clientSecret);
 
         this.bot.CommandDictionary.TryAddCommand(new Command("song", this.SongCommand));
     }
 
-    public override void Dispose()
-    {
-        this.cachedApiResponses.Dispose();
-        this.semaphore.Dispose();
-        this.server.Dispose();
-        base.Dispose();
-    }
-
     public async Task InitializeAsync()
     {
-        // Make sure "http://localhost:5543/callback" is in your spotify application as redirect uri!
-        this.server = new EmbedIOAuthServer(new Uri("http://localhost:5543/callback"), 5543);
-        await this.server.Start();
-
-        this.server.AuthorizationCodeReceived += this.OnAuthorizationCodeReceived;
-        this.server.ErrorReceived += this.OnErrorReceived;
-
-        var request = new LoginRequest(this.server.BaseUri, this.clientId, LoginRequest.ResponseType.Code)
-        {
-            Scope = [Scopes.UserModifyPlaybackState, Scopes.UserReadPlaybackState, Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPrivate,],
-        };
-        BrowserUtil.Open(request.ToUri());
+        await this.spotifyAPI.InitializeAsync();
     }
 
-    private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
+    public override void Dispose()
     {
-        if (queue == null)
-        {
-            return null;
-        }
-
-        if (queue.CurrentlyPlaying is FullTrack track)
-        {
-            return track;
-        }
-        else
-        {
-            return null;
-        }
+        this.spotifyAPI.Dispose();
+        base.Dispose();
     }
 
     private async Task<string> SongCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         string message = string.Empty;
-        await this.semaphore.WaitAsync();
-        try
+        SongAndArtistNames songAndArtistNames = await this.spotifyAPI.GetCurrentlyPlayingSongAndArtists();
+        string currentlyPlayingSongName = songAndArtistNames.SongName;
+        string currentlyPlayingArtistNames = string.Join(", ", songAndArtistNames.ArtistNames);
+        if (currentlyPlayingSongName.Equals(string.Empty) || currentlyPlayingArtistNames.Equals(string.Empty))
         {
-            await this.cachedApiResponses.RefreshCachedApiResponses(this.spotify);
-            var context = this.cachedApiResponses.Context;
-            var queue = this.cachedApiResponses.Queue;
-
-            string currentlyPlayingSongName = string.Empty;
-            List<SimpleArtist> currentlyPlayingArtists = [];
-            if (context != null && context.IsPlaying)
-            {
-                var currentlyPlaying = GetCurrentlyPlaying(queue);
-                currentlyPlayingSongName = currentlyPlaying?.Name;
-                currentlyPlayingArtists = currentlyPlaying?.Artists;
-            }
-
-            string currentlyPlayingArtistNames = string.Join(", ", currentlyPlayingArtists);
-            if (currentlyPlayingSongName.Equals(string.Empty) || currentlyPlayingArtistNames.Equals(string.Empty))
-            {
-                message = "Ain't nothing playing";
-            }
-            else
-            {
-                message = currentlyPlayingSongName + " by " + currentlyPlayingArtistNames;
-            }
+            message = "Ain't nothing playing";
         }
-        finally
+        else
         {
-            this.semaphore.Release();
+            message = currentlyPlayingSongName + " by " + currentlyPlayingArtistNames;
         }
 
         return message;
     }
 
-    private async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
+    private class SongAndArtistNames
     {
-        await this.server.Stop();
+        public string SongName { get; set; }
 
-        var tokenResponse = await new OAuthClient().RequestToken(
-          new AuthorizationCodeTokenRequest(
-              this.clientId, this.clientSecret, response.Code, new Uri("http://localhost:5543/callback")));
-
-        var config = SpotifyClientConfig.CreateDefault().WithAuthenticator(new AuthorizationCodeAuthenticator(this.clientId, this.clientSecret, tokenResponse));
-        this.spotify = new SpotifyClient(config);
+        public List<string> ArtistNames { get; set; }
     }
 
-    private async Task OnErrorReceived(object sender, string error, string state)
+    private class SpotifyAPI : IDisposable
     {
-        Console.WriteLine($"Aborting authorization, error received: {error}");
-        await this.server.Stop();
-    }
+        private readonly string clientID;
+        private readonly string clientSecret;
 
-    private class CachedApiResponses : IDisposable
-    {
         private readonly TimeSpan callAgainTimeout = TimeSpan.FromSeconds(6);
         private readonly SemaphoreSlim semaphore = new (1, 1);
         private DateTime timeOfLastCall = DateTime.MinValue;
 
-        public CurrentlyPlayingContext Context { get; private set; }
+        private EmbedIOAuthServer server;
+        private SpotifyClient spotify;
 
-        public QueueResponse Queue { get; private set; }
+        private CurrentlyPlayingContext context;
+        private QueueResponse queue;
 
-        public async Task<bool> RefreshCachedApiResponses(SpotifyClient spotify)
+        public SpotifyAPI(string clientID, string clientSecret)
         {
-            DateTime now = DateTime.UtcNow;
-            DateTime timeoutTime = this.timeOfLastCall.Add(this.callAgainTimeout);
-            if (timeoutTime.CompareTo(now) < 0)
+            this.clientID = clientID;
+            this.clientSecret = clientSecret;
+        }
+
+        public async Task InitializeAsync()
+        {
+            // Make sure "http://localhost:5543/callback" is in your spotify application as redirect uri!
+            this.server = new EmbedIOAuthServer(new Uri("http://localhost:5543/callback"), 5543);
+            await this.server.Start();
+
+            this.server.AuthorizationCodeReceived += this.OnAuthorizationCodeReceived;
+            this.server.ErrorReceived += this.OnErrorReceived;
+
+            var request = new LoginRequest(this.server.BaseUri, this.clientID, LoginRequest.ResponseType.Code)
             {
-                await this.semaphore.WaitAsync();
-                try
-                {
-                    this.timeOfLastCall = now;
-                    var getCurrentContextTask = spotify.Player.GetCurrentPlayback();
-                    var getQueueTask = spotify.Player.GetQueue();
+                Scope = [Scopes.UserModifyPlaybackState, Scopes.UserReadPlaybackState, Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPrivate,],
+            };
+            BrowserUtil.Open(request.ToUri());
+        }
 
-                    this.Context = await getCurrentContextTask;
-                    this.Queue = await getQueueTask;
-                }
-                finally
+        public async Task<SongAndArtistNames> GetCurrentlyPlayingSongAndArtists()
+        {
+            await this.semaphore.WaitAsync();
+            try
+            {
+                await this.RefreshCachedApiResponsesAsync();
+                var context = this.context;
+                var queue = this.queue;
+
+                string currentlyPlayingSongName = string.Empty;
+                List<SimpleArtist> currentlyPlayingArtists = [];
+                List<string> currentlyPlayingArtistNames = [];
+                if (context != null && context.IsPlaying)
                 {
-                    this.semaphore.Release();
+                    var currentlyPlaying = GetCurrentlyPlaying(queue);
+                    currentlyPlayingSongName = currentlyPlaying?.Name;
+                    currentlyPlayingArtists = currentlyPlaying?.Artists;
                 }
+
+                foreach (var artist in currentlyPlayingArtists)
+                {
+                    currentlyPlayingArtistNames.Add(artist.Name);
+                }
+
+                return new SongAndArtistNames { SongName = currentlyPlayingSongName, ArtistNames = currentlyPlayingArtistNames };
             }
-
-            return true;
+            finally
+            {
+                this.semaphore.Release();
+            }
         }
 
         public void Dispose()
         {
             this.semaphore.Dispose();
+            this.server.Dispose();
+        }
+
+        private async Task RefreshCachedApiResponsesAsync()
+        {
+            DateTime now = DateTime.UtcNow;
+            DateTime timeoutTime = this.timeOfLastCall.Add(this.callAgainTimeout);
+            if (timeoutTime.CompareTo(now) < 0)
+            {
+                this.timeOfLastCall = now;
+                var getCurrentContextTask = this.spotify.Player.GetCurrentPlayback();
+                var getQueueTask = this.spotify.Player.GetQueue();
+
+                this.context = await getCurrentContextTask;
+                this.queue = await getQueueTask;
+            }
+        }
+
+        private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
+        {
+            if (queue == null)
+            {
+                return null;
+            }
+
+            if (queue.CurrentlyPlaying is FullTrack track)
+            {
+                return track;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        private async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
+        {
+            await this.server.Stop();
+
+            var tokenResponse = await new OAuthClient().RequestToken(
+              new AuthorizationCodeTokenRequest(
+                  this.clientID, this.clientSecret, response.Code, new Uri("http://localhost:5543/callback")));
+
+            var config = SpotifyClientConfig.CreateDefault().WithAuthenticator(new AuthorizationCodeAuthenticator(this.clientID, this.clientSecret, tokenResponse));
+            this.spotify = new SpotifyClient(config);
+        }
+
+        private async Task OnErrorReceived(object sender, string error, string state)
+        {
+            Console.WriteLine($"Aborting authorization, error received: {error}");
+            await this.server.Stop();
         }
     }
 }
