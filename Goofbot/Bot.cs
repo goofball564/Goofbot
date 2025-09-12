@@ -107,9 +107,6 @@ internal class Bot : IDisposable
 
         // Start the bot
         this.twitchClient.Connect();
-
-        // Start timers after bot has connected
-        this.blueGuyModule.StartTimer();
     }
 
     public void SendMessage(string message, bool reverseMessage)
@@ -150,6 +147,9 @@ internal class Bot : IDisposable
     {
         Console.WriteLine($"Connected to {e.AutoJoinChannel}");
         this.SendMessage("Goofbot is activated and at your service MrDestructoid", false);
+
+        // Start timers after bot has connected
+        this.blueGuyModule.StartTimer();
     }
 
     private async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
