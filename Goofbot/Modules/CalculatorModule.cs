@@ -9,7 +9,7 @@ internal class CalculatorModule : GoofbotModule
     public CalculatorModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
-        this.bot.TwitchClient.OnMessageReceived += this.Client_OnMessageReceived;
+        this.bot.MessageReceived += this.Client_OnMessageReceived;
     }
 
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
@@ -31,7 +31,7 @@ internal class CalculatorModule : GoofbotModule
 
         if (!(botMessage.Equals(string.Empty) || botMessage.Equals(chatMessage)))
         {
-            this.bot.TwitchClient.SendMessage(this.bot.TwitchChannelUsername, botMessage);
+            this.bot.SendMessage(botMessage, false);
         }
     }
 }

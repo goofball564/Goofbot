@@ -152,7 +152,7 @@ internal partial class BlueGuyModule : GoofbotModule
     private async void GuyTimerCallback(object source, ElapsedEventArgs e)
     {
         string message = await this.GuyCommand("random");
-        this.bot.TwitchClient.SendMessage(this.bot.TwitchChannelUsername, message);
+        this.bot.SendMessage(message, false);
     }
 
     private void WriteCurrentBlueGuyImageToFile(string colorName)

@@ -8,6 +8,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using TwitchLib.Client;
 using TwitchLib.Client.Models;
 
 internal class TwitchAuthenticationManager : IDisposable
@@ -26,15 +27,17 @@ internal class TwitchAuthenticationManager : IDisposable
     private readonly SemaphoreSlim channelTokensSemaphore = new (1, 1);
 
     private readonly Bot bot;
+    private readonly TwitchClient twitchClient;
     private readonly string twitchClientID;
     private readonly string twitchClientSecret;
 
     private string twitchBotAccessToken;
     private string twitchChannelAccessToken;
 
-    public TwitchAuthenticationManager(Bot bot, string twitchClientID, string twitchClientSecret)
+    public TwitchAuthenticationManager(Bot bot, TwitchClient twitchClient, string twitchClientID, string twitchClientSecret)
     {
         this.bot = bot;
+        this.twitchClient = twitchClient;
         this.twitchClientID = twitchClientID;
         this.twitchClientSecret = twitchClientSecret;
     }
@@ -59,7 +62,7 @@ internal class TwitchAuthenticationManager : IDisposable
         this.bot.TwitchAPI.Settings.AccessToken = this.twitchChannelAccessToken;
 
         var credentials = new ConnectionCredentials(this.bot.TwitchBotUsername, this.twitchBotAccessToken);
-        this.bot.TwitchClient.Initialize(credentials, this.bot.TwitchChannelUsername);
+        this.twitchClient.Initialize(credentials, this.bot.TwitchChannelUsername);
     }
 
     private async Task<string> RefreshTwitchAccessToken(bool botToken)

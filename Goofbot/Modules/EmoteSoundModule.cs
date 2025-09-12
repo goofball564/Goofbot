@@ -22,12 +22,7 @@ internal partial class EmoteSoundModule : GoofbotModule
         this.emoteListFile = Path.Join(this.moduleDataFolder, "emotes.txt");
         this.ParseTheThing();
 
-        this.bot.TwitchClient.OnMessageReceived += this.Client_OnMessageReceived;
-    }
-
-    private void OnCancellation()
-    {
-        this.bot.TwitchClient.OnMessageReceived -= this.Client_OnMessageReceived;
+        this.bot.MessageReceived += this.Client_OnMessageReceived;
     }
 
     private void ParseTheThing()

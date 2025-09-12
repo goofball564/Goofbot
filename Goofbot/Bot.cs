@@ -17,11 +17,11 @@ internal class Bot : IDisposable
     public readonly string TwitchChannelUsername;
 
     public readonly TwitchAPI TwitchAPI;
-    public readonly TwitchClient TwitchClient;
     public readonly CommandDictionary CommandDictionary;
 
     private readonly string goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
+    private readonly TwitchClient twitchClient;
     private readonly SpotifyModule spotifyModule;
     private readonly SoundAlertModule soundAlertModule;
     private readonly MiscCommandsModule miscCommandsModule;
@@ -36,7 +36,7 @@ internal class Bot : IDisposable
         this.TwitchChannelUsername = twitchChannelUsername;
 
         this.TwitchAPI = new ();
-        this.TwitchClient = new ();
+        this.twitchClient = new ();
         this.CommandDictionary = new ();
 
         // Get location of bot data folder
@@ -52,13 +52,14 @@ internal class Bot : IDisposable
         dynamic twitchAppCredentials = Program.ParseJsonFile(twitchAppCredentialsFile);
         string clientID = twitchAppCredentials.client_id;
         string clientSecret = twitchAppCredentials.client_secret;
-        this.TwitchAuthenticationManager = new (this, clientID, clientSecret);
+        this.TwitchAuthenticationManager = new (this, this.twitchClient, clientID, clientSecret);
 
         // Subscribe to TwitchClient events
-        this.TwitchClient.OnLog += this.Client_OnLog;
-        this.TwitchClient.OnConnected += this.Client_OnConnected;
-        this.TwitchClient.OnIncorrectLogin += this.Client_OnIncorrectLogin;
-        this.TwitchClient.OnChatCommandReceived += this.Client_OnChatCommandReceived;
+        this.twitchClient.OnLog += this.Client_OnLog;
+        this.twitchClient.OnConnected += this.Client_OnConnected;
+        this.twitchClient.OnIncorrectLogin += this.Client_OnIncorrectLogin;
+        this.twitchClient.OnMessageReceived += this.Client_OnMessageReceived;
+        this.twitchClient.OnChatCommandReceived += this.Client_OnChatCommandReceived;
 
         // Initialize Magick.NET
         MagickNET.Initialize();
@@ -72,6 +73,8 @@ internal class Bot : IDisposable
         this.blueGuyModule = new (this, "BlueGuyModule");
         this.textToSpeechModule = new (this, "TextToSpeechModule");
     }
+
+    public event EventHandler<OnMessageReceivedArgs> MessageReceived;
 
     public TwitchAuthenticationManager TwitchAuthenticationManager { get; private set; }
 
@@ -100,17 +103,27 @@ internal class Bot : IDisposable
         this.textToSpeechModule.Initialize();
 
         // Requires TwitchClient to be initialized
-        this.TwitchClient.AddChatCommandIdentifier('!');
+        this.twitchClient.AddChatCommandIdentifier('!');
 
         // Finish everything else before starting the bot
         await spotifyModuleInitializeTask;
         await colorDictionaryTask;
 
         // Start the bot
-        this.TwitchClient.Connect();
+        this.twitchClient.Connect();
 
         // Start timers after bot has connected
         this.blueGuyModule.StartTimer();
+    }
+
+    public void SendMessage(string message, bool reverseMessage)
+    {
+        if (reverseMessage)
+        {
+            message = Program.ReverseString(message);
+        }
+
+        this.twitchClient.SendMessage(this.TwitchChannelUsername, message);
     }
 
     public void Dispose()
@@ -127,6 +140,11 @@ internal class Bot : IDisposable
         this.ColorDictionary.Dispose();
     }
 
+    private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
+    {
+        this.MessageReceived?.Invoke(this, e);
+    }
+
     private void Client_OnLog(object sender, OnLogArgs e)
     {
         Console.WriteLine($"{e.DateTime}: {e.BotUsername} - {e.Data}");
@@ -135,7 +153,7 @@ internal class Bot : IDisposable
     private void Client_OnConnected(object sender, OnConnectedArgs e)
     {
         Console.WriteLine($"Connected to {e.AutoJoinChannel}");
-        this.TwitchClient.SendMessage(this.TwitchChannelUsername, "Goofbot is activated and at your service MrDestructoid");
+        this.SendMessage("Goofbot is activated and at your service MrDestructoid", false);
     }
 
     private async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
@@ -163,7 +181,7 @@ internal class Bot : IDisposable
 
         if (!message.Equals(string.Empty))
         {
-            this.TwitchClient.SendMessage(this.TwitchChannelUsername, message);
+            this.twitchClient.SendMessage(this.TwitchChannelUsername, message);
         }
     }
 
