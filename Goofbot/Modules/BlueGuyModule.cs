@@ -70,9 +70,8 @@ internal partial class BlueGuyModule : GoofbotModule
         this.timer.Stop();
     }
 
-    public async Task<string> GuyCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs = null, bool isReversed = false)
+    public async Task GuyCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs = null, bool isReversed = false)
     {
-        string message;
         bool colorChanged = false;
 
         if (commandArgs.Equals("default", StringComparison.OrdinalIgnoreCase))
@@ -86,7 +85,7 @@ internal partial class BlueGuyModule : GoofbotModule
             if (IsHexColorCode(commandArgs) || commandArgs.Equals(DefaultColorCode) || commandArgs.Equals(SpeedGuyColorCode))
             {
                 colorChanged = !commandArgs.Equals(this.lastColorCode, StringComparison.OrdinalIgnoreCase);
-                message = colorChanged ? ColorChangeString : SameColorString;
+                this.bot.SendMessage(colorChanged ? ColorChangeString : SameColorString, isReversed);
 
                 this.lastColorCode = commandArgs;
                 this.SetBlueGuyImage(commandArgs);
@@ -94,14 +93,14 @@ internal partial class BlueGuyModule : GoofbotModule
             else if (commandArgs.Equals(string.Empty))
             {
                 colorChanged = false;
-                message = NoArgumentString;
+                this.bot.SendMessage(NoArgumentString, isReversed);
             }
             else if (commandArgs.Equals("random", StringComparison.OrdinalIgnoreCase))
             {
                 string colorName = this.bot.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
 
                 colorChanged = true;
-                message = string.Format(RandomColorString, colorName);
+                this.bot.SendMessage(string.Format(RandomColorString, colorName), isReversed);
 
                 this.lastColorCode = hexColorCode;
                 this.SetBlueGuyImage(hexColorCode);
@@ -113,7 +112,7 @@ internal partial class BlueGuyModule : GoofbotModule
                 if (this.bot.ColorDictionary.TryGetHex(commandArgs, out string hexColorCode))
                 {
                     colorChanged = !hexColorCode.Equals(this.lastColorCode, StringComparison.OrdinalIgnoreCase);
-                    message = colorChanged ? ColorChangeString : SameColorString;
+                    this.bot.SendMessage(colorChanged ? ColorChangeString : SameColorString, isReversed);
 
                     this.lastColorCode = hexColorCode;
                     this.SetBlueGuyImage(hexColorCode);
@@ -123,7 +122,7 @@ internal partial class BlueGuyModule : GoofbotModule
                 else
                 {
                     colorChanged = false;
-                    message = UnknownColorString;
+                    this.bot.SendMessage(UnknownColorString, isReversed);
                 }
             }
 
@@ -137,8 +136,6 @@ internal partial class BlueGuyModule : GoofbotModule
         {
             this.semaphore.Release();
         }
-
-        return message;
     }
 
     [GeneratedRegex("^#[0-9A-Fa-f]{6}$")]
@@ -151,8 +148,7 @@ internal partial class BlueGuyModule : GoofbotModule
 
     private async void GuyTimerCallback(object source, ElapsedEventArgs e)
     {
-        string message = await this.GuyCommand("random");
-        this.bot.SendMessage(message, false);
+        await this.GuyCommand("random");
     }
 
     private void WriteCurrentBlueGuyImageToFile(string colorName)

@@ -167,21 +167,13 @@ internal class Bot : IDisposable
         Command command;
         if (this.CommandDictionary.TryGetCommand(commandName, out command))
         {
-            message = await command.ExecuteCommandAsync(commandArgs, e, isReversed);
+            await command.ExecuteCommandAsync(commandArgs, e, isReversed);
         }
         else if (this.CommandDictionary.TryGetCommand(Program.ReverseString(commandName), out command))
         {
             isReversed = true;
-
             string commandArgsReversed = Program.ReverseString(commandArgs);
-
-            message = await command.ExecuteCommandAsync(commandArgsReversed, e, isReversed);
-            message = Program.ReverseString(message);
-        }
-
-        if (!message.Equals(string.Empty))
-        {
-            this.twitchClient.SendMessage(this.TwitchChannelUsername, message);
+            await command.ExecuteCommandAsync(commandArgsReversed, e, isReversed);
         }
     }
 

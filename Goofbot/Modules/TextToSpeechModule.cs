@@ -22,7 +22,7 @@ internal class TextToSpeechModule : GoofbotModule
     private readonly string sapi4ExeFile;
     private readonly Random random = new ();
 
-    private readonly List<Func<string, OnChatCommandReceivedArgs, bool, Task<string>>> listOfTTSCommands = [];
+    private readonly List<Func<string, OnChatCommandReceivedArgs, bool, Task>> listOfTTSCommands = [];
 
     private readonly BlockingCollection<QueuedTTS> ttsQueue = new (new ConcurrentQueue<QueuedTTS>(), 1000);
     private QueuedTTS currentTTS;
@@ -85,22 +85,21 @@ internal class TextToSpeechModule : GoofbotModule
         base.Dispose();
     }
 
-    public async Task<string> TTSCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public async Task TTSCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         if (commandArgs.Equals(string.Empty))
         {
-            return "Enter a message with this command to hear it read by one of Goofbot's TTS !voices";
+            this.bot.SendMessage("Enter a message with this command to hear it read by one of Goofbot's TTS !voices", isReversed);
         }
         else
         {
             // Perform the TTS with a randomly selected TTS voice
             int randomIndex = this.random.Next(this.listOfTTSCommands.Count);
             await this.listOfTTSCommands[randomIndex](commandArgs, eventArgs, isReversed);
-            return string.Empty;
         }
     }
 
-    public async Task<string> SamCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public Task SamCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         string username = eventArgs.Command.ChatMessage.DisplayName;
 
@@ -108,16 +107,17 @@ internal class TextToSpeechModule : GoofbotModule
         {
             string message = "my roflcopter goes soi soi soi soi soi soi my sprinklerststststststststststststststst crotch";
             this.ttsQueue.Add(new QueuedTTS(username, message, this.SpeakSAPI5));
-            return message;
+            this.bot.SendMessage(message, isReversed);
         }
         else
         {
             this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakSAPI5));
-            return string.Empty;
         }
+
+        return Task.Delay(0);
     }
 
-    public async Task<string> PaulCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public Task PaulCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         string username = eventArgs.Command.ChatMessage.DisplayName;
 
@@ -125,16 +125,17 @@ internal class TextToSpeechModule : GoofbotModule
         {
             string message = "aeiou John Madden John Madden John Madden uuuuuuuuuuuuuuuuuuuuu ebrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbrbr";
             this.ttsQueue.Add(new QueuedTTS(username, message, this.SpeakDECTalk));
-            return message;
+            this.bot.SendMessage(message, isReversed);
         }
         else
         {
             this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakDECTalk));
-            return string.Empty;
         }
+
+        return Task.Delay(0);
     }
 
-    public async Task<string> BonziCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public Task BonziCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         string username = eventArgs.Command.ChatMessage.DisplayName;
 
@@ -142,28 +143,31 @@ internal class TextToSpeechModule : GoofbotModule
         {
             string message = "What did the beaver say to the tree? It's been nice gnawing you!";
             this.ttsQueue.Add(new QueuedTTS(username, message, this.SpeakSAPI4));
-            return message;
+            this.bot.SendMessage(message, isReversed);
         }
         else
         {
             this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakSAPI4));
-            return string.Empty;
         }
+
+        return Task.Delay(0);
     }
 
-    public async Task<string> VoicesCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public Task VoicesCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         if (isReversed)
         {
-            return "paul! ,bonzi! ,sam!";
+            this.bot.SendMessage("paul! ,bonzi! ,sam!", isReversed);
         }
         else
         {
-            return "!sam, !bonzi, !paul";
+            this.bot.SendMessage("!sam, !bonzi, !paul", isReversed);
         }
+
+        return Task.Delay(0);
     }
 
-    public async Task<string> CancelCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public Task CancelCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         switch (commandArgs)
         {
@@ -195,7 +199,7 @@ internal class TextToSpeechModule : GoofbotModule
                 break;
         }
 
-        return string.Empty;
+        return Task.Delay(0);
     }
 
     private static SpeechSynthesizer InitializeSpeechSynthesizer()

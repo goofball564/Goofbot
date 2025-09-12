@@ -38,7 +38,7 @@ internal class SpotifyModule : GoofbotModule
         base.Dispose();
     }
 
-    private async Task<string> SongCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    private async Task SongCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
     {
         string message = string.Empty;
         SongAndArtistNames songAndArtistNames = await this.spotifyAPI.GetCurrentlyPlayingSongAndArtists();
@@ -46,14 +46,12 @@ internal class SpotifyModule : GoofbotModule
         string currentlyPlayingArtistNames = string.Join(", ", songAndArtistNames.ArtistNames);
         if (currentlyPlayingSongName.Equals(string.Empty) || currentlyPlayingArtistNames.Equals(string.Empty))
         {
-            message = "Ain't nothing playing";
+            this.bot.SendMessage("Ain't nothing playing", isReversed);
         }
         else
         {
-            message = currentlyPlayingSongName + " by " + currentlyPlayingArtistNames;
+            this.bot.SendMessage(currentlyPlayingSongName + " by " + currentlyPlayingArtistNames, isReversed);
         }
-
-        return message;
     }
 
     private class SongAndArtistNames
@@ -117,6 +115,8 @@ internal class SpotifyModule : GoofbotModule
                     var currentlyPlaying = GetCurrentlyPlaying(queue);
                     currentlyPlayingSongName = currentlyPlaying?.Name;
                     currentlyPlayingArtists = currentlyPlaying?.Artists;
+                    /*var album = currentlyPlaying?.Album;
+                    album.Name*/
                 }
 
                 foreach (var artist in currentlyPlayingArtists)
