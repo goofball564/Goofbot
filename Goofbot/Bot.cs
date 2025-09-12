@@ -167,13 +167,13 @@ internal class Bot : IDisposable
         Command command;
         if (this.CommandDictionary.TryGetCommand(commandName, out command))
         {
-            await command.ExecuteCommandAsync(commandArgs, e, isReversed);
+            await command.ExecuteCommandAsync(commandArgs, isReversed, e);
         }
         else if (this.CommandDictionary.TryGetCommand(Program.ReverseString(commandName), out command))
         {
             isReversed = true;
             string commandArgsReversed = Program.ReverseString(commandArgs);
-            await command.ExecuteCommandAsync(commandArgsReversed, e, isReversed);
+            await command.ExecuteCommandAsync(commandArgsReversed, isReversed, e);
         }
     }
 

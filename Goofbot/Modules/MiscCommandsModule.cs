@@ -19,7 +19,7 @@ internal class MiscCommandsModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new (CommandsCommandName, this.CommandsCommand));
     }
 
-    public async Task AnticiCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public async Task AnticiCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         int randomDelay = this.random.Next(50000) + 10000;
         await Task.Delay(randomDelay);
@@ -28,7 +28,7 @@ internal class MiscCommandsModule : GoofbotModule
         this.bot.SendMessage($"...pation! @{username}", isReversed);
     }
 
-    public Task CommandsCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public Task CommandsCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         List<string> commandNames = [];
 

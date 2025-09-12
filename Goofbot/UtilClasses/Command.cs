@@ -10,12 +10,12 @@ internal class Command
     public readonly string Name;
     public readonly bool Unlisted;
 
-    private readonly Func<string, OnChatCommandReceivedArgs, bool, Task> commandAction;
+    private readonly Func<string, bool, OnChatCommandReceivedArgs, Task> commandAction;
     private readonly TimeSpan timeout;
 
     private DateTime timeOfLastInvocation = DateTime.MinValue;
 
-    public Command(string name, Func<string, OnChatCommandReceivedArgs, bool, Task> commandAction, CommandAccessibilityModifier commandAccessibilityModifier = CommandAccessibilityModifier.AllChatters, bool unlisted = false, int timeoutSeconds = 1)
+    public Command(string name, Func<string, bool, OnChatCommandReceivedArgs, Task> commandAction, CommandAccessibilityModifier commandAccessibilityModifier = CommandAccessibilityModifier.AllChatters, bool unlisted = false, int timeoutSeconds = 1)
     {
         this.Name = name;
         this.CommandAccessibilityModifier = commandAccessibilityModifier;
@@ -32,11 +32,10 @@ internal class Command
         }
     }
 
-    public async Task ExecuteCommandAsync(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public async Task ExecuteCommandAsync(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         if (this.CommandAccessibilityModifier == CommandAccessibilityModifier.StreamerOnly && !eventArgs.Command.ChatMessage.IsBroadcaster)
         {
-            // return "I don't answer to you, peasant! OhMyDog (this command is for Goof's use only)";
             return;
         }
         else if (this.CommandAccessibilityModifier == CommandAccessibilityModifier.SubOnly && !eventArgs.Command.ChatMessage.IsSubscriber)
@@ -53,7 +52,7 @@ internal class Command
         if (timeoutTime.CompareTo(invocationTime) < 0)
         {
             this.timeOfLastInvocation = invocationTime;
-            await this.commandAction(commandArgs, eventArgs, isReversed);
+            await this.commandAction(commandArgs, isReversed, eventArgs);
         }
     }
 }

@@ -22,7 +22,7 @@ internal class TextToSpeechModule : GoofbotModule
     private readonly string sapi4ExeFile;
     private readonly Random random = new ();
 
-    private readonly List<Func<string, OnChatCommandReceivedArgs, bool, Task>> listOfTTSCommands = [];
+    private readonly List<Func<string, bool, OnChatCommandReceivedArgs, Task>> listOfTTSCommands = [];
 
     private readonly BlockingCollection<QueuedTTS> ttsQueue = new (new ConcurrentQueue<QueuedTTS>(), 1000);
     private QueuedTTS currentTTS;
@@ -85,7 +85,7 @@ internal class TextToSpeechModule : GoofbotModule
         base.Dispose();
     }
 
-    public async Task TTSCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public async Task TTSCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         if (commandArgs.Equals(string.Empty))
         {
@@ -95,11 +95,11 @@ internal class TextToSpeechModule : GoofbotModule
         {
             // Perform the TTS with a randomly selected TTS voice
             int randomIndex = this.random.Next(this.listOfTTSCommands.Count);
-            await this.listOfTTSCommands[randomIndex](commandArgs, eventArgs, isReversed);
+            await this.listOfTTSCommands[randomIndex](commandArgs, isReversed, eventArgs);
         }
     }
 
-    public Task SamCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public Task SamCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string username = eventArgs.Command.ChatMessage.DisplayName;
 
@@ -117,7 +117,7 @@ internal class TextToSpeechModule : GoofbotModule
         return Task.Delay(0);
     }
 
-    public Task PaulCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public Task PaulCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string username = eventArgs.Command.ChatMessage.DisplayName;
 
@@ -135,7 +135,7 @@ internal class TextToSpeechModule : GoofbotModule
         return Task.Delay(0);
     }
 
-    public Task BonziCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public Task BonziCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string username = eventArgs.Command.ChatMessage.DisplayName;
 
@@ -153,7 +153,7 @@ internal class TextToSpeechModule : GoofbotModule
         return Task.Delay(0);
     }
 
-    public Task VoicesCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public Task VoicesCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         if (isReversed)
         {
@@ -167,7 +167,7 @@ internal class TextToSpeechModule : GoofbotModule
         return Task.Delay(0);
     }
 
-    public Task CancelCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    public Task CancelCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         switch (commandArgs)
         {

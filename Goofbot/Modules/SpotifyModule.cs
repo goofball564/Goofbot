@@ -39,7 +39,7 @@ internal class SpotifyModule : GoofbotModule
         base.Dispose();
     }
 
-    private async Task SongCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    private async Task SongCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string message = string.Empty;
         SongAndArtistNames songAndArtistNames = await this.spotifyAPI.GetCurrentlyPlayingSongAndArtistsAsync();
@@ -55,7 +55,7 @@ internal class SpotifyModule : GoofbotModule
         }
     }
 
-    private async Task AlbumCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs, bool isReversed)
+    private async Task AlbumCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         AlbumAndArtistNames currentlyPlayingAlbum = await this.spotifyAPI.GetCurrentlyPlayingAlbumAndArtistsAsync();
         string currentlyPlayingAlbumName = currentlyPlayingAlbum.AlbumName;

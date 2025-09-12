@@ -70,7 +70,7 @@ internal partial class BlueGuyModule : GoofbotModule
         this.timer.Stop();
     }
 
-    public async Task GuyCommand(string commandArgs, OnChatCommandReceivedArgs eventArgs = null, bool isReversed = false)
+    public async Task GuyCommand(string commandArgs, bool isReversed = false, OnChatCommandReceivedArgs eventArgs = null)
     {
         bool colorChanged = false;
 
