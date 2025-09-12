@@ -22,6 +22,8 @@ internal class Bot : IDisposable
     private readonly string goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
     private readonly TwitchClient twitchClient;
+    private readonly TwitchAuthenticationManager twitchAuthenticationManager;
+
     private readonly SpotifyModule spotifyModule;
     private readonly SoundAlertModule soundAlertModule;
     private readonly MiscCommandsModule miscCommandsModule;
@@ -52,7 +54,7 @@ internal class Bot : IDisposable
         dynamic twitchAppCredentials = Program.ParseJsonFile(twitchAppCredentialsFile);
         string clientID = twitchAppCredentials.client_id;
         string clientSecret = twitchAppCredentials.client_secret;
-        this.TwitchAuthenticationManager = new (this, this.twitchClient, clientID, clientSecret);
+        this.twitchAuthenticationManager = new (this, this.twitchClient, clientID, clientSecret);
 
         // Subscribe to TwitchClient events
         this.twitchClient.OnLog += this.Client_OnLog;
@@ -76,8 +78,6 @@ internal class Bot : IDisposable
 
     public event EventHandler<OnMessageReceivedArgs> MessageReceived;
 
-    public TwitchAuthenticationManager TwitchAuthenticationManager { get; private set; }
-
     public ColorDictionary ColorDictionary { get; private set; }
 
     public string StuffFolder { get; private set; }
@@ -87,7 +87,7 @@ internal class Bot : IDisposable
     public async Task Start()
     {
         Task colorDictionaryTask = this.ColorDictionary.InitializeAsync();
-        Task authenticationManagerInitializeTask = this.TwitchAuthenticationManager.InitializeAsync();
+        Task authenticationManagerInitializeTask = this.twitchAuthenticationManager.InitializeAsync();
         Task spotifyModuleInitializeTask = this.spotifyModule.InitializeAsync();
 
         // Twitch API Authentication Required for EventSub
@@ -136,7 +136,7 @@ internal class Bot : IDisposable
         this.blueGuyModule.Dispose();
         this.textToSpeechModule.Dispose();
 
-        this.TwitchAuthenticationManager.Dispose();
+        this.twitchAuthenticationManager.Dispose();
         this.ColorDictionary.Dispose();
     }
 
