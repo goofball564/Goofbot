@@ -88,7 +88,7 @@ internal partial class BlueGuyModule : GoofbotModule
                 this.bot.SendMessage(colorChanged ? ColorChangeString : SameColorString, isReversed);
 
                 this.lastColorCode = commandArgs;
-                this.SetBlueGuyImage(commandArgs);
+                this.SetBlueGuyImage(commandArgs, isReversed);
             }
             else if (commandArgs.Equals(string.Empty))
             {
@@ -103,7 +103,7 @@ internal partial class BlueGuyModule : GoofbotModule
                 this.bot.SendMessage(string.Format(RandomColorString, colorName), isReversed);
 
                 this.lastColorCode = hexColorCode;
-                this.SetBlueGuyImage(hexColorCode);
+                this.SetBlueGuyImage(hexColorCode, isReversed);
 
                 this.WriteCurrentBlueGuyImageToFile(colorName);
             }
@@ -115,7 +115,7 @@ internal partial class BlueGuyModule : GoofbotModule
                     this.bot.SendMessage(colorChanged ? ColorChangeString : SameColorString, isReversed);
 
                     this.lastColorCode = hexColorCode;
-                    this.SetBlueGuyImage(hexColorCode);
+                    this.SetBlueGuyImage(hexColorCode, isReversed);
 
                     this.WriteCurrentBlueGuyImageToFile(commandArgs);
                 }
@@ -164,7 +164,7 @@ internal partial class BlueGuyModule : GoofbotModule
         }
     }
 
-    private void SetBlueGuyImage(string colorCode)
+    private void SetBlueGuyImage(string colorCode, bool invert)
     {
         if (colorCode.Equals(DefaultColorCode))
         {
@@ -190,6 +190,18 @@ internal partial class BlueGuyModule : GoofbotModule
                 solidColor.Colorize(new MagickColor(colorCode), (Percentage)100.0);
                 grayscaleImage.Composite(solidColor, CompositeOperator.Overlay);
                 solidColor.Write(ColorOutputFile, MagickFormat.Png);
+            }
+
+            if (invert)
+            {
+
+                grayscaleImage.Negate(Channels.Blue);
+                grayscaleImage.Negate(Channels.Red);
+                grayscaleImage.Negate(Channels.Green);
+
+                eyesImage.Negate(Channels.Blue);
+                eyesImage.Negate(Channels.Red);
+                eyesImage.Negate(Channels.Green);
             }
 
             images.Add(grayscaleImage);
