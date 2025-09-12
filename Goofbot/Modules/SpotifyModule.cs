@@ -68,7 +68,7 @@ internal class SpotifyModule : GoofbotModule
         }
     }
 
-    private class SongAndArtistNames
+    private struct SongAndArtistNames
     {
         public string SongName { get; set; }
 
