@@ -63,10 +63,7 @@ internal class TextToSpeechModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new Command("paul", this.PaulCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new Command("sam", this.SamCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new Command("bonzi", this.BonziCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
-    }
 
-    public void Initialize()
-    {
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
     }
 

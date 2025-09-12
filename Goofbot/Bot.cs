@@ -16,13 +16,14 @@ internal class Bot : IDisposable
     public readonly string TwitchBotUsername;
     public readonly string TwitchChannelUsername;
 
-    public readonly TwitchAPI TwitchAPI;
     public readonly CommandDictionary CommandDictionary;
 
     private readonly string goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
     private readonly TwitchClient twitchClient;
+    private readonly TwitchAPI twitchAPI;
     private readonly TwitchAuthenticationManager twitchAuthenticationManager;
+    private readonly ChannelPointRedemptionEventSub channelPointRedemptionEventSub;
 
     private readonly SpotifyModule spotifyModule;
     private readonly SoundAlertModule soundAlertModule;
@@ -37,8 +38,8 @@ internal class Bot : IDisposable
         this.TwitchBotUsername = twitchBotUsername;
         this.TwitchChannelUsername = twitchChannelUsername;
 
-        this.TwitchAPI = new ();
         this.twitchClient = new ();
+        this.twitchAPI = new ();
         this.CommandDictionary = new ();
 
         // Get location of bot data folder
@@ -54,7 +55,7 @@ internal class Bot : IDisposable
         dynamic twitchAppCredentials = Program.ParseJsonFile(twitchAppCredentialsFile);
         string clientID = twitchAppCredentials.client_id;
         string clientSecret = twitchAppCredentials.client_secret;
-        this.twitchAuthenticationManager = new (this, this.twitchClient, clientID, clientSecret);
+        this.twitchAuthenticationManager = new (this, this.twitchClient, this.twitchAPI, clientID, clientSecret);
 
         // Subscribe to TwitchClient events
         this.twitchClient.OnLog += this.Client_OnLog;
@@ -65,6 +66,10 @@ internal class Bot : IDisposable
 
         // Initialize Magick.NET
         MagickNET.Initialize();
+
+        // Subscribe to Twitch EventSub for Channel Point Redemption
+        this.channelPointRedemptionEventSub = new (this.twitchAPI);
+        this.EventSubWebsocketClient = this.channelPointRedemptionEventSub.EventSubWebsocketClient;
 
         // Instantiate modules
         this.spotifyModule = new (this, "SpotifyModule");
@@ -90,24 +95,15 @@ internal class Bot : IDisposable
         Task authenticationManagerInitializeTask = this.twitchAuthenticationManager.InitializeAsync();
         Task spotifyModuleInitializeTask = this.spotifyModule.InitializeAsync();
 
-        // Twitch API Authentication Required for EventSub
         await authenticationManagerInitializeTask;
+        await spotifyModuleInitializeTask;
+        await colorDictionaryTask;
 
-        // Subscribe to Twitch EventSub for Channel Point Redemption
         // Requires TwitchAPI to be initialized
-        ChannelPointRedemptionEventSub channelPointRedemptionEventSub = new (this);
-        this.EventSubWebsocketClient = channelPointRedemptionEventSub.EventSubWebsocketClient;
-
-        // Requires EventSubWebsocketClient to be initialized
-        this.soundAlertModule.Initialize();
-        this.textToSpeechModule.Initialize();
+        this.channelPointRedemptionEventSub.Start();
 
         // Requires TwitchClient to be initialized
         this.twitchClient.AddChatCommandIdentifier('!');
-
-        // Finish everything else before starting the bot
-        await spotifyModuleInitializeTask;
-        await colorDictionaryTask;
 
         // Start the bot
         this.twitchClient.Connect();

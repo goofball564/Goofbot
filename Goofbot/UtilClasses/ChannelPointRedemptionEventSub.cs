@@ -10,35 +10,42 @@ using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TwitchLib.EventSub.Websockets.Extensions;
+using TwitchLib.Api;
 
 internal class ChannelPointRedemptionEventSub
 {
     public readonly EventSubWebsocketClient EventSubWebsocketClient;
 
-    public ChannelPointRedemptionEventSub(Bot bot)
+    private readonly IHost app;
+
+    public ChannelPointRedemptionEventSub(TwitchAPI twitchAPI)
     {
-        ChannelPointRedemptionEventSubService service = new (bot);
+        ChannelPointRedemptionEventSubService service = new (twitchAPI);
         this.EventSubWebsocketClient = service.EventSubWebsocketClient;
 
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddTwitchLibEventSubWebsockets();
         builder.Services.AddSingleton<IHostedService>(provider => service);
-        var app = builder.Build();
-        app.Start();
+        this.app = builder.Build();
+    }
+
+    public void Start()
+    {
+        this.app.Start();
     }
 
     private class ChannelPointRedemptionEventSubService : IHostedService
     {
         public readonly EventSubWebsocketClient EventSubWebsocketClient = new ();
-        private readonly Bot bot;
+        private readonly TwitchAPI twitchAPI;
 
         // You need the UserID for the User/Channel you want to get Events from.
         // You can use await _api.Helix.Users.GetUsersAsync() for that.
         private const string UserId = "600829895";
 
-        public ChannelPointRedemptionEventSubService(Bot bot)
+        public ChannelPointRedemptionEventSubService(TwitchAPI twitchAPI)
         {
-            this.bot = bot;
+            this.twitchAPI = twitchAPI;
             this.EventSubWebsocketClient.WebsocketConnected += this.OnWebsocketConnected;
             this.EventSubWebsocketClient.WebsocketDisconnected += this.OnWebsocketDisconnected;
             this.EventSubWebsocketClient.WebsocketReconnected += this.OnWebsocketReconnected;
@@ -63,7 +70,7 @@ internal class ChannelPointRedemptionEventSub
             {
                 // subscribe to topics
                 var condition = new Dictionary<string, string> { { "broadcaster_user_id", UserId } };
-                await this.bot.TwitchAPI.Helix.EventSub.CreateEventSubSubscriptionAsync("channel.channel_points_custom_reward_redemption.add", "1", condition, EventSubTransportMethod.Websocket, this.EventSubWebsocketClient.SessionId);
+                await this.twitchAPI.Helix.EventSub.CreateEventSubSubscriptionAsync("channel.channel_points_custom_reward_redemption.add", "1", condition, EventSubTransportMethod.Websocket, this.EventSubWebsocketClient.SessionId);
             }
         }
 

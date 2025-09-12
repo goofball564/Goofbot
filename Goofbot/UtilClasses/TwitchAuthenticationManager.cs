@@ -8,6 +8,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Models;
 
@@ -28,16 +29,18 @@ internal class TwitchAuthenticationManager : IDisposable
 
     private readonly Bot bot;
     private readonly TwitchClient twitchClient;
+    private readonly TwitchAPI twitchAPI;
     private readonly string twitchClientID;
     private readonly string twitchClientSecret;
 
     private string twitchBotAccessToken;
     private string twitchChannelAccessToken;
 
-    public TwitchAuthenticationManager(Bot bot, TwitchClient twitchClient, string twitchClientID, string twitchClientSecret)
+    public TwitchAuthenticationManager(Bot bot, TwitchClient twitchClient, TwitchAPI twitchAPI, string twitchClientID, string twitchClientSecret)
     {
         this.bot = bot;
         this.twitchClient = twitchClient;
+        this.twitchAPI = twitchAPI;
         this.twitchClientID = twitchClientID;
         this.twitchClientSecret = twitchClientSecret;
     }
@@ -58,8 +61,8 @@ internal class TwitchAuthenticationManager : IDisposable
         this.twitchBotAccessToken = await botAccessTokenTask;
         this.twitchChannelAccessToken = await channelAccessTokenTask;
 
-        this.bot.TwitchAPI.Settings.ClientId = this.twitchClientID;
-        this.bot.TwitchAPI.Settings.AccessToken = this.twitchChannelAccessToken;
+        this.twitchAPI.Settings.ClientId = this.twitchClientID;
+        this.twitchAPI.Settings.AccessToken = this.twitchChannelAccessToken;
 
         var credentials = new ConnectionCredentials(this.bot.TwitchBotUsername, this.twitchBotAccessToken);
         this.twitchClient.Initialize(credentials, this.bot.TwitchChannelUsername);
