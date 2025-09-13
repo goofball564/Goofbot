@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 
 internal class ColorDictionary : IDisposable
@@ -99,18 +98,6 @@ internal class ColorDictionary : IDisposable
         }
     }
 
-    public struct ColorNameAndHexColorCode
-    {
-        public readonly string ColorName;
-        public readonly string HexColorCode;
-
-        public ColorNameAndHexColorCode(string colorName, string hexColorCode)
-        {
-            this.ColorName = colorName;
-            this.HexColorCode = hexColorCode;
-        }
-    }
-
     private static void GetHSV(string hexColorCode, out double hue, out double saturation, out double value)
     {
         Color color = ColorTranslator.FromHtml(hexColorCode);
@@ -150,6 +137,18 @@ internal class ColorDictionary : IDisposable
         if (!colorNamesString.Equals(string.Empty))
         {
             await File.WriteAllTextAsync(this.colorNamesFile, colorNamesString);
+        }
+    }
+
+    public struct ColorNameAndHexColorCode
+    {
+        public readonly string ColorName;
+        public readonly string HexColorCode;
+
+        public ColorNameAndHexColorCode(string colorName, string hexColorCode)
+        {
+            this.ColorName = colorName;
+            this.HexColorCode = hexColorCode;
         }
     }
 }
