@@ -83,23 +83,46 @@ internal class ColorDictionary : IDisposable
         }
     }
 
-    public bool TryGetHex(string colorName, out string hexColorCode)
+    public async Task<(bool, string)> TryGetHexColorCodeAsync(string colorName)
     {
-        return this.colorDictionary.TryGetValue(colorName.ToLowerInvariant(), out hexColorCode);
+        await this.semaphore.WaitAsync();
+        try
+        {
+            bool success = this.colorDictionary.TryGetValue(colorName.ToLowerInvariant(), out string hexColorCode);
+            return (success, hexColorCode);
+        }
+        finally
+        {
+            this.semaphore.Release();
+        }
     }
 
-    public string GetRandomName()
+    public async Task<ColorNameAndHexColorCode> GetRandomSaturatedColorAsync()
     {
-        int randomIndex = this.random.Next(0, this.colorNameList.Count);
-        return this.colorNameList[randomIndex];
+        await this.semaphore.WaitAsync();
+        try
+        {
+            int randomIndex = this.random.Next(0, this.saturatedColorNameList.Count);
+            string colorName = this.saturatedColorNameList[randomIndex];
+            string hexColorCode = this.colorDictionary[colorName.ToLowerInvariant()];
+            return new ColorNameAndHexColorCode(colorName, hexColorCode);
+        }
+        finally
+        {
+            this.semaphore.Release();
+        }
     }
 
-    public string GetRandomSaturatedName(out string hexColorCode)
+    public struct ColorNameAndHexColorCode
     {
-        int randomIndex = this.random.Next(0, this.saturatedColorNameList.Count);
-        string colorName = this.saturatedColorNameList[randomIndex];
-        this.TryGetHex(colorName, out hexColorCode);
-        return colorName;
+        public readonly string ColorName;
+        public readonly string HexColorCode;
+
+        public ColorNameAndHexColorCode(string colorName, string hexColorCode)
+        {
+            this.ColorName = colorName;
+            this.HexColorCode = hexColorCode;
+        }
     }
 
     private static void GetHSV(string hexColorCode, out double hue, out double saturation, out double value)

@@ -97,9 +97,11 @@ internal partial class BlueGuyModule : GoofbotModule
             }
             else if (commandArgs.Equals("random", StringComparison.OrdinalIgnoreCase))
             {
-                string colorName = this.bot.ColorDictionary.GetRandomSaturatedName(out string hexColorCode);
-
                 colorChanged = true;
+                var color = await this.bot.ColorDictionary.GetRandomSaturatedColorAsync();
+                string colorName = color.ColorName;
+                string hexColorCode = color.HexColorCode;
+
                 this.bot.SendMessage(string.Format(RandomColorString, colorName), isReversed);
 
                 this.lastColorCode = hexColorCode;
@@ -109,7 +111,7 @@ internal partial class BlueGuyModule : GoofbotModule
             }
             else
             {
-                if (this.bot.ColorDictionary.TryGetHex(commandArgs, out string hexColorCode))
+                if (await this.bot.ColorDictionary.TryGetHexColorCodeAsync(commandArgs) is (true, string hexColorCode))
                 {
                     colorChanged = !hexColorCode.Equals(this.lastColorCode, StringComparison.OrdinalIgnoreCase);
                     this.bot.SendMessage(colorChanged ? ColorChangeString : SameColorString, isReversed);
