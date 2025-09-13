@@ -1,5 +1,6 @@
 ﻿namespace Goofbot.Utils;
 
+using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -15,7 +16,7 @@ internal class ColorDictionary : IDisposable
     private readonly Random random = new ();
     private readonly string colorNamesFile;
     private readonly HttpClient httpClient = new ();
-    private readonly SemaphoreSlim semaphore = new (1, 1);
+    private readonly AsyncReaderWriterLock asyncReaderWriterLock = new ();
 
     private List<string> colorNameList;
     private Dictionary<string, string> colorDictionary;
@@ -31,7 +32,7 @@ internal class ColorDictionary : IDisposable
     public void Dispose()
     {
         this.httpClient.Dispose();
-        this.semaphore.Dispose();
+        this.asyncReaderWriterLock.Dispose();
     }
 
     public async Task InitializeAsync(bool forceRedownload = false)
@@ -41,8 +42,7 @@ internal class ColorDictionary : IDisposable
 
     public async Task RefreshAsync(bool forceRedownload = false)
     {
-        await this.semaphore.WaitAsync();
-        try
+        using (await this.asyncReaderWriterLock.WriteLockAsync())
         {
             this.colorNameList = [];
             this.colorDictionary = [];
@@ -77,39 +77,25 @@ internal class ColorDictionary : IDisposable
                 }
             });
         }
-        finally
-        {
-            this.semaphore.Release();
-        }
     }
 
     public async Task<(bool, string)> TryGetHexColorCodeAsync(string colorName)
     {
-        await this.semaphore.WaitAsync();
-        try
+        using (await this.asyncReaderWriterLock.ReadLockAsync())
         {
             bool success = this.colorDictionary.TryGetValue(colorName.ToLowerInvariant(), out string hexColorCode);
             return (success, hexColorCode);
-        }
-        finally
-        {
-            this.semaphore.Release();
         }
     }
 
     public async Task<ColorNameAndHexColorCode> GetRandomSaturatedColorAsync()
     {
-        await this.semaphore.WaitAsync();
-        try
+        using (await this.asyncReaderWriterLock.ReadLockAsync())
         {
             int randomIndex = this.random.Next(0, this.saturatedColorNameList.Count);
             string colorName = this.saturatedColorNameList[randomIndex];
             string hexColorCode = this.colorDictionary[colorName.ToLowerInvariant()];
             return new ColorNameAndHexColorCode(colorName, hexColorCode);
-        }
-        finally
-        {
-            this.semaphore.Release();
         }
     }
 
