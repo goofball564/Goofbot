@@ -37,11 +37,12 @@ internal class ChannelPointRedemptionEventSub
     private class ChannelPointRedemptionEventSubService : IHostedService
     {
         public readonly EventSubWebsocketClient EventSubWebsocketClient = new ();
-        private readonly TwitchAPI twitchAPI;
 
         // You need the UserID for the User/Channel you want to get Events from.
         // You can use await _api.Helix.Users.GetUsersAsync() for that.
         private const string UserId = "600829895";
+
+        private readonly TwitchAPI twitchAPI;
 
         public ChannelPointRedemptionEventSubService(TwitchAPI twitchAPI)
         {
@@ -87,14 +88,16 @@ internal class ChannelPointRedemptionEventSub
             }
         }
 
-        private async Task OnWebsocketReconnected(object sender, EventArgs e)
+        private Task OnWebsocketReconnected(object sender, EventArgs e)
         {
             Console.WriteLine($"Websocket {this.EventSubWebsocketClient.SessionId} reconnected");
+            return Task.Delay(0);
         }
 
-        private async Task OnErrorOccurred(object sender, ErrorOccuredArgs e)
+        private Task OnErrorOccurred(object sender, ErrorOccuredArgs e)
         {
             Console.WriteLine($"Websocket {this.EventSubWebsocketClient.SessionId} - Error occurred!");
+            return Task.Delay(0);
         }
     }
 }

@@ -246,7 +246,7 @@ internal class TextToSpeechModule : GoofbotModule
         await this.RunProcessThatGeneratesWavThenPlayWav(message, cancellationToken, this.decTalkExeFile, argumentList);
     }
 
-    private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)
+    private Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)
     {
         if (e.Notification.Payload.Event.Reward.Title.Equals("TTS"))
         {
@@ -255,6 +255,8 @@ internal class TextToSpeechModule : GoofbotModule
 
             this.ttsQueue.Add(new QueuedTTS(username, message, this.SpeakSAPI5));
         }
+
+        return Task.Delay(0);
     }
 
     private async Task RunProcessThatGeneratesWavThenPlayWav(string message, CancellationToken cancellationToken, string exeFile, string[] argumentList, bool useShellExecute = false, bool createNoWindow = false)
@@ -347,6 +349,4 @@ internal class QueuedTTS : IDisposable
     {
         this.CancellationTokenSource.Dispose();
     }
-
-
 }

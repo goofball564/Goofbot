@@ -10,7 +10,6 @@ internal abstract class GoofbotModule : IDisposable
     protected readonly Bot bot;
     protected readonly SqliteConnection sqliteConnection;
 
-
     private const string ModuleDatabaseFile = "data.db";
 
     protected GoofbotModule(Bot bot, string moduleDataFolder)

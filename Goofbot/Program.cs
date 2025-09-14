@@ -13,7 +13,7 @@ internal class Program
     public static async Task Main()
     {
         Bot bot = new (TwitchBotUsername, TwitchChannelUsername);
-        await bot.Start();
+        await bot.StartAsync();
 
         // Let the bot do its thing
         await Task.Delay(Timeout.Infinite);

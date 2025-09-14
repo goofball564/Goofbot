@@ -196,7 +196,6 @@ internal partial class BlueGuyModule : GoofbotModule
 
             if (invert)
             {
-
                 grayscaleImage.Negate(Channels.Blue);
                 grayscaleImage.Negate(Channels.Red);
                 grayscaleImage.Negate(Channels.Green);

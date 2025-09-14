@@ -61,8 +61,8 @@ public class WebServer : IDisposable
                 }
                 else
                 {
-                    writer.WriteLine("No code found in query string!");
-                    writer.Flush();
+                    await writer.WriteLineAsync("No code found in query string!");
+                    await writer.FlushAsync();
                 }
             }
         }

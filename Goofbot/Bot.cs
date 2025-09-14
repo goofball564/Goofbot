@@ -89,7 +89,7 @@ internal class Bot : IDisposable
 
     public EventSubWebsocketClient EventSubWebsocketClient { get; private set; }
 
-    public async Task Start()
+    public async Task StartAsync()
     {
         Task colorDictionaryTask = this.ColorDictionary.InitializeAsync();
         Task authenticationManagerInitializeTask = this.twitchAuthenticationManager.InitializeAsync();
