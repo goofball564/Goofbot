@@ -1,6 +1,7 @@
 ﻿namespace Goofbot.Modules;
 
 using Goofbot.UtilClasses;
+using Microsoft.VisualStudio.Threading;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
 using System;
@@ -87,8 +88,10 @@ internal class SpotifyModule : GoofbotModule
         private readonly string clientID;
         private readonly string clientSecret;
 
-        private readonly TimeSpan callAgainTimeout = TimeSpan.FromSeconds(6);
         private readonly SemaphoreSlim semaphore = new (1, 1);
+        private readonly AsyncManualResetEvent spotifyClientConnected = new (false, false);
+
+        private readonly TimeSpan callAgainTimeout = TimeSpan.FromSeconds(6);
         private DateTime timeOfLastCall = DateTime.MinValue;
 
         private EmbedIOAuthServer server;
@@ -117,6 +120,8 @@ internal class SpotifyModule : GoofbotModule
                 Scope = [Scopes.UserModifyPlaybackState, Scopes.UserReadPlaybackState, Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPrivate,],
             };
             BrowserUtil.Open(request.ToUri());
+
+            await this.spotifyClientConnected.WaitAsync();
         }
 
         public async Task<NameAndArtistNames> GetCurrentlyPlayingSongAndArtistsAsync()
@@ -219,6 +224,8 @@ internal class SpotifyModule : GoofbotModule
 
             var config = SpotifyClientConfig.CreateDefault().WithAuthenticator(new AuthorizationCodeAuthenticator(this.clientID, this.clientSecret, tokenResponse));
             this.spotify = new SpotifyClient(config);
+
+            this.spotifyClientConnected.Set();
         }
 
         private async Task OnErrorReceived(object sender, string error, string state)
