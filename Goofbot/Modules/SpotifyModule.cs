@@ -70,18 +70,28 @@ internal class SpotifyModule : GoofbotModule
         }
     }
 
-    private struct SongAndArtistNames
+    private readonly struct SongAndArtistNames
     {
-        public string SongName { get; set; }
+        public readonly string SongName;
+        public readonly List<string> ArtistNames;
 
-        public List<string> ArtistNames { get; set; }
+        public SongAndArtistNames(string songName, List<string> artistNames)
+        {
+            this.SongName = songName;
+            this.ArtistNames = artistNames;
+        }
     }
 
-    private struct AlbumAndArtistNames
+    private readonly struct AlbumAndArtistNames
     {
-        public string AlbumName { get; set; }
+        public readonly string AlbumName;
+        public readonly List<string> ArtistNames;
 
-        public List<string> ArtistNames { get; set; }
+        public AlbumAndArtistNames(string albumNames, List<string> artistNames)
+        {
+            this.AlbumName = albumNames;
+            this.ArtistNames = artistNames;
+        }
     }
 
     private class SpotifyAPI : IDisposable
@@ -151,7 +161,7 @@ internal class SpotifyModule : GoofbotModule
                 this.semaphore.Release();
             }
 
-            return new SongAndArtistNames { SongName = currentlyPlayingSongName, ArtistNames = currentlyPlayingArtistNames };
+            return new SongAndArtistNames(currentlyPlayingSongName, currentlyPlayingArtistNames);
         }
 
         public async Task<AlbumAndArtistNames> GetCurrentlyPlayingAlbumAndArtistsAsync()
@@ -185,7 +195,7 @@ internal class SpotifyModule : GoofbotModule
                 this.semaphore.Release();
             }
 
-            return new AlbumAndArtistNames { AlbumName = currentlyPlayingAlbumName, ArtistNames = currentlyPlayingArtistNames };
+            return new AlbumAndArtistNames(currentlyPlayingAlbumName, currentlyPlayingArtistNames);
         }
 
         public void Dispose()
