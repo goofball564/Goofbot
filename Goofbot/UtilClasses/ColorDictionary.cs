@@ -140,7 +140,7 @@ internal class ColorDictionary : IDisposable
         }
     }
 
-    public struct ColorNameAndHexColorCode
+    public readonly struct ColorNameAndHexColorCode
     {
         public readonly string ColorName;
         public readonly string HexColorCode;
