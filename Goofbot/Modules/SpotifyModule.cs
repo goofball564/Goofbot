@@ -1,6 +1,6 @@
 ﻿namespace Goofbot.Modules;
 
-using Goofbot.Utils;
+using Goofbot.UtilClasses;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
 using System;

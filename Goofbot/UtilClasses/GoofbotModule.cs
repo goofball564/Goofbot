@@ -1,4 +1,4 @@
-﻿namespace Goofbot.Utils;
+﻿namespace Goofbot.UtilClasses;
 
 using Microsoft.Data.Sqlite;
 using System;

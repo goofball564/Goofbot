@@ -1,6 +1,6 @@
 ﻿namespace Goofbot.Modules;
 
-using Goofbot.Utils;
+using Goofbot.UtilClasses;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

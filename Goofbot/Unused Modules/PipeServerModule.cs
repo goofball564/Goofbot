@@ -1,6 +1,6 @@
 ﻿namespace Goofbot.Modules;
 
-using Goofbot.Utils;
+using Goofbot.UtilClasses;
 using System;
 using System.IO.Pipes;
 using System.Text;

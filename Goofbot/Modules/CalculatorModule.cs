@@ -1,7 +1,7 @@
 ﻿namespace Goofbot.Modules;
 
 using AngouriMath;
-using Goofbot.Utils;
+using Goofbot.UtilClasses;
 using TwitchLib.Client.Events;
 
 internal class CalculatorModule : GoofbotModule

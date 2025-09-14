@@ -1,4 +1,4 @@
-﻿namespace Goofbot.Utils;
+﻿namespace Goofbot.UtilClasses;
 
 using System.Threading.Tasks;
 using CSCore.Codecs;

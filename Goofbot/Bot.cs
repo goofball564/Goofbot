@@ -1,7 +1,7 @@
 ﻿namespace Goofbot;
 
 using Goofbot.Modules;
-using Goofbot.Utils;
+using Goofbot.UtilClasses;
 using ImageMagick;
 using System;
 using System.IO;

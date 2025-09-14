@@ -1,6 +1,6 @@
 ﻿namespace Goofbot.Modules;
 
-using Goofbot.Utils;
+using Goofbot.UtilClasses;
 using System.IO;
 using System.Threading.Tasks;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
