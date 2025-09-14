@@ -42,8 +42,8 @@ internal class SpotifyModule : GoofbotModule
     private async Task SongCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string message = string.Empty;
-        SongAndArtistNames songAndArtistNames = await this.spotifyAPI.GetCurrentlyPlayingSongAndArtistsAsync();
-        string currentlyPlayingSongName = songAndArtistNames.SongName;
+        NameAndArtistNames songAndArtistNames = await this.spotifyAPI.GetCurrentlyPlayingSongAndArtistsAsync();
+        string currentlyPlayingSongName = songAndArtistNames.Name;
         string currentlyPlayingArtistNames = string.Join(", ", songAndArtistNames.ArtistNames);
         if (currentlyPlayingSongName.Equals(string.Empty) || currentlyPlayingArtistNames.Equals(string.Empty))
         {
@@ -57,8 +57,8 @@ internal class SpotifyModule : GoofbotModule
 
     private async Task AlbumCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        AlbumAndArtistNames currentlyPlayingAlbum = await this.spotifyAPI.GetCurrentlyPlayingAlbumAndArtistsAsync();
-        string currentlyPlayingAlbumName = currentlyPlayingAlbum.AlbumName;
+        NameAndArtistNames currentlyPlayingAlbum = await this.spotifyAPI.GetCurrentlyPlayingAlbumAndArtistsAsync();
+        string currentlyPlayingAlbumName = currentlyPlayingAlbum.Name;
         string currentlyPlayingArtistNames = string.Join(", ", currentlyPlayingAlbum.ArtistNames);
         if (currentlyPlayingAlbumName.Equals(string.Empty) || currentlyPlayingArtistNames.Equals(string.Empty))
         {
@@ -70,26 +70,14 @@ internal class SpotifyModule : GoofbotModule
         }
     }
 
-    private readonly struct SongAndArtistNames
+    private readonly struct NameAndArtistNames
     {
-        public readonly string SongName;
+        public readonly string Name;
         public readonly List<string> ArtistNames;
 
-        public SongAndArtistNames(string songName, List<string> artistNames)
+        public NameAndArtistNames(string songName, List<string> artistNames)
         {
-            this.SongName = songName;
-            this.ArtistNames = artistNames;
-        }
-    }
-
-    private readonly struct AlbumAndArtistNames
-    {
-        public readonly string AlbumName;
-        public readonly List<string> ArtistNames;
-
-        public AlbumAndArtistNames(string albumNames, List<string> artistNames)
-        {
-            this.AlbumName = albumNames;
+            this.Name = songName;
             this.ArtistNames = artistNames;
         }
     }
@@ -131,71 +119,14 @@ internal class SpotifyModule : GoofbotModule
             BrowserUtil.Open(request.ToUri());
         }
 
-        public async Task<SongAndArtistNames> GetCurrentlyPlayingSongAndArtistsAsync()
+        public async Task<NameAndArtistNames> GetCurrentlyPlayingSongAndArtistsAsync()
         {
-            string currentlyPlayingSongName = string.Empty;
-            List<string> currentlyPlayingArtistNames = [];
-
-            await this.semaphore.WaitAsync();
-            try
-            {
-                await this.RefreshCachedApiResponsesAsync();
-                var context = this.context;
-                var queue = this.queue;
-
-                List<SimpleArtist> currentlyPlayingArtists = [];
-                if (context != null && context.IsPlaying)
-                {
-                    var currentlyPlaying = GetCurrentlyPlaying(queue);
-                    currentlyPlayingSongName = currentlyPlaying?.Name;
-                    currentlyPlayingArtists = currentlyPlaying?.Artists;
-                }
-
-                foreach (var artist in currentlyPlayingArtists)
-                {
-                    currentlyPlayingArtistNames.Add(artist.Name);
-                }
-            }
-            finally
-            {
-                this.semaphore.Release();
-            }
-
-            return new SongAndArtistNames(currentlyPlayingSongName, currentlyPlayingArtistNames);
+            return await this.GetCurrentlyPlayingHelperAsync(false);
         }
 
-        public async Task<AlbumAndArtistNames> GetCurrentlyPlayingAlbumAndArtistsAsync()
+        public async Task<NameAndArtistNames> GetCurrentlyPlayingAlbumAndArtistsAsync()
         {
-            string currentlyPlayingAlbumName = string.Empty;
-            List<string> currentlyPlayingArtistNames = [];
-
-            await this.semaphore.WaitAsync();
-            try
-            {
-                await this.RefreshCachedApiResponsesAsync();
-
-                var context = this.context;
-                var queue = this.queue;
-
-                List<SimpleArtist> currentlyPlayingArtists = [];
-                if (context != null && context.IsPlaying)
-                {
-                    var currentlyPlaying = GetCurrentlyPlaying(queue);
-                    currentlyPlayingAlbumName = currentlyPlaying?.Album.Name;
-                    currentlyPlayingArtists = currentlyPlaying?.Album.Artists;
-                }
-
-                foreach (var artist in currentlyPlayingArtists)
-                {
-                    currentlyPlayingArtistNames.Add(artist.Name);
-                }
-            }
-            finally
-            {
-                this.semaphore.Release();
-            }
-
-            return new AlbumAndArtistNames(currentlyPlayingAlbumName, currentlyPlayingArtistNames);
+            return await this.GetCurrentlyPlayingHelperAsync(true);
         }
 
         public void Dispose()
@@ -219,6 +150,48 @@ internal class SpotifyModule : GoofbotModule
             {
                 return null;
             }
+        }
+
+        private async Task<NameAndArtistNames> GetCurrentlyPlayingHelperAsync(bool album = false)
+        {
+            string name = string.Empty;
+            List<string> artistNames = [];
+
+            await this.semaphore.WaitAsync();
+            try
+            {
+                await this.RefreshCachedApiResponsesAsync();
+
+                var context = this.context;
+                var queue = this.queue;
+
+                List<SimpleArtist> artists = [];
+                if (context != null && context.IsPlaying)
+                {
+                    var currentlyPlaying = GetCurrentlyPlaying(queue);
+                    if (album)
+                    {
+                        name = currentlyPlaying?.Album.Name;
+                        artists = currentlyPlaying?.Album.Artists;
+                    }
+                    else
+                    {
+                        name = currentlyPlaying?.Name;
+                        artists = currentlyPlaying?.Artists;
+                    }
+                }
+
+                foreach (var artist in artists)
+                {
+                    artistNames.Add(artist.Name);
+                }
+            }
+            finally
+            {
+                this.semaphore.Release();
+            }
+
+            return new NameAndArtistNames(name, artistNames);
         }
 
         private async Task RefreshCachedApiResponsesAsync()
