@@ -96,7 +96,7 @@ internal class TextToSpeechModule : GoofbotModule
         }
     }
 
-    public Task SamCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    public async Task SamCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string username = eventArgs.Command.ChatMessage.DisplayName;
 
@@ -110,11 +110,9 @@ internal class TextToSpeechModule : GoofbotModule
         {
             this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakSAPI5));
         }
-
-        return Task.Delay(0);
     }
 
-    public Task PaulCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    public async Task PaulCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string username = eventArgs.Command.ChatMessage.DisplayName;
 
@@ -128,11 +126,9 @@ internal class TextToSpeechModule : GoofbotModule
         {
             this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakDECTalk));
         }
-
-        return Task.Delay(0);
     }
 
-    public Task BonziCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    public async Task BonziCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string username = eventArgs.Command.ChatMessage.DisplayName;
 
@@ -146,11 +142,9 @@ internal class TextToSpeechModule : GoofbotModule
         {
             this.ttsQueue.Add(new QueuedTTS(username, commandArgs, this.SpeakSAPI4));
         }
-
-        return Task.Delay(0);
     }
 
-    public Task VoicesCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    public async Task VoicesCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         if (isReversed)
         {
@@ -160,11 +154,9 @@ internal class TextToSpeechModule : GoofbotModule
         {
             this.bot.SendMessage("!sam, !bonzi, !paul", isReversed);
         }
-
-        return Task.Delay(0);
     }
 
-    public Task CancelCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    public async Task CancelCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         switch (commandArgs)
         {
@@ -195,8 +187,6 @@ internal class TextToSpeechModule : GoofbotModule
 
                 break;
         }
-
-        return Task.Delay(0);
     }
 
     private static SpeechSynthesizer InitializeSpeechSynthesizer()
@@ -224,7 +214,7 @@ internal class TextToSpeechModule : GoofbotModule
         await Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        using (SemaphoreSlim semaphore = new (0, 2))
+        using (SemaphoreSlim semaphore = new (0))
         using (SpeechSynthesizer speechSynthesizer = InitializeSpeechSynthesizer())
         {
             speechSynthesizer.SpeakCompleted += (sender, e) => semaphore.Release();
@@ -246,7 +236,7 @@ internal class TextToSpeechModule : GoofbotModule
         await this.RunProcessThatGeneratesWavThenPlayWav(message, cancellationToken, this.decTalkExeFile, argumentList);
     }
 
-    private Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)
+    private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)
     {
         if (e.Notification.Payload.Event.Reward.Title.Equals("TTS"))
         {
@@ -255,8 +245,6 @@ internal class TextToSpeechModule : GoofbotModule
 
             this.ttsQueue.Add(new QueuedTTS(username, message, this.SpeakSAPI5));
         }
-
-        return Task.Delay(0);
     }
 
     private async Task RunProcessThatGeneratesWavThenPlayWav(string message, CancellationToken cancellationToken, string exeFile, string[] argumentList, bool useShellExecute = false, bool createNoWindow = false)
@@ -296,7 +284,7 @@ internal class TextToSpeechModule : GoofbotModule
             cancellationToken.ThrowIfCancellationRequested();
 
             // Play TTS from sound file, but stop if cancelled
-            using (SemaphoreSlim semaphore = new (0, 1))
+            using (SemaphoreSlim semaphore = new (0))
             using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4), cancellationToken: cancellationToken, playImmediately: false))
             {
                 // Wait for Disposal because SoundPlayer disposes itself when it finishes playing or it's cancelled
@@ -304,8 +292,6 @@ internal class TextToSpeechModule : GoofbotModule
                 soundPlayer.Play();
                 await semaphore.WaitAsync();
             }
-
-            TryDeleteFile(OutFile);
         });
     }
 }

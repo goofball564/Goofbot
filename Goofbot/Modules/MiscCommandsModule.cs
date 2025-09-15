@@ -71,7 +71,7 @@ internal class MiscCommandsModule : GoofbotModule
         this.bot.SendMessage($"...pation! @{username}", isReversed);
     }
 
-    public Task CommandsCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    public async Task CommandsCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         List<string> commandNames = [];
 
@@ -139,6 +139,5 @@ internal class MiscCommandsModule : GoofbotModule
         }
 
         this.bot.SendMessage(listOfCommands, isReversed);
-        return Task.Delay(0);
     }
 }

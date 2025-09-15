@@ -66,66 +66,6 @@ internal class SpotifyModule : GoofbotModule
         }
     }
 
-    public async void QueueModeCallback(object source, ElapsedEventArgs e)
-    {
-        ContextAndQueue contextAndQueue = await this.spotifyAPI.GetCurrentlyPlayingContextAndQueueAsync();
-        var context = contextAndQueue.Context;
-        var queue = contextAndQueue.Queue;
-
-        // if spotify is playing
-        if (context != null && context.IsPlaying)
-        {
-            // get what's currently playing, see if it's changed
-            // from the last time we checked
-            var currentlyPlaying = GetCurrentlyPlaying(queue);
-            string? currentlyPlayingId = currentlyPlaying?.Id;
-            if (currentlyPlayingId != null && currentlyPlayingId != this.currentlyPlayingID)
-            {
-                // IF now playing a different song than before...
-                // set currently playing song info
-                this.currentlyPlayingID = currentlyPlayingId;
-
-                // set these to false, meaning these actions are
-                // queued to happen (will be set to true when the action is taken
-                // so the action only happens once)
-                this.addedToQueue = false;
-                this.removedFromPlaylist = false;
-            }
-
-            // get remaining duration of current song, next song in queue
-            double? remainingDuration = GetRemainingDuration(queue, context);
-            var nextInQueue = GetNextInQueue(queue);
-            string? nextInQueueId = nextInQueue?.Id;
-
-            // if a certain duration remains in the current song
-            if (remainingDuration != null && remainingDuration < QueueModeRemainingDurationThreshold)
-            {
-                // get queue playlist
-                var playlist = await this.spotifyAPI.GetPlaylistAsync(QueueModePlaylistID);
-
-                // get first song in queue playlist
-                var firstInPlaylist = GetFirstInPlaylist(playlist);
-                string? firstInPlaylistID = firstInPlaylist?.Id;
-                string? firstInPlaylistUri = firstInPlaylist?.Uri;
-
-                if (!this.removedFromPlaylist && currentlyPlayingId != null && currentlyPlayingId == firstInPlaylistID)
-                {
-                    // if first song in queue playlist is currently playing, remove it from head of playlist
-                    // (do this only once until currently playing song changes)
-                    this.removedFromPlaylist = true;
-                    await this.spotifyAPI.RemoveFirstSongFromPlaylist(playlist);
-                }
-                else if (this.QueueMode && !this.addedToQueue && nextInQueueId != null && firstInPlaylistUri != null && nextInQueueId != firstInPlaylistID)
-                {
-                    // if first song in queue playlist is NOT currently playing, add first song in queue playlist to queue
-                    // (do this only once until currently playing song changes)
-                    this.addedToQueue = true;
-                    await this.spotifyAPI.AddSongToQueueAsync(firstInPlaylistUri);
-                }
-            }
-        }
-    }
-
     public async Task InitializeAsync()
     {
         await this.spotifyAPI.InitializeAsync();
@@ -246,6 +186,66 @@ internal class SpotifyModule : GoofbotModule
         this.bot.SendMessage(chatMessage, isReversed);
     }
 
+    private async void QueueModeCallback(object source, ElapsedEventArgs e)
+    {
+        ContextAndQueue contextAndQueue = await this.spotifyAPI.GetCurrentlyPlayingContextAndQueueAsync();
+        var context = contextAndQueue.Context;
+        var queue = contextAndQueue.Queue;
+
+        // if spotify is playing
+        if (context != null && context.IsPlaying)
+        {
+            // get what's currently playing, see if it's changed
+            // from the last time we checked
+            var currentlyPlaying = GetCurrentlyPlaying(queue);
+            string? currentlyPlayingID = currentlyPlaying?.Id;
+            if (currentlyPlayingID != null && currentlyPlayingID != this.currentlyPlayingID)
+            {
+                // IF now playing a different song than before...
+                // set currently playing song info
+                this.currentlyPlayingID = currentlyPlayingID;
+
+                // set these to false, meaning these actions are
+                // queued to happen (will be set to true when the action is taken
+                // so the action only happens once)
+                this.addedToQueue = false;
+                this.removedFromPlaylist = false;
+            }
+
+            // get remaining duration of current song, next song in queue
+            double? remainingDuration = GetRemainingDuration(queue, context);
+            var nextInQueue = GetNextInQueue(queue);
+            string? nextInQueueID = nextInQueue?.Id;
+
+            // if a certain duration remains in the current song
+            if (remainingDuration != null && remainingDuration < QueueModeRemainingDurationThreshold)
+            {
+                // get queue playlist
+                var playlist = await this.spotifyAPI.GetPlaylistAsync(QueueModePlaylistID);
+
+                // get first song in queue playlist
+                var firstInPlaylist = GetFirstInPlaylist(playlist);
+                string? firstInPlaylistID = firstInPlaylist?.Id;
+                string? firstInPlaylistURI = firstInPlaylist?.Uri;
+
+                if (!this.removedFromPlaylist && currentlyPlayingID != null && currentlyPlayingID == firstInPlaylistID)
+                {
+                    // if first song in queue playlist is currently playing, remove it from head of playlist
+                    // (do this only once until currently playing song changes)
+                    this.removedFromPlaylist = true;
+                    await this.spotifyAPI.RemoveFirstSongFromPlaylist(playlist);
+                }
+                else if (!this.addedToQueue && nextInQueueID != null && firstInPlaylistURI != null && nextInQueueID != firstInPlaylistID)
+                {
+                    // if first song in queue playlist is NOT currently playing, add first song in queue playlist to queue
+                    // (do this only once until currently playing song changes)
+                    this.addedToQueue = true;
+                    await this.spotifyAPI.AddSongToQueueAsync(firstInPlaylistURI);
+                }
+            }
+        }
+    }
+
     private readonly struct NameAndArtistNames
     {
         public readonly string Name;
@@ -358,9 +358,9 @@ internal class SpotifyModule : GoofbotModule
             await this.spotify.Playlists.RemoveItems(playlist.Id, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
         }
 
-        public async Task AddSongToQueueAsync(string songUri)
+        public async Task AddSongToQueueAsync(string songURI)
         {
-            await this.spotify.Player.AddToQueue(new PlayerAddToQueueRequest(songUri));
+            await this.spotify.Player.AddToQueue(new PlayerAddToQueueRequest(songURI));
         }
 
         public async Task<FullPlaylist> GetPlaylistAsync(string playlistID)
