@@ -9,11 +9,22 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using TwitchLib.Client.Events;
 
 internal class SpotifyModule : GoofbotModule
 {
+    private const double QueueModeRemainingDurationThreshold = 60;
+    private const string QueueModePlaylistID = "3du4cQHr1wlUagJ0UGf5sR";
+
+    private readonly System.Timers.Timer timer = new (TimeSpan.FromSeconds(20));
     private readonly SpotifyAPI spotifyAPI;
+    private bool queueModeBackingValue;
+
+    private bool removedFromPlaylist = false;
+    private bool addedToQueue = false;
+
+    private string? currentlyPlayingID;
 
     public SpotifyModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
@@ -25,8 +36,94 @@ internal class SpotifyModule : GoofbotModule
 
         this.spotifyAPI = new SpotifyAPI(clientID, clientSecret);
 
+        this.timer.AutoReset = true;
+        this.timer.Elapsed += this.QueueModeCallback;
+
         this.bot.CommandDictionary.TryAddCommand(new Command("song", this.SongCommand));
         this.bot.CommandDictionary.TryAddCommand(new Command("album", this.AlbumCommand));
+        this.bot.CommandDictionary.TryAddCommand(new Command("queuemode", this.QueueModeCommand, CommandAccessibilityModifier.StreamerOnly));
+    }
+
+    public bool QueueMode
+    {
+        get
+        {
+            return this.queueModeBackingValue;
+        }
+
+        set
+        {
+            if (value)
+            {
+                this.timer.Start();
+            }
+            else
+            {
+                this.timer.Stop();
+            }
+
+            this.queueModeBackingValue = value;
+        }
+    }
+
+    public async void QueueModeCallback(object source, ElapsedEventArgs e)
+    {
+        ContextAndQueue contextAndQueue = await this.spotifyAPI.GetCurrentlyPlayingContextAndQueueAsync();
+        var context = contextAndQueue.Context;
+        var queue = contextAndQueue.Queue;
+
+        // if spotify is playing
+        if (context != null && context.IsPlaying)
+        {
+            // get what's currently playing, see if it's changed
+            // from the last time we checked
+            var currentlyPlaying = GetCurrentlyPlaying(queue);
+            string? currentlyPlayingId = currentlyPlaying?.Id;
+            if (currentlyPlayingId != null && currentlyPlayingId != this.currentlyPlayingID)
+            {
+                // IF now playing a different song than before...
+                // set currently playing song info
+                this.currentlyPlayingID = currentlyPlayingId;
+
+                // set these to false, meaning these actions are
+                // queued to happen (will be set to true when the action is taken
+                // so the action only happens once)
+                this.addedToQueue = false;
+                this.removedFromPlaylist = false;
+            }
+
+            // get remaining duration of current song, next song in queue
+            double? remainingDuration = GetRemainingDuration(queue, context);
+            var nextInQueue = GetNextInQueue(queue);
+            string? nextInQueueId = nextInQueue?.Id;
+
+            // if a certain duration remains in the current song
+            if (remainingDuration != null && remainingDuration < QueueModeRemainingDurationThreshold)
+            {
+                // get queue playlist
+                var playlist = await this.spotifyAPI.GetPlaylistAsync(QueueModePlaylistID);
+
+                // get first song in queue playlist
+                var firstInPlaylist = GetFirstInPlaylist(playlist);
+                string? firstInPlaylistID = firstInPlaylist?.Id;
+                string? firstInPlaylistUri = firstInPlaylist?.Uri;
+
+                if (!this.removedFromPlaylist && currentlyPlayingId != null && currentlyPlayingId == firstInPlaylistID)
+                {
+                    // if first song in queue playlist is currently playing, remove it from head of playlist
+                    // (do this only once until currently playing song changes)
+                    this.removedFromPlaylist = true;
+                    await this.spotifyAPI.RemoveFirstSongFromPlaylist(playlist);
+                }
+                else if (this.QueueMode && !this.addedToQueue && nextInQueueId != null && firstInPlaylistUri != null && nextInQueueId != firstInPlaylistID)
+                {
+                    // if first song in queue playlist is NOT currently playing, add first song in queue playlist to queue
+                    // (do this only once until currently playing song changes)
+                    this.addedToQueue = true;
+                    await this.spotifyAPI.AddSongToQueueAsync(firstInPlaylistUri);
+                }
+            }
+        }
     }
 
     public async Task InitializeAsync()
@@ -38,6 +135,77 @@ internal class SpotifyModule : GoofbotModule
     {
         this.spotifyAPI.Dispose();
         base.Dispose();
+    }
+
+    private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
+    {
+        if (queue == null)
+        {
+            return null;
+        }
+
+        if (queue.CurrentlyPlaying is FullTrack track)
+        {
+            return track;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    private static double? GetRemainingDuration(QueueResponse? queue, CurrentlyPlayingContext? context)
+    {
+        if (queue == null || context == null)
+        {
+            return null;
+        }
+
+        if (queue.CurrentlyPlaying is FullTrack track)
+        {
+            int duration = track.DurationMs;
+            int remainingDuration = duration - context.ProgressMs;
+            return remainingDuration / 1000.0;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    private static FullTrack? GetNextInQueue(QueueResponse? queue)
+    {
+        if (queue == null)
+        {
+            return null;
+        }
+
+        if (queue.Queue[0] is FullTrack track)
+        {
+            return track;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    private static FullTrack? GetFirstInPlaylist(FullPlaylist? playlist)
+    {
+        if (playlist == null || playlist.Tracks == null || playlist.Tracks.Items == null)
+        {
+            return null;
+        }
+
+        var playableItem = playlist.Tracks.Items[0].Track;
+        if (playableItem is FullTrack track)
+        {
+            return track;
+        }
+        else
+        {
+            return null;
+        }
     }
 
     private async Task SongCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
@@ -71,6 +239,13 @@ internal class SpotifyModule : GoofbotModule
         }
     }
 
+    private async Task QueueModeCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        this.QueueMode = !this.QueueMode;
+        string chatMessage = this.QueueMode ? "Queue Mode has been enabled" : "Queue mode has been disabled";
+        this.bot.SendMessage(chatMessage, isReversed);
+    }
+
     private readonly struct NameAndArtistNames
     {
         public readonly string Name;
@@ -80,6 +255,18 @@ internal class SpotifyModule : GoofbotModule
         {
             this.Name = songName;
             this.ArtistNames = artistNames;
+        }
+    }
+
+    private readonly struct ContextAndQueue
+    {
+        public readonly CurrentlyPlayingContext Context;
+        public readonly QueueResponse Queue;
+
+        public ContextAndQueue(CurrentlyPlayingContext context, QueueResponse Queue)
+        {
+            this.Context = context;
+            this.Queue = Queue;
         }
     }
 
@@ -126,12 +313,59 @@ internal class SpotifyModule : GoofbotModule
 
         public async Task<NameAndArtistNames> GetCurrentlyPlayingSongAndArtistsAsync()
         {
-            return await this.GetCurrentlyPlayingHelperAsync(false);
+            await this.semaphore.WaitAsync();
+            try
+            {
+                return await this.GetCurrentlyPlayingHelperAsync(false);
+            }
+            finally
+            {
+                this.semaphore.Release();
+            }
         }
 
         public async Task<NameAndArtistNames> GetCurrentlyPlayingAlbumAndArtistsAsync()
         {
-            return await this.GetCurrentlyPlayingHelperAsync(true);
+            await this.semaphore.WaitAsync();
+            try
+            {
+                return await this.GetCurrentlyPlayingHelperAsync(true);
+            }
+            finally
+            {
+                this.semaphore.Release();
+            }
+        }
+
+        public async Task<ContextAndQueue> GetCurrentlyPlayingContextAndQueueAsync()
+        {
+            await this.semaphore.WaitAsync();
+            try
+            {
+                await this.RefreshCachedApiResponsesAsync();
+                return new ContextAndQueue(this.context, this.queue);
+            }
+            finally
+            {
+                this.semaphore.Release();
+            }
+        }
+
+        public async Task RemoveFirstSongFromPlaylist(FullPlaylist playlist)
+        {
+            IList<int>? indicesToRemove = [0,];
+            string? snapshotId = playlist.SnapshotId;
+            await this.spotify.Playlists.RemoveItems(playlist.Id, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
+        }
+
+        public async Task AddSongToQueueAsync(string songUri)
+        {
+            await this.spotify.Player.AddToQueue(new PlayerAddToQueueRequest(songUri));
+        }
+
+        public async Task<FullPlaylist> GetPlaylistAsync(string playlistID)
+        {
+            return await this.spotify.Playlists.Get(playlistID);
         }
 
         public void Dispose()
@@ -140,60 +374,35 @@ internal class SpotifyModule : GoofbotModule
             this.server.Dispose();
         }
 
-        private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
-        {
-            if (queue == null)
-            {
-                return null;
-            }
-
-            if (queue.CurrentlyPlaying is FullTrack track)
-            {
-                return track;
-            }
-            else
-            {
-                return null;
-            }
-        }
-
         private async Task<NameAndArtistNames> GetCurrentlyPlayingHelperAsync(bool album = false)
         {
             string name = string.Empty;
             List<string> artistNames = [];
 
-            await this.semaphore.WaitAsync();
-            try
+            await this.RefreshCachedApiResponsesAsync();
+
+            var context = this.context;
+            var queue = this.queue;
+
+            List<SimpleArtist> artists = [];
+            if (context != null && context.IsPlaying)
             {
-                await this.RefreshCachedApiResponsesAsync();
-
-                var context = this.context;
-                var queue = this.queue;
-
-                List<SimpleArtist> artists = [];
-                if (context != null && context.IsPlaying)
+                var currentlyPlaying = GetCurrentlyPlaying(queue);
+                if (album)
                 {
-                    var currentlyPlaying = GetCurrentlyPlaying(queue);
-                    if (album)
-                    {
-                        name = currentlyPlaying?.Album.Name;
-                        artists = currentlyPlaying?.Album.Artists;
-                    }
-                    else
-                    {
-                        name = currentlyPlaying?.Name;
-                        artists = currentlyPlaying?.Artists;
-                    }
+                    name = currentlyPlaying?.Album.Name;
+                    artists = currentlyPlaying?.Album.Artists;
                 }
-
-                foreach (var artist in artists)
+                else
                 {
-                    artistNames.Add(artist.Name);
+                    name = currentlyPlaying?.Name;
+                    artists = currentlyPlaying?.Artists;
                 }
             }
-            finally
+
+            foreach (var artist in artists)
             {
-                this.semaphore.Release();
+                artistNames.Add(artist.Name);
             }
 
             return new NameAndArtistNames(name, artistNames);
