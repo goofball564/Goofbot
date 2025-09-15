@@ -19,6 +19,47 @@ internal class MiscCommandsModule : GoofbotModule
     {
         this.bot.CommandDictionary.TryAddCommand(new ("antici", this.AnticiCommand, timeoutSeconds: 0));
         this.bot.CommandDictionary.TryAddCommand(new (CommandsCommandName, this.CommandsCommand));
+
+        this.bot.CommandDictionary.TryAddCommand(new ("lock", this.LockCommand, CommandAccessibilityModifier.StreamerOnly));
+        this.bot.CommandDictionary.TryAddCommand(new ("unlock", this.UnlockCommand, CommandAccessibilityModifier.StreamerOnly));
+    }
+
+    public async Task LockCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        if (this.bot.CommandDictionary.TryGetCommand(commandArgs, out Command command))
+        {
+            if (command.TryLock())
+            {
+                this.bot.SendMessage($"!{commandArgs} command has been locked!", isReversed);
+            }
+            else
+            {
+                this.bot.SendMessage($"!{commandArgs} can't be locked", isReversed);
+            }
+        }
+        else
+        {
+            this.bot.SendMessage($"!{commandArgs} doesn't exist", isReversed);
+        }
+    }
+
+    public async Task UnlockCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        if (this.bot.CommandDictionary.TryGetCommand(commandArgs, out Command command))
+        {
+            if (command.TryUnlock())
+            {
+                this.bot.SendMessage($"!{commandArgs} command has been unlocked!", isReversed);
+            }
+            else
+            {
+                this.bot.SendMessage($"!{commandArgs} can't be unlocked", isReversed);
+            }
+        }
+        else
+        {
+            this.bot.SendMessage($"!{commandArgs} doesn't exist", isReversed);
+        }
     }
 
     public async Task AnticiCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)

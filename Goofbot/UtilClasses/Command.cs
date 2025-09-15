@@ -32,13 +32,41 @@ internal class Command
         }
     }
 
+    public bool Unlocked { get; set; } = false;
+
+    public bool TryLock()
+    {
+        if (this.Unlocked && this.CommandAccessibilityModifier != CommandAccessibilityModifier.AllChatters)
+        {
+            this.Unlocked = false;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public bool TryUnlock()
+    {
+        if (!this.Unlocked && this.CommandAccessibilityModifier != CommandAccessibilityModifier.AllChatters)
+        {
+            this.Unlocked = true;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     public async Task ExecuteCommandAsync(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         if (this.CommandAccessibilityModifier == CommandAccessibilityModifier.StreamerOnly && !eventArgs.Command.ChatMessage.IsBroadcaster)
         {
             return;
         }
-        else if (this.CommandAccessibilityModifier == CommandAccessibilityModifier.SubOnly && !eventArgs.Command.ChatMessage.IsSubscriber)
+        else if (this.CommandAccessibilityModifier == CommandAccessibilityModifier.SubOnly && !eventArgs.Command.ChatMessage.IsSubscriber && !this.Unlocked)
         {
             return;
         }
