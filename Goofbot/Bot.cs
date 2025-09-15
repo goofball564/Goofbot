@@ -3,6 +3,7 @@
 using Goofbot.Modules;
 using Goofbot.UtilClasses;
 using ImageMagick;
+using Microsoft.Data.Sqlite;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -16,7 +17,10 @@ internal class Bot : IDisposable
     public readonly string TwitchBotUsername;
     public readonly string TwitchChannelUsername;
 
+    public readonly SqliteConnection SqliteConnection;
     public readonly CommandDictionary CommandDictionary;
+
+    private const string DatabaseFile = "data.db";
 
     private readonly string goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
@@ -79,6 +83,12 @@ internal class Bot : IDisposable
         this.emoteSoundModule = new (this, "EmoteSoundModule");
         this.blueGuyModule = new (this, "BlueGuyModule");
         this.textToSpeechModule = new (this, "TextToSpeechModule");
+
+        // Create connection to Sqlite database
+        SqliteConnectionStringBuilder connectionStringBuilder = [];
+        connectionStringBuilder.DataSource = Path.Join(this.StuffFolder, DatabaseFile);
+        this.SqliteConnection = new SqliteConnection(connectionStringBuilder.ConnectionString);
+        this.SqliteConnection.Open();
     }
 
     public event EventHandler<OnMessageReceivedArgs> MessageReceived;
@@ -131,6 +141,7 @@ internal class Bot : IDisposable
 
         this.twitchAuthenticationManager.Dispose();
         this.ColorDictionary.Dispose();
+        this.SqliteConnection.Dispose();
     }
 
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)

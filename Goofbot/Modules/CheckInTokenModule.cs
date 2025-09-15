@@ -36,14 +36,14 @@ internal class CheckInTokenModule : GoofbotModule
                 Users (UserID INTEGER PRIMARY KEY, 
                 UserName TEXT NOT NULL)
         ";
-        createTable.Connection = this.sqliteConnection;
+        createTable.Connection = this.bot.SqliteConnection;
         createTable.ExecuteReader();
     }
 
     private void InsertOrUpdateUser(string userID, string userName)
     {
         string insertCommandText = "INSERT INTO Users VALUES (@UserID, @UserName);";
-        var insertCommand = new SqliteCommand(insertCommandText, this.sqliteConnection);
+        var insertCommand = new SqliteCommand(insertCommandText, this.bot.SqliteConnection);
         insertCommand.Parameters.AddWithValue("@UserID", int.Parse(userID));
         insertCommand.Parameters.AddWithValue("@UserName", userName);
 
@@ -59,7 +59,7 @@ internal class CheckInTokenModule : GoofbotModule
                 SET UserName = @UserName
                 WHERE UserID = @UserID
         ";
-            var updateCommand = new SqliteCommand(updateCommandText, this.sqliteConnection);
+            var updateCommand = new SqliteCommand(updateCommandText, this.bot.SqliteConnection);
             updateCommand.Parameters.AddWithValue("@UserID", int.Parse(userID));
             updateCommand.Parameters.AddWithValue("@UserName", userName);
 
