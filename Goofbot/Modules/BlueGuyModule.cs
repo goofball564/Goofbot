@@ -30,6 +30,7 @@ internal partial class BlueGuyModule : GoofbotModule
     private readonly string blueGuyEyesFile;
     private readonly string speedGuyColorFile;
     private readonly string guysFolder;
+    private readonly string invertedGuysFolder;
 
     private readonly SemaphoreSlim semaphore = new (1, 1);
     private readonly System.Timers.Timer timer = new (TimeSpan.FromMinutes(20));
@@ -46,6 +47,9 @@ internal partial class BlueGuyModule : GoofbotModule
 
         this.guysFolder = Path.Join(this.moduleDataFolder, "Guys");
         Directory.CreateDirectory(this.guysFolder);
+
+        this.invertedGuysFolder = Path.Join(this.moduleDataFolder, "InvertedGuys");
+        Directory.CreateDirectory(this.invertedGuysFolder);
 
         this.bot.CommandDictionary.TryAddCommand(new Command("guy", this.GuyCommand));
 
@@ -107,7 +111,7 @@ internal partial class BlueGuyModule : GoofbotModule
                 this.lastColorCode = hexColorCode;
                 this.SetBlueGuyImage(hexColorCode, isReversed);
 
-                this.WriteCurrentBlueGuyImageToFile(colorName);
+                this.WriteCurrentBlueGuyImageToFile(colorName, isReversed);
             }
             else
             {
@@ -119,7 +123,7 @@ internal partial class BlueGuyModule : GoofbotModule
                     this.lastColorCode = hexColorCode;
                     this.SetBlueGuyImage(hexColorCode, isReversed);
 
-                    this.WriteCurrentBlueGuyImageToFile(commandArgs);
+                    this.WriteCurrentBlueGuyImageToFile(commandArgs, isReversed);
                 }
                 else
                 {
@@ -153,12 +157,13 @@ internal partial class BlueGuyModule : GoofbotModule
         await this.GuyCommand("random");
     }
 
-    private void WriteCurrentBlueGuyImageToFile(string colorName)
+    private void WriteCurrentBlueGuyImageToFile(string colorName, bool isReversed)
     {
         string colorFileName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colorName).Replace(" ", string.Empty) + "Guy.png";
+        string outputFolder = isReversed ? this.invertedGuysFolder : this.guysFolder;
         try
         {
-            File.Copy(OtherOutputFile, Path.Join(this.guysFolder, colorFileName), false);
+            File.Copy(OtherOutputFile, Path.Join(outputFolder, colorFileName), false);
         }
         catch (IOException e)
         {
