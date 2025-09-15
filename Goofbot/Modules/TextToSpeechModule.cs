@@ -249,50 +249,47 @@ internal class TextToSpeechModule : GoofbotModule
 
     private async Task RunProcessThatGeneratesWavThenPlayWav(string message, CancellationToken cancellationToken, string exeFile, string[] argumentList, bool useShellExecute = false, bool createNoWindow = false)
     {
-        await Task.Run(async () =>
+        // Cancel if cancellation requested before starting
+        cancellationToken.ThrowIfCancellationRequested();
+        Task delayTask = Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
+
+        TryDeleteFile(OutFile);
+
+        // Run EXE to generate TTS and output it to OutFile
+        using (var process = new Process
         {
-            // Cancel if cancellation requested before starting
-            cancellationToken.ThrowIfCancellationRequested();
-            Task delayTask = Task.Delay(DelayBeforeTTSInMilliseconds, cancellationToken);
-
-            TryDeleteFile(OutFile);
-
-            // Run EXE to generate TTS and output it to OutFile
-            using (var process = new Process
+            StartInfo =
+        {
+            FileName = exeFile,
+            UseShellExecute = useShellExecute,
+            CreateNoWindow = createNoWindow,
+            WorkingDirectory = Path.GetDirectoryName(exeFile),
+        },
+            EnableRaisingEvents = true,
+        })
+        {
+            foreach (string argument in argumentList)
             {
-                StartInfo =
-            {
-                FileName = exeFile,
-                UseShellExecute = useShellExecute,
-                CreateNoWindow = createNoWindow,
-                WorkingDirectory = Path.GetDirectoryName(exeFile),
-            },
-                EnableRaisingEvents = true,
-            })
-            {
-                foreach (string argument in argumentList)
-                {
-                    process.StartInfo.ArgumentList.Add(argument);
-                }
-
-                process.Start();
-                await process.WaitForExitAsync(cancellationToken);
+                process.StartInfo.ArgumentList.Add(argument);
             }
 
-            // Wait for a delay before starting to speak, but check if cancelled before speaking
-            await delayTask;
-            cancellationToken.ThrowIfCancellationRequested();
+            process.Start();
+            await process.WaitForExitAsync(cancellationToken);
+        }
 
-            // Play TTS from sound file, but stop if cancelled
-            using (SemaphoreSlim semaphore = new (0))
-            using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4), cancellationToken: cancellationToken, playImmediately: false))
-            {
-                // Wait for Disposal because SoundPlayer disposes itself when it finishes playing or it's cancelled
-                soundPlayer.Disposed += (sender, e) => semaphore.Release();
-                soundPlayer.Play();
-                await semaphore.WaitAsync();
-            }
-        });
+        // Wait for a delay before starting to speak, but check if cancelled before speaking
+        await delayTask;
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Play TTS from sound file, but stop if cancelled
+        using (SemaphoreSlim semaphore = new (0))
+        using (SoundPlayer soundPlayer = new (OutFile, volume: (float)(Volume / 171.4), cancellationToken: cancellationToken, playImmediately: false))
+        {
+            // Wait for Disposal because SoundPlayer disposes itself when it finishes playing or it's cancelled
+            soundPlayer.Disposed += (sender, e) => semaphore.Release();
+            soundPlayer.Play();
+            await semaphore.WaitAsync();
+        }
     }
 }
 
