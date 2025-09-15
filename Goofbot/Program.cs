@@ -7,16 +7,18 @@ using System.Threading.Tasks;
 
 internal class Program
 {
+    public static CancellationTokenSource CancellationTokenSource = new ();
+
     private const string TwitchBotUsername = "goofbotthebot";
     private const string TwitchChannelUsername = "goofballthecat";
 
     public static async Task Main()
     {
-        Bot bot = new (TwitchBotUsername, TwitchChannelUsername);
+        using Bot bot = new (TwitchBotUsername, TwitchChannelUsername);
         await bot.StartAsync();
 
         // Let the bot do its thing
-        await Task.Delay(Timeout.Infinite);
+        await Task.Delay(Timeout.Infinite, CancellationTokenSource.Token);
     }
 
     public static dynamic ParseJsonFile(string file)
