@@ -9,6 +9,8 @@ using TwitchLib.Client.Events;
 internal class MiscCommandsModule : GoofbotModule
 {
     private const string CommandsCommandName = "commands";
+    private const int AnticiCommandMinimumDelay = 10000;
+    private const int AnticiCommandDelayVariance = 50000;
 
     private readonly Random random = new ();
 
@@ -21,7 +23,7 @@ internal class MiscCommandsModule : GoofbotModule
 
     public async Task AnticiCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        int randomDelay = this.random.Next(50000) + 10000;
+        int randomDelay = this.random.Next(AnticiCommandDelayVariance) + AnticiCommandMinimumDelay;
         await Task.Delay(randomDelay);
 
         string username = eventArgs.Command.ChatMessage.DisplayName;
