@@ -214,17 +214,15 @@ internal class Bot : IDisposable
         using var sqliteConnection = this.OpenSqliteConnection();
         using var command = new SqliteCommand();
         command.Connection = sqliteConnection;
-        using (await this.SqliteReaderWriterLock.WriteLockAsync())
-        {
-            command.CommandText = "PRAGMA foreign_keys = ON;";
-            await command.ExecuteNonQueryAsync();
-            command.CommandText = "PRAGMA journal_mode = wal;";
-            await command.ExecuteNonQueryAsync();
-            command.CommandText =
-                @"CREATE TABLE IF NOT EXISTS TwitchUsers (
+        command.CommandText =
+            @"PRAGMA foreign_keys = ON;
+            PRAGMA journal_mode = wal;
+            CREATE TABLE IF NOT EXISTS TwitchUsers (
                     UserID INTEGER PRIMARY KEY,
                     UserName TEXT NOT NULL
                 );";
+        using (await this.SqliteReaderWriterLock.WriteLockAsync())
+        {
             await command.ExecuteNonQueryAsync();
         }
     }
