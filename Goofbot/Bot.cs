@@ -6,6 +6,7 @@ using ImageMagick;
 using Microsoft.Data.Sqlite;
 using Microsoft.VisualStudio.Threading;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using TwitchLib.Api;
@@ -98,17 +99,14 @@ internal class Bot : IDisposable
 
     public async Task StartAsync()
     {
-        Task colorDictionaryTask = this.ColorDictionary.InitializeAsync();
-        Task authenticationManagerInitializeTask = this.twitchAuthenticationManager.InitializeAsync();
-        Task spotifyModuleInitializeTask = this.spotifyModule.InitializeAsync();
-        Task initializeDatabaseTask = this.InitializeDatabaseAsync();
-        Task initialzeCheckInTokenModule = this.checkInTokenModule.InitializeAsync();
+        List<Task> tasks = [];
+        tasks.Add(this.ColorDictionary.InitializeAsync());
+        tasks.Add(this.twitchAuthenticationManager.InitializeAsync());
+        tasks.Add(this.spotifyModule.InitializeAsync());
+        tasks.Add(this.InitializeDatabaseAsync());
+        tasks.Add(this.checkInTokenModule.InitializeAsync());
 
-        await authenticationManagerInitializeTask;
-        await initializeDatabaseTask;
-        await initialzeCheckInTokenModule;
-        await spotifyModuleInitializeTask;
-        await colorDictionaryTask;
+        await Task.WhenAll(tasks);
 
         // Requires TwitchAPI to be initialized
         this.channelPointRedemptionEventSub.Start();
