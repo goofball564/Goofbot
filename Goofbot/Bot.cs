@@ -104,16 +104,19 @@ internal class Bot : IDisposable
         Task colorDictionaryTask = this.ColorDictionary.InitializeAsync();
         Task authenticationManagerInitializeTask = this.twitchAuthenticationManager.InitializeAsync();
         Task spotifyModuleInitializeTask = this.spotifyModule.InitializeAsync();
+        Task createTableTask = this.CreateTwitchUsersTableAsync();
 
         await authenticationManagerInitializeTask;
         await spotifyModuleInitializeTask;
-        await colorDictionaryTask;
 
         // Requires TwitchAPI to be initialized
         this.channelPointRedemptionEventSub.Start();
 
         // Requires TwitchClient to be initialized
         this.twitchClient.AddChatCommandIdentifier('!');
+
+        await colorDictionaryTask;
+        await createTableTask;
 
         // Start the bot
         this.twitchClient.Connect();
@@ -142,6 +145,16 @@ internal class Bot : IDisposable
         this.twitchAuthenticationManager.Dispose();
         this.ColorDictionary.Dispose();
         this.SqliteConnection.Dispose();
+    }
+
+    public async Task InsertOrUpdateTwitchUserAsync(string userID, string userName)
+    {
+        using var replaceCommand = new SqliteCommand();
+        replaceCommand.CommandText = "REPLACE INTO TwitchUsers VALUES (@UserID, @UserName);";
+        replaceCommand.Connection = this.SqliteConnection;
+        replaceCommand.Parameters.AddWithValue("@UserID", int.Parse(userID));
+        replaceCommand.Parameters.AddWithValue("@UserName", userName);
+        await replaceCommand.ExecuteNonQueryAsync();
     }
 
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
@@ -186,5 +199,17 @@ internal class Bot : IDisposable
 
     private void Client_OnIncorrectLogin(object sender, OnIncorrectLoginArgs e)
     {
+    }
+
+    private async Task CreateTwitchUsersTableAsync()
+    {
+        using var createTable = new SqliteCommand();
+        createTable.CommandText =
+                @"CREATE TABLE IF NOT EXISTS TwitchUsers (
+                    UserID INTEGER PRIMARY KEY,
+                    UserName TEXT NOT NULL
+                );";
+        createTable.Connection = this.SqliteConnection;
+        await createTable.ExecuteNonQueryAsync();
     }
 }
