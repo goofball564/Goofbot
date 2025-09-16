@@ -160,11 +160,10 @@ internal class Bot : IDisposable
     public async Task InsertOrUpdateTwitchUserAsync(string userID, string userName)
     {
         using var sqliteConnection = this.OpenSqliteConnection();
-        using var replaceCommand = new SqliteCommand();
+        using var replaceCommand = new SqliteCommand(null, sqliteConnection);
         replaceCommand.CommandText = "REPLACE INTO TwitchUsers VALUES (@UserID, @UserName);";
         replaceCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
         replaceCommand.Parameters.AddWithValue("@UserName", userName);
-        replaceCommand.Connection = sqliteConnection;
         using (await this.SqliteReaderWriterLock.WriteLockAsync())
         {
             await replaceCommand.ExecuteNonQueryAsync();
@@ -218,8 +217,7 @@ internal class Bot : IDisposable
     private async Task InitializeDatabaseAsync()
     {
         using var sqliteConnection = this.OpenSqliteConnection();
-        using var command = new SqliteCommand();
-        command.Connection = sqliteConnection;
+        using var command = new SqliteCommand(null, sqliteConnection);
         command.CommandText =
             @"PRAGMA journal_mode = wal;
             PRAGMA journal_mode = wal;

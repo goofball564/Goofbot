@@ -43,8 +43,7 @@ internal class CheckInTokenModule : GoofbotModule
     private async Task CreateTokenCountsTableAsync()
     {
         using var sqliteConnection = this.bot.OpenSqliteConnection();
-        using var createTableCommand = new SqliteCommand();
-        createTableCommand.Connection = sqliteConnection;
+        using var createTableCommand = new SqliteCommand(null, sqliteConnection);
         createTableCommand.CommandText =
             @"CREATE TABLE IF NOT EXISTS CheckInTokenModule_TokenCounts (
                 UserID INTEGER PRIMARY KEY,
@@ -65,19 +64,17 @@ internal class CheckInTokenModule : GoofbotModule
     {
         using var sqliteConnection = this.bot.OpenSqliteConnection();
 
-        using var updateCommand = new SqliteCommand();
+        using var updateCommand = new SqliteCommand(null, sqliteConnection);
         updateCommand.CommandText =
             @"INSERT INTO CheckInTokenModule_TokenCounts VALUES (@UserID, 1, unixepoch('now','subsec'))
                 ON CONFLICT(UserID) DO UPDATE SET TokenCount = TokenCount + 1;";
         updateCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-        updateCommand.Connection = sqliteConnection;
         using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
             await updateCommand.ExecuteNonQueryAsync();
         }
 
-        using var selectCommand = new SqliteCommand();
-        selectCommand.Connection = sqliteConnection;
+        using var selectCommand = new SqliteCommand(null, sqliteConnection);
         selectCommand.CommandText = "Select TokenCount FROM CheckInTokenModule_TokenCounts WHERE UserID = @UserID;";
         selectCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
 
