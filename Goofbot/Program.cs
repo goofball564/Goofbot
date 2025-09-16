@@ -18,7 +18,13 @@ internal class Program
         await bot.StartAsync();
 
         // Let the bot do its thing
-        await Task.Delay(Timeout.Infinite, CancellationTokenSource.Token);
+        try
+        {
+            await Task.Delay(Timeout.Infinite, CancellationTokenSource.Token);
+        }
+        catch
+        {
+        }
     }
 
     public static dynamic ParseJsonFile(string file)
