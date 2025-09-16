@@ -105,18 +105,16 @@ internal class Bot : IDisposable
         Task initialzeCheckInTokenModule = this.checkInTokenModule.InitializeAsync();
 
         await authenticationManagerInitializeTask;
+        await initializeDatabaseTask;
+        await initialzeCheckInTokenModule;
+        await spotifyModuleInitializeTask;
+        await colorDictionaryTask;
 
         // Requires TwitchAPI to be initialized
         this.channelPointRedemptionEventSub.Start();
 
         // Requires TwitchClient to be initialized
         this.twitchClient.AddChatCommandIdentifier('!');
-
-        await initializeDatabaseTask;
-        await initialzeCheckInTokenModule;
-        await spotifyModuleInitializeTask;
-
-        await colorDictionaryTask;
 
         // Start the bot
         this.twitchClient.Connect();
