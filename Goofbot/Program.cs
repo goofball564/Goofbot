@@ -12,7 +12,7 @@ internal class Program
 
     public static async Task Main()
     {
-        CancellationTokenSource cancellationTokenSource = new ();
+        using CancellationTokenSource cancellationTokenSource = new ();
         using Bot bot = new (TwitchBotUsername, TwitchChannelUsername, cancellationTokenSource);
         await bot.StartAsync();
 
