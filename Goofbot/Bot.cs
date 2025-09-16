@@ -4,6 +4,7 @@ using Goofbot.Modules;
 using Goofbot.UtilClasses;
 using ImageMagick;
 using Microsoft.Data.Sqlite;
+using Microsoft.VisualStudio.Threading;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -14,13 +15,13 @@ using TwitchLib.EventSub.Websockets;
 
 internal class Bot : IDisposable
 {
+    public const string DatabaseFile = "data.db";
+
     public readonly string TwitchBotUsername;
     public readonly string TwitchChannelUsername;
 
-    public readonly SqliteConnection SqliteConnection;
+    public readonly AsyncReaderWriterLock SqliteReaderWriterLock = new ();
     public readonly CommandDictionary CommandDictionary;
-
-    private const string DatabaseFile = "data.db";
 
     private readonly string goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
@@ -83,12 +84,6 @@ internal class Bot : IDisposable
         this.emoteSoundModule = new (this, "EmoteSoundModule");
         this.blueGuyModule = new (this, "BlueGuyModule");
         this.textToSpeechModule = new (this, "TextToSpeechModule");
-
-        // Create connection to Sqlite database
-        SqliteConnectionStringBuilder connectionStringBuilder = [];
-        connectionStringBuilder.DataSource = Path.Join(this.StuffFolder, DatabaseFile);
-        this.SqliteConnection = new SqliteConnection(connectionStringBuilder.ConnectionString);
-        this.SqliteConnection.Open();
     }
 
     public event EventHandler<OnMessageReceivedArgs> MessageReceived;
@@ -144,17 +139,30 @@ internal class Bot : IDisposable
 
         this.twitchAuthenticationManager.Dispose();
         this.ColorDictionary.Dispose();
-        this.SqliteConnection.Dispose();
+    }
+
+    public SqliteConnection OpenSqliteConnection()
+    {
+        // Create connection to Sqlite database
+        SqliteConnectionStringBuilder connectionStringBuilder = [];
+        connectionStringBuilder.DataSource = Path.Join(this.StuffFolder, DatabaseFile);
+        var sqliteConnection = new SqliteConnection(connectionStringBuilder.ConnectionString);
+        sqliteConnection.Open();
+        return sqliteConnection;
     }
 
     public async Task InsertOrUpdateTwitchUserAsync(string userID, string userName)
     {
+        using var sqliteConnection = this.OpenSqliteConnection();
         using var replaceCommand = new SqliteCommand();
         replaceCommand.CommandText = "REPLACE INTO TwitchUsers VALUES (@UserID, @UserName);";
-        replaceCommand.Connection = this.SqliteConnection;
         replaceCommand.Parameters.AddWithValue("@UserID", int.Parse(userID));
         replaceCommand.Parameters.AddWithValue("@UserName", userName);
-        await replaceCommand.ExecuteNonQueryAsync();
+        replaceCommand.Connection = sqliteConnection;
+        using (await this.SqliteReaderWriterLock.WriteLockAsync())
+        {
+            await replaceCommand.ExecuteNonQueryAsync();
+        }
     }
 
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
@@ -203,13 +211,17 @@ internal class Bot : IDisposable
 
     private async Task CreateTwitchUsersTableAsync()
     {
+        using var sqliteConnection = this.OpenSqliteConnection();
         using var createTable = new SqliteCommand();
         createTable.CommandText =
                 @"CREATE TABLE IF NOT EXISTS TwitchUsers (
                     UserID INTEGER PRIMARY KEY,
                     UserName TEXT NOT NULL
                 );";
-        createTable.Connection = this.SqliteConnection;
-        await createTable.ExecuteNonQueryAsync();
+        createTable.Connection = sqliteConnection;
+        using (await this.SqliteReaderWriterLock.WriteLockAsync())
+        {
+            await createTable.ExecuteNonQueryAsync();
+        }
     }
 }
