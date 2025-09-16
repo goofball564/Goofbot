@@ -90,9 +90,6 @@ internal class SoundPlayer : IDisposable
 
     private async void OnStopped(object sender, PlaybackStoppedEventArgs e)
     {
-        await Task.Run(() =>
-        {
-            this.Dispose();
-        });
+        await Task.Run(this.Dispose());
     }
 }
