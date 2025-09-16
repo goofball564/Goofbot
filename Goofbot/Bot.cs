@@ -156,7 +156,7 @@ internal class Bot : IDisposable
         using var sqliteConnection = this.OpenSqliteConnection();
         using var replaceCommand = new SqliteCommand();
         replaceCommand.CommandText = "REPLACE INTO TwitchUsers VALUES (@UserID, @UserName);";
-        replaceCommand.Parameters.AddWithValue("@UserID", int.Parse(userID));
+        replaceCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
         replaceCommand.Parameters.AddWithValue("@UserName", userName);
         replaceCommand.Connection = sqliteConnection;
         using (await this.SqliteReaderWriterLock.WriteLockAsync())
