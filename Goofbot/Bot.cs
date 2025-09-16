@@ -99,7 +99,7 @@ internal class Bot : IDisposable
         Task colorDictionaryTask = this.ColorDictionary.InitializeAsync();
         Task authenticationManagerInitializeTask = this.twitchAuthenticationManager.InitializeAsync();
         Task spotifyModuleInitializeTask = this.spotifyModule.InitializeAsync();
-        Task initializeDatabaseTask = this.InitializeDatabaseAsync();
+        Task createTableTask = this.InitializeDatabaseAsync();
 
         await authenticationManagerInitializeTask;
         await spotifyModuleInitializeTask;
@@ -111,7 +111,7 @@ internal class Bot : IDisposable
         this.twitchClient.AddChatCommandIdentifier('!');
 
         await colorDictionaryTask;
-        await initializeDatabaseTask;
+        await createTableTask;
 
         // Start the bot
         this.twitchClient.Connect();
