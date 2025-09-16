@@ -2,6 +2,7 @@
 
 using Goofbot.UtilClasses;
 using Microsoft.Data.Sqlite;
+using System;
 using System.Threading.Tasks;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 
@@ -40,18 +41,33 @@ internal class CheckInTokenModule : GoofbotModule
         }
     }
 
-    private async Task IncrementTokens(string userID)
+    private async Task<long> IncrementTokensAsync(string userID)
     {
         using var sqliteConnection = this.bot.OpenSqliteConnection();
+
         using var updateCommand = new SqliteCommand();
         updateCommand.CommandText =
             @"INSERT INTO CheckInTokenModule_TokenCounts VALUES (@UserID, 1, unixepoch('now','subsec')) 
             ON CONFLICT(UserID) DO UPDATE SET TokenCount = TokenCount + 1;";
-        updateCommand.Parameters.AddWithValue("@UserID", int.Parse(userID));
+        updateCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
         updateCommand.Connection = sqliteConnection;
+
         using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
-            await updateCommand.ExecuteReaderAsync();
+            await updateCommand.ExecuteNonQueryAsync();
         }
+
+        using var selectCommand = new SqliteCommand();
+        selectCommand.Connection = sqliteConnection;
+        selectCommand.CommandText = "Select TokenCount FROM TokenCounts WHERE UserID = @UserID;";
+        selectCommand.Parameters.AddWithValue("@UserID", userID);
+
+        long result;
+        using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
+        {
+            result = Convert.ToInt64(await selectCommand.ExecuteScalarAsync());
+        }
+
+        return result;
     }
 }
