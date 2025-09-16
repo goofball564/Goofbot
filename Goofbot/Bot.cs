@@ -99,7 +99,7 @@ internal class Bot : IDisposable
         Task colorDictionaryTask = this.ColorDictionary.InitializeAsync();
         Task authenticationManagerInitializeTask = this.twitchAuthenticationManager.InitializeAsync();
         Task spotifyModuleInitializeTask = this.spotifyModule.InitializeAsync();
-        Task createTableTask = this.CreateTwitchUsersTableAsync();
+        Task initializeDatabaseTask = this.InitializeDatabaseAsync();
 
         await authenticationManagerInitializeTask;
         await spotifyModuleInitializeTask;
@@ -111,7 +111,7 @@ internal class Bot : IDisposable
         this.twitchClient.AddChatCommandIdentifier('!');
 
         await colorDictionaryTask;
-        await createTableTask;
+        await initializeDatabaseTask;
 
         // Start the bot
         this.twitchClient.Connect();
@@ -209,19 +209,23 @@ internal class Bot : IDisposable
     {
     }
 
-    private async Task CreateTwitchUsersTableAsync()
+    private async Task InitializeDatabaseAsync()
     {
         using var sqliteConnection = this.OpenSqliteConnection();
-        using var createTable = new SqliteCommand();
-        createTable.CommandText =
+        using var command = new SqliteCommand();
+        command.Connection = sqliteConnection;
+        using (await this.SqliteReaderWriterLock.WriteLockAsync())
+        {
+            command.CommandText = "PRAGMA foreign_keys = ON;";
+            await command.ExecuteNonQueryAsync();
+            command.CommandText = "PRAGMA journal_mode = wal;";
+            await command.ExecuteNonQueryAsync();
+            command.CommandText =
                 @"CREATE TABLE IF NOT EXISTS TwitchUsers (
                     UserID INTEGER PRIMARY KEY,
                     UserName TEXT NOT NULL
                 );";
-        createTable.Connection = sqliteConnection;
-        using (await this.SqliteReaderWriterLock.WriteLockAsync())
-        {
-            await createTable.ExecuteNonQueryAsync();
+            await command.ExecuteNonQueryAsync();
         }
     }
 }
