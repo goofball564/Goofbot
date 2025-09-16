@@ -37,6 +37,7 @@ internal class Bot : IDisposable
     private readonly EmoteSoundModule emoteSoundModule;
     private readonly BlueGuyModule blueGuyModule;
     private readonly TextToSpeechModule textToSpeechModule;
+    private readonly CheckInTokenModule checkInTokenModule;
 
     public Bot(string twitchBotUsername, string twitchChannelUsername)
     {
@@ -84,6 +85,7 @@ internal class Bot : IDisposable
         this.emoteSoundModule = new (this, "EmoteSoundModule");
         this.blueGuyModule = new (this, "BlueGuyModule");
         this.textToSpeechModule = new (this, "TextToSpeechModule");
+        this.checkInTokenModule = new (this, "CheckInTokenModule");
     }
 
     public event EventHandler<OnMessageReceivedArgs> MessageReceived;
@@ -99,7 +101,8 @@ internal class Bot : IDisposable
         Task colorDictionaryTask = this.ColorDictionary.InitializeAsync();
         Task authenticationManagerInitializeTask = this.twitchAuthenticationManager.InitializeAsync();
         Task spotifyModuleInitializeTask = this.spotifyModule.InitializeAsync();
-        Task createTableTask = this.InitializeDatabaseAsync();
+        Task initializeDatabaseTask = this.InitializeDatabaseAsync();
+        Task initialzeCheckinModule = this.checkInTokenModule.InitializeAsync();
 
         await authenticationManagerInitializeTask;
         await spotifyModuleInitializeTask;
@@ -110,8 +113,10 @@ internal class Bot : IDisposable
         // Requires TwitchClient to be initialized
         this.twitchClient.AddChatCommandIdentifier('!');
 
+        await initializeDatabaseTask;
+        await initialzeCheckinModule;
+
         await colorDictionaryTask;
-        await createTableTask;
 
         // Start the bot
         this.twitchClient.Connect();
@@ -136,6 +141,7 @@ internal class Bot : IDisposable
         this.emoteSoundModule.Dispose();
         this.blueGuyModule.Dispose();
         this.textToSpeechModule.Dispose();
+        this.checkInTokenModule.Dispose();
 
         this.twitchAuthenticationManager.Dispose();
         this.ColorDictionary.Dispose();
@@ -215,12 +221,12 @@ internal class Bot : IDisposable
         using var command = new SqliteCommand();
         command.Connection = sqliteConnection;
         command.CommandText =
-            @"PRAGMA foreign_keys = ON;
+            @"PRAGMA journal_mode = wal;
             PRAGMA journal_mode = wal;
             CREATE TABLE IF NOT EXISTS TwitchUsers (
-                    UserID INTEGER PRIMARY KEY,
-                    UserName TEXT NOT NULL
-                );";
+                UserID INTEGER PRIMARY KEY,
+                UserName TEXT NOT NULL
+            );";
         using (await this.SqliteReaderWriterLock.WriteLockAsync())
         {
             await command.ExecuteNonQueryAsync();
