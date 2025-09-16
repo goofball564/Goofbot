@@ -7,20 +7,19 @@ using System.Threading.Tasks;
 
 internal class Program
 {
-    public static CancellationTokenSource CancellationTokenSource = new ();
-
     private const string TwitchBotUsername = "goofbotthebot";
     private const string TwitchChannelUsername = "goofballthecat";
 
     public static async Task Main()
     {
-        using Bot bot = new (TwitchBotUsername, TwitchChannelUsername);
+        CancellationTokenSource cancellationTokenSource = new ();
+        using Bot bot = new (TwitchBotUsername, TwitchChannelUsername, cancellationTokenSource);
         await bot.StartAsync();
 
         // Let the bot do its thing
         try
         {
-            await Task.Delay(Timeout.Infinite, CancellationTokenSource.Token);
+            await Task.Delay(Timeout.Infinite, cancellationTokenSource.Token);
         }
         catch
         {

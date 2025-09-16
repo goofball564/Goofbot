@@ -22,13 +22,6 @@ internal class MiscCommandsModule : GoofbotModule
 
         this.bot.CommandDictionary.TryAddCommand(new ("lock", this.LockCommand, CommandAccessibilityModifier.StreamerOnly));
         this.bot.CommandDictionary.TryAddCommand(new ("unlock", this.UnlockCommand, CommandAccessibilityModifier.StreamerOnly));
-        this.bot.CommandDictionary.TryAddCommand(new ("shutdown", this.ShutdownCommand, CommandAccessibilityModifier.StreamerOnly));
-    }
-
-    public async Task ShutdownCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
-    {
-        this.bot.SendMessage("Shutting down now MrDestructoid", isReversed);
-        await Program.CancellationTokenSource.CancelAsync();
     }
 
     public async Task LockCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)

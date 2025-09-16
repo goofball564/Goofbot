@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Client;
@@ -26,6 +27,8 @@ internal class Bot : IDisposable
 
     private readonly string goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
+    private readonly CancellationTokenSource cancellationTokenSource;
+
     private readonly TwitchClient twitchClient = new ();
     private readonly TwitchAPI twitchAPI = new ();
     private readonly TwitchAuthenticationManager twitchAuthenticationManager;
@@ -40,10 +43,11 @@ internal class Bot : IDisposable
     private readonly TextToSpeechModule textToSpeechModule;
     private readonly CheckInTokenModule checkInTokenModule;
 
-    public Bot(string twitchBotUsername, string twitchChannelUsername)
+    public Bot(string twitchBotUsername, string twitchChannelUsername, CancellationTokenSource cancellationTokenSource)
     {
         this.TwitchBotUsername = twitchBotUsername;
         this.TwitchChannelUsername = twitchChannelUsername;
+        this.cancellationTokenSource = cancellationTokenSource;
 
         // Get location of bot data folder
         string stuffLocationFile = Path.Join(this.goofbotAppDataFolder, "stufflocation.txt");
@@ -83,6 +87,8 @@ internal class Bot : IDisposable
         this.blueGuyModule = new (this, "BlueGuyModule");
         this.textToSpeechModule = new (this, "TextToSpeechModule");
         this.checkInTokenModule = new (this, "CheckInTokenModule");
+
+        this.CommandDictionary.TryAddCommand(new ("shutdown", this.ShutdownCommand, CommandAccessibilityModifier.StreamerOnly));
     }
 
     public event EventHandler<OnMessageReceivedArgs> MessageReceived;
@@ -204,6 +210,12 @@ internal class Bot : IDisposable
 
     private void Client_OnIncorrectLogin(object sender, OnIncorrectLoginArgs e)
     {
+    }
+
+    public async Task ShutdownCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        this.SendMessage("Shutting down now MrDestructoid", isReversed);
+        await this.cancellationTokenSource.CancelAsync();
     }
 
     private async Task InitializeDatabaseAsync()
