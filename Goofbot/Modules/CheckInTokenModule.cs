@@ -53,7 +53,8 @@ internal class CheckInTokenModule : GoofbotModule
                 FOREIGN KEY(UserID) REFERENCES TwitchUsers(UserID)
             );
 
-            CREATE INDEX IF NOT EXISTS CheckInTokenModule_TokenCountsIdx1 ON CheckInTokenModule_TokenCounts (TokenCount DESC, LastUpdateTimestamp ASC);";
+            CREATE INDEX IF NOT EXISTS CheckInTokenModule_TokenCountsIdx1
+                ON CheckInTokenModule_TokenCounts (TokenCount DESC, LastUpdateTimestamp ASC);";
         using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
             await createTableCommand.ExecuteNonQueryAsync();
@@ -66,7 +67,8 @@ internal class CheckInTokenModule : GoofbotModule
 
         using var updateCommand = new SqliteCommand();
         updateCommand.CommandText =
-            @"INSERT INTO CheckInTokenModule_TokenCounts VALUES (@UserID, 1, unixepoch('now','subsec')) ON CONFLICT(UserID) DO UPDATE SET TokenCount = TokenCount + 1;";
+            @"INSERT INTO CheckInTokenModule_TokenCounts VALUES (@UserID, 1, unixepoch('now','subsec'))
+                ON CONFLICT(UserID) DO UPDATE SET TokenCount = TokenCount + 1;";
         updateCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
         updateCommand.Connection = sqliteConnection;
         using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
