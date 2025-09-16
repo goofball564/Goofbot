@@ -22,12 +22,12 @@ internal class Bot : IDisposable
     public readonly string TwitchChannelUsername;
 
     public readonly AsyncReaderWriterLock SqliteReaderWriterLock = new ();
-    public readonly CommandDictionary CommandDictionary;
+    public readonly CommandDictionary CommandDictionary = new ();
 
     private readonly string goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
-    private readonly TwitchClient twitchClient;
-    private readonly TwitchAPI twitchAPI;
+    private readonly TwitchClient twitchClient = new ();
+    private readonly TwitchAPI twitchAPI = new ();
     private readonly TwitchAuthenticationManager twitchAuthenticationManager;
     private readonly ChannelPointRedemptionEventSub channelPointRedemptionEventSub;
 
@@ -44,10 +44,6 @@ internal class Bot : IDisposable
     {
         this.TwitchBotUsername = twitchBotUsername;
         this.TwitchChannelUsername = twitchChannelUsername;
-
-        this.twitchClient = new ();
-        this.twitchAPI = new ();
-        this.CommandDictionary = new ();
 
         // Get location of bot data folder
         string stuffLocationFile = Path.Join(this.goofbotAppDataFolder, "stufflocation.txt");
