@@ -20,7 +20,6 @@ using System.Threading.Tasks;
 // type of bet
 // amount
 // who placed it
-
 internal class GoofsinoModule
 {
 }
