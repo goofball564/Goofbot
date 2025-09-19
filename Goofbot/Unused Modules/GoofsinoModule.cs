@@ -1,11 +1,4 @@
 ﻿namespace Goofbot.Modules;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 // Goofsino
 // Has game(s)
 // Users can join game(s)

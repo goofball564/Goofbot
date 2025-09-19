@@ -2,10 +2,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 
 internal class DeckOfCards
 {
@@ -48,6 +45,14 @@ internal class DeckOfCards
         King,
     }
 
+    public int Count
+    {
+        get
+        {
+            return this.cards.Count;
+        }
+    }
+
     public void ShuffleDeck()
     {
         this.currentIndex = 0;
@@ -72,9 +77,19 @@ internal class DeckOfCards
         }
     }
 
+    public Card Peek(int index)
+    {
+        return this.cards[index];
+    }
+
     public readonly struct Card(CardSuit suit, CardRank rank)
     {
         public readonly CardSuit Suit = suit;
         public readonly CardRank Rank = rank;
+
+        public override string ToString()
+        {
+            return $"{Enum.GetName(this.Rank)} of {Enum.GetName(this.Suit)}";
+        }
     }
 }

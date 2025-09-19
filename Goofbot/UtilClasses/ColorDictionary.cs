@@ -6,13 +6,13 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 internal class ColorDictionary : IDisposable
 {
     public const string ColorNamesRequestUrl = "https://api.color.pizza/v1/";
 
-    private readonly Random random = new ();
     private readonly string colorNamesFile;
     private readonly HttpClient httpClient = new ();
     private readonly AsyncReaderWriterLock asyncReaderWriterLock = new ();
@@ -87,11 +87,22 @@ internal class ColorDictionary : IDisposable
         }
     }
 
+    public async Task<ColorNameAndHexColorCode> GetRandomColorAsync()
+    {
+        using (await this.asyncReaderWriterLock.ReadLockAsync())
+        {
+            int randomIndex = RandomNumberGenerator.GetInt32(this.colorNameList.Count);
+            string colorName = this.colorNameList[randomIndex];
+            string hexColorCode = this.colorDictionary[colorName.ToLowerInvariant()];
+            return new ColorNameAndHexColorCode(colorName, hexColorCode);
+        }
+    }
+
     public async Task<ColorNameAndHexColorCode> GetRandomSaturatedColorAsync()
     {
         using (await this.asyncReaderWriterLock.ReadLockAsync())
         {
-            int randomIndex = this.random.Next(0, this.saturatedColorNameList.Count);
+            int randomIndex = RandomNumberGenerator.GetInt32(this.saturatedColorNameList.Count);
             string colorName = this.saturatedColorNameList[randomIndex];
             string hexColorCode = this.colorDictionary[colorName.ToLowerInvariant()];
             return new ColorNameAndHexColorCode(colorName, hexColorCode);
