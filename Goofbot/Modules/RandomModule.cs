@@ -9,13 +9,15 @@ using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 using static Goofbot.UtilClasses.ColorDictionary;
 using static Goofbot.UtilClasses.DeckOfCards;
+using static Goofbot.UtilClasses.DeckOfTarotCards;
 
 internal partial class RandomModule : GoofbotModule
 {
     private readonly List<string> listOfDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     private readonly List<string> listOfMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-    private DeckOfCards cards = new ();
+    private readonly DeckOfCards cards = new ();
+    private readonly DeckOfTarotCards tarotCards = new ();
 
     public RandomModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
@@ -41,6 +43,9 @@ internal partial class RandomModule : GoofbotModule
                 this.bot.SendMessage($"{card} @{displayName}", isReversed);
                 break;
             case "tarot":
+                index = RandomNumberGenerator.GetInt32(this.tarotCards.Count);
+                TarotCard tarotCard = this.tarotCards.Peek(index);
+                this.bot.SendMessage($"{tarotCard} @{displayName}", isReversed);
                 break;
             case "tarot card":
                 goto case "tarot";
@@ -56,6 +61,8 @@ internal partial class RandomModule : GoofbotModule
                 ColorNameAndHexColorCode color = await this.bot.ColorDictionary.GetRandomColorAsync();
                 this.bot.SendMessage($"{color.ColorName} - {color.HexColorCode} @{displayName}", isReversed);
                 break;
+            case "colour":
+                goto case "color";
             default:
                 break;
         }
@@ -74,6 +81,7 @@ internal partial class RandomModule : GoofbotModule
                 this.bot.SendMessage("(╯°□°)╯︵ ┻━┻", isReversed);
                 break;
             default:
+                this.bot.SendMessage("🤸", isReversed);
                 break;
         }
     }
@@ -91,7 +99,7 @@ internal partial class RandomModule : GoofbotModule
                     roll = RandomNumberGenerator.GetInt32(dieFaces) + 1;
                     this.bot.SendMessage($"You rolled {roll} @{displayName}", isReversed);
                 }
-                catch (OverflowException e)
+                catch (OverflowException)
                 {
                     this.bot.SendMessage("This die has too many faces for poor Goofbot to comprehend :(", isReversed);
                 }
@@ -106,11 +114,13 @@ internal partial class RandomModule : GoofbotModule
                 int roll2 = RandomNumberGenerator.GetInt32(6) + 1;
                 this.bot.SendMessage($"You rolled {roll1} and {roll2} @{displayName}", isReversed);
                 break;
-            case "blunt":
-                break;
             case "joint":
+                this.bot.SendMessage("widepeepoHigh", isReversed);
                 break;
+            case "blunt":
+                goto case "joint";
             default:
+                this.bot.SendMessage("BIGCAT", isReversed);
                 break;
         }
     }
