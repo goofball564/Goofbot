@@ -45,15 +45,14 @@ internal class CheckInTokenModule : GoofbotModule
         using var sqliteConnection = this.bot.OpenSqliteConnection();
         using var createTableCommand = new SqliteCommand(null, sqliteConnection);
         createTableCommand.CommandText =
-            @"CREATE TABLE IF NOT EXISTS CheckInTokenModule_TokenCounts (
+            @"CREATE TABLE IF NOT EXISTS TokenCounts (
                 UserID INTEGER PRIMARY KEY,
                 TokenCount INTEGER NOT NULL,
                 LastUpdateTimestamp REAL NOT NULL,
                 FOREIGN KEY(UserID) REFERENCES TwitchUsers(UserID)
             );
 
-            CREATE INDEX IF NOT EXISTS CheckInTokenModule_TokenCountsIdx1
-                ON CheckInTokenModule_TokenCounts (TokenCount DESC, LastUpdateTimestamp ASC);";
+            CREATE INDEX IF NOT EXISTS TokenCountsIdx ON TokenCounts (TokenCount DESC, LastUpdateTimestamp ASC);";
         using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
             await createTableCommand.ExecuteNonQueryAsync();
@@ -66,7 +65,7 @@ internal class CheckInTokenModule : GoofbotModule
 
         using var updateCommand = new SqliteCommand(null, sqliteConnection);
         updateCommand.CommandText =
-            @"INSERT INTO CheckInTokenModule_TokenCounts VALUES (@UserID, 1, unixepoch('now','subsec'))
+            @"INSERT INTO TokenCounts VALUES (@UserID, 1, unixepoch('now','subsec'))
                 ON CONFLICT(UserID) DO UPDATE SET TokenCount = TokenCount + 1;";
         updateCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
         using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
@@ -75,7 +74,7 @@ internal class CheckInTokenModule : GoofbotModule
         }
 
         using var selectCommand = new SqliteCommand(null, sqliteConnection);
-        selectCommand.CommandText = "Select TokenCount FROM CheckInTokenModule_TokenCounts WHERE UserID = @UserID;";
+        selectCommand.CommandText = "Select TokenCount FROM TokenCounts WHERE UserID = @UserID;";
         selectCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
 
         long result;
