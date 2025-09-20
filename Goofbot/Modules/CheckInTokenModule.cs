@@ -68,18 +68,15 @@ internal class CheckInTokenModule : GoofbotModule
             @"INSERT INTO TokenCounts VALUES (@UserID, 1, unixepoch('now','subsec'))
                 ON CONFLICT(UserID) DO UPDATE SET TokenCount = TokenCount + 1;";
         updateCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
-        {
-            await updateCommand.ExecuteNonQueryAsync();
-        }
 
         using var selectCommand = new SqliteCommand(null, sqliteConnection);
         selectCommand.CommandText = "Select TokenCount FROM TokenCounts WHERE UserID = @UserID;";
         selectCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
 
         long result;
-        using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
+        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
+            await updateCommand.ExecuteNonQueryAsync();
             result = Convert.ToInt64(await selectCommand.ExecuteScalarAsync());
         }
 
