@@ -19,6 +19,22 @@ internal class CheckInTokenModule : GoofbotModule
         await this.CreateTokenCountsTableAsync();
     }
 
+    private static async Task<long> IncrementTokensAsync(SqliteConnection sqliteConnection, string userID)
+    {
+        using var updateCommand = sqliteConnection.CreateCommand();
+        updateCommand.CommandText =
+            @"INSERT INTO TokenCounts VALUES (@UserID, 1, unixepoch('now','subsec'))
+                ON CONFLICT(UserID) DO UPDATE SET TokenCount = TokenCount + 1;";
+        updateCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
+
+        using var selectCommand = sqliteConnection.CreateCommand();
+        selectCommand.CommandText = "Select TokenCount FROM TokenCounts WHERE UserID = @UserID;";
+        selectCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
+
+        await updateCommand.ExecuteNonQueryAsync();
+        return Convert.ToInt64(await selectCommand.ExecuteScalarAsync());
+    }
+
     private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)
     {
         string reward = e.Notification.Payload.Event.Reward.Title;
@@ -27,8 +43,14 @@ internal class CheckInTokenModule : GoofbotModule
 
         if (reward.Equals("Daily GoofCoin", StringComparison.OrdinalIgnoreCase))
         {
-            await this.bot.InsertOrUpdateTwitchUserAsync(userID, userName);
-            long tokens = await this.IncrementTokensAsync(userID);
+            long tokens;
+            using (var sqliteConnection = this.bot.OpenSqliteConnection())
+            using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
+            {
+                await Bot.InsertOrUpdateTwitchUserAsync(sqliteConnection, userID, userName);
+                tokens = await IncrementTokensAsync(sqliteConnection, userID);
+            }
+
             if (tokens == 1)
             {
                 this.bot.SendMessage($"Congrats on your very first GoofCoin, {userName}!", false);
@@ -57,29 +79,5 @@ internal class CheckInTokenModule : GoofbotModule
         {
             await createTableCommand.ExecuteNonQueryAsync();
         }
-    }
-
-    private async Task<long> IncrementTokensAsync(string userID)
-    {
-        using var sqliteConnection = this.bot.OpenSqliteConnection();
-
-        using var updateCommand = new SqliteCommand(null, sqliteConnection);
-        updateCommand.CommandText =
-            @"INSERT INTO TokenCounts VALUES (@UserID, 1, unixepoch('now','subsec'))
-                ON CONFLICT(UserID) DO UPDATE SET TokenCount = TokenCount + 1;";
-        updateCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-
-        using var selectCommand = new SqliteCommand(null, sqliteConnection);
-        selectCommand.CommandText = "Select TokenCount FROM TokenCounts WHERE UserID = @UserID;";
-        selectCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-
-        long result;
-        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
-        {
-            await updateCommand.ExecuteNonQueryAsync();
-            result = Convert.ToInt64(await selectCommand.ExecuteScalarAsync());
-        }
-
-        return result;
     }
 }

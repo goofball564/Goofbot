@@ -101,6 +101,15 @@ internal class Bot : IDisposable
 
     public EventSubWebsocketClient EventSubWebsocketClient { get; private set; }
 
+    public static async Task InsertOrUpdateTwitchUserAsync(SqliteConnection sqliteConnection, string userID, string userName)
+    {
+        using var replaceCommand = new SqliteCommand(null, sqliteConnection);
+        replaceCommand.CommandText = "REPLACE INTO TwitchUsers VALUES (@UserID, @UserName);";
+        replaceCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
+        replaceCommand.Parameters.AddWithValue("@UserName", userName);
+        await replaceCommand.ExecuteNonQueryAsync();
+    }
+
     public async Task StartAsync()
     {
         List<Task> tasks = [];
@@ -158,19 +167,6 @@ internal class Bot : IDisposable
         return sqliteConnection;
     }
 
-    public async Task InsertOrUpdateTwitchUserAsync(string userID, string userName)
-    {
-        using var sqliteConnection = this.OpenSqliteConnection();
-        using var replaceCommand = new SqliteCommand(null, sqliteConnection);
-        replaceCommand.CommandText = "REPLACE INTO TwitchUsers VALUES (@UserID, @UserName);";
-        replaceCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-        replaceCommand.Parameters.AddWithValue("@UserName", userName);
-        using (await this.SqliteReaderWriterLock.WriteLockAsync())
-        {
-            await replaceCommand.ExecuteNonQueryAsync();
-        }
-    }
-
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
     {
         this.MessageReceived?.Invoke(this, e);
@@ -215,7 +211,7 @@ internal class Bot : IDisposable
     {
     }
 
-    public async Task ShutdownCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    private async Task ShutdownCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         this.SendMessage("Shutting down now MrDestructoid", isReversed);
         await this.cancellationTokenSource.CancelAsync();
@@ -224,17 +220,27 @@ internal class Bot : IDisposable
     private async Task InitializeDatabaseAsync()
     {
         using var sqliteConnection = this.OpenSqliteConnection();
-        using var command = new SqliteCommand(null, sqliteConnection);
-        command.CommandText =
-            @"PRAGMA journal_mode = wal;
+        using var transaction = sqliteConnection.BeginTransaction();
+        try
+        {
+            using var command = new SqliteCommand(null, sqliteConnection);
+            command.CommandText =
+                @"PRAGMA journal_mode = wal;
             PRAGMA journal_mode = wal;
             CREATE TABLE IF NOT EXISTS TwitchUsers (
                 UserID INTEGER PRIMARY KEY,
                 UserName TEXT NOT NULL
             );";
-        using (await this.SqliteReaderWriterLock.WriteLockAsync())
+            using (await this.SqliteReaderWriterLock.WriteLockAsync())
+            {
+                await command.ExecuteNonQueryAsync();
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch (SqliteException)
         {
-            await command.ExecuteNonQueryAsync();
+            await transaction.RollbackAsync();
         }
     }
 }
