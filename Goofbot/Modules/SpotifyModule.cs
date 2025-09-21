@@ -246,28 +246,16 @@ internal class SpotifyModule : GoofbotModule
         }
     }
 
-    private readonly struct NameAndArtistNames
+    private readonly struct NameAndArtistNames(string songName, List<string> artistNames)
     {
-        public readonly string Name;
-        public readonly List<string> ArtistNames;
-
-        public NameAndArtistNames(string songName, List<string> artistNames)
-        {
-            this.Name = songName;
-            this.ArtistNames = artistNames;
-        }
+        public readonly string Name = songName;
+        public readonly List<string> ArtistNames = artistNames;
     }
 
-    private readonly struct ContextAndQueue
+    private readonly struct ContextAndQueue(CurrentlyPlayingContext context, QueueResponse queue)
     {
-        public readonly CurrentlyPlayingContext Context;
-        public readonly QueueResponse Queue;
-
-        public ContextAndQueue(CurrentlyPlayingContext context, QueueResponse Queue)
-        {
-            this.Context = context;
-            this.Queue = Queue;
-        }
+        public readonly CurrentlyPlayingContext Context = context;
+        public readonly QueueResponse Queue = queue;
     }
 
     private class SpotifyAPI : IDisposable
