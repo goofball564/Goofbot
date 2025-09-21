@@ -216,6 +216,15 @@ internal class GoofsinoModule : GoofbotModule
         }
     }
 
+    private static async Task<SqliteDataReader> GetAllBetsByType(SqliteConnection sqliteConnection, Bet bet)
+    {
+        using var sqliteCommand = sqliteConnection.CreateCommand();
+        sqliteCommand.CommandText = "SELECT * FROM Bets WHERE BetTypeID = @BetTypeID;";
+        sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
+
+        return await sqliteCommand.ExecuteReaderAsync();
+    }
+
     private static async Task<long> GetBalanceAsync(SqliteConnection sqliteConnection, string userID)
     {
         using var sqliteCommand = sqliteConnection.CreateCommand();
