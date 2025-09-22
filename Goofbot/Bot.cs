@@ -105,7 +105,7 @@ internal class Bot : IDisposable
 
     public static async Task InsertOrUpdateTwitchUserAsync(SqliteConnection sqliteConnection, string userID, string userName)
     {
-        using var replaceCommand = new SqliteCommand(null, sqliteConnection);
+        using var replaceCommand = sqliteConnection.CreateCommand();
         replaceCommand.CommandText = "REPLACE INTO TwitchUsers VALUES (@UserID, @UserName);";
         replaceCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
         replaceCommand.Parameters.AddWithValue("@UserName", userName);
@@ -120,6 +120,7 @@ internal class Bot : IDisposable
         tasks.Add(this.spotifyModule.InitializeAsync());
         tasks.Add(this.InitializeDatabaseAsync());
         tasks.Add(this.checkInTokenModule.InitializeAsync());
+        tasks.Add(this.goofsinoModule.InitializeAsync());
 
         await Task.WhenAll(tasks);
 
@@ -222,28 +223,31 @@ internal class Bot : IDisposable
 
     private async Task InitializeDatabaseAsync()
     {
-        using var sqliteConnection = this.OpenSqliteConnection();
-        using var transaction = sqliteConnection.BeginTransaction();
-        try
+        using (await this.SqliteReaderWriterLock.WriteLockAsync())
+        using (var sqliteConnection = this.OpenSqliteConnection())
+        using (var transaction = sqliteConnection.BeginTransaction())
+        using (var command = sqliteConnection.CreateCommand())
         {
-            using var command = new SqliteCommand(null, sqliteConnection);
-            command.CommandText =
-                @"PRAGMA journal_mode = wal;
-            PRAGMA journal_mode = wal;
-            CREATE TABLE IF NOT EXISTS TwitchUsers (
-                UserID INTEGER PRIMARY KEY,
-                UserName TEXT NOT NULL
-            );";
-            using (await this.SqliteReaderWriterLock.WriteLockAsync())
+            try
             {
+                command.CommandText = "PRAGMA journal_mode = WAL;";
                 await command.ExecuteNonQueryAsync();
-            }
+                command.CommandText = "PRAGMA foreign_keys = ON;";
+                await command.ExecuteNonQueryAsync();
+                command.CommandText =
+                    @"CREATE TABLE IF NOT EXISTS TwitchUsers (
+                        UserID INTEGER PRIMARY KEY,
+                        UserName TEXT NOT NULL
+                );";
+                await command.ExecuteNonQueryAsync();
 
-            await transaction.CommitAsync();
-        }
-        catch (SqliteException)
-        {
-            await transaction.RollbackAsync();
+                await transaction.CommitAsync();
+            }
+            catch (SqliteException)
+            {
+                await transaction.RollbackAsync();
+                Console.WriteLine("FAILED TRANSACTION");
+            }
         }
     }
 }
