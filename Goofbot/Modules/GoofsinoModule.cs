@@ -329,6 +329,12 @@ internal class GoofsinoModule : GoofbotModule
             await DeleteAllBetsByType(sqliteConnection, bet);
 
             await transaction.CommitAsync();
+
+            foreach (string message in messages)
+            {
+                this.bot.SendMessage(message, false);
+            }
+
             return true;
         }
         catch (SqliteException)
