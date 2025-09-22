@@ -161,10 +161,10 @@ internal static class GoofsinoModuleHelperMethods
 
     public static async Task DeleteAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet)
     {
-        using var deleteCommand = sqliteConnection.CreateCommand();
-        deleteCommand.CommandText = "DELETE FROM Bets WHERE BetTypeID = @BetTypeID;";
-        deleteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
-        await deleteCommand.ExecuteNonQueryAsync();
+        using var sqliteCommand = sqliteConnection.CreateCommand();
+        sqliteCommand.CommandText = "DELETE FROM Bets WHERE BetTypeID = @BetTypeID;";
+        sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
+        await sqliteCommand.ExecuteNonQueryAsync();
     }
 
     public static async Task<long> GetBalanceAsync(SqliteConnection sqliteConnection, string userID)
