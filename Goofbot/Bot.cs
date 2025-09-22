@@ -225,12 +225,11 @@ internal class Bot : IDisposable
     {
         using (await this.SqliteReaderWriterLock.WriteLockAsync())
         using (var sqliteConnection = this.OpenSqliteConnection())
-        using (var transaction = sqliteConnection.BeginTransaction())
         using (var command = sqliteConnection.CreateCommand())
         {
             try
             {
-                command.CommandText = "PRAGMA journal_mode = WAL;";
+                command.CommandText = "PRAGMA journal_mode = wal;";
                 await command.ExecuteNonQueryAsync();
                 command.CommandText = "PRAGMA foreign_keys = ON;";
                 await command.ExecuteNonQueryAsync();
@@ -240,13 +239,10 @@ internal class Bot : IDisposable
                         UserName TEXT NOT NULL
                 );";
                 await command.ExecuteNonQueryAsync();
-
-                await transaction.CommitAsync();
             }
-            catch (SqliteException)
+            catch (SqliteException e)
             {
-                await transaction.RollbackAsync();
-                Console.WriteLine("FAILED TRANSACTION");
+                Console.WriteLine($"SQLITE EXCEPTION: {e}");
             }
         }
     }

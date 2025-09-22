@@ -50,8 +50,9 @@ internal class GoofsinoModule : GoofbotModule
                 await CreateTablesAsync(sqliteConnection);
                 await transaction.CommitAsync();
             }
-            catch (SqliteException)
+            catch (SqliteException e)
             {
+                Console.WriteLine($"SQLITE EXCEPTION: {e}");
                 await transaction.RollbackAsync();
             }
         }
@@ -85,9 +86,10 @@ internal class GoofsinoModule : GoofbotModule
                     this.bot.SendMessage($"@{userName} {balance} gamba points", isReversed);
                 }
             }
-            catch (SqliteException)
+            catch (SqliteException e)
             {
                 this.bot.SendMessage("Hey, Goof, your bot broke! (Balance Command)", false);
+                Console.WriteLine($"SQLITE EXCEPTION: {e}");
                 await transaction.RollbackAsync();
             }
         }
@@ -123,9 +125,10 @@ internal class GoofsinoModule : GoofbotModule
 
                     await transaction.CommitAsync();
                 }
-                catch (SqliteException)
+                catch (SqliteException e)
                 {
                     this.bot.SendMessage("Hey, Goof, your bot broke! (Bet Command)", false);
+                    Console.WriteLine($"SQLITE EXCEPTION: {e}");
                     await transaction.RollbackAsync();
                 }
             }
@@ -176,10 +179,16 @@ internal class GoofsinoModule : GoofbotModule
                 }
 
                 await transaction.CommitAsync();
+
+                foreach (string message in messages)
+                {
+                    this.bot.SendMessage(message, isReversed);
+                }
             }
-            catch (SqliteException)
+            catch (SqliteException e)
             {
                 this.bot.SendMessage("Hey, Goof, your bot broke! (Roulette Wheel Spin)", false);
+                Console.WriteLine($"SQLITE EXCEPTION: {e}");
                 await transaction.RollbackAsync();
             }
         }

@@ -68,7 +68,12 @@ internal static class GoofsinoModuleHelperMethods
     public static async Task<List<string>> ResolveAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet, bool success)
     {
         List<string> messages = [];
-        var reader = await GetAllBetsByTypeAsync(sqliteConnection, bet);
+
+        using var sqliteCommand = sqliteConnection.CreateCommand();
+        sqliteCommand.CommandText = "SELECT Bets.UserID, TwitchUsers.UserName, Bets.Amount FROM Bets INNER JOIN TwitchUsers ON TwitchUsers.UserID = Bets.UserID WHERE BetTypeID = @BetTypeID;";
+        sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
+
+        var reader = await sqliteCommand.ExecuteReaderAsync();
 
         while (await reader.ReadAsync())
         {
@@ -88,7 +93,9 @@ internal static class GoofsinoModuleHelperMethods
                 amount *= -1;
             }
 
-            messages.Add($"{userName} {verb} {Math.Abs(amount)} gamba points for betting on {bet.BetName}");
+            long balance = await GetBalanceAsync(sqliteConnection, userID);
+
+            messages.Add($"{userName} {verb} {Math.Abs(amount)} gamba points for betting on {bet.BetName}. Balance: {balance + amount} gamba points");
 
             await AddBalanceAsync(sqliteConnection, userID, amount);
 
