@@ -37,6 +37,15 @@ internal class GoofsinoModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new Command("spin", this.SpinCommand, CommandAccessibilityModifier.StreamerOnly));
     }
 
+    public async Task InitializeAsync()
+    {
+        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
+        using (var sqliteConnection = this.bot.OpenSqliteConnection())
+        {
+            await CreateTablesAsync(sqliteConnection);
+        }
+    }
+
     private async Task RedCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string userID = eventArgs.Command.ChatMessage.UserId;
@@ -77,23 +86,20 @@ internal class GoofsinoModule : GoofbotModule
     {
         this.rouletteTable.Spin();
 
-        var color = this.rouletteTable.Color;
-        if (color == RouletteTable.RouletteColor.Red)
-        {
-            // red bets succeed, black bets fail
-        }
-        else if (color == RouletteTable.RouletteColor.Black)
-        {
-            // black bets succeed, red bets fail
-        }
-    }
-
-    public async Task InitializeAsync()
-    {
         using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         {
-            await CreateTablesAsync(sqliteConnection);
+            var color = this.rouletteTable.Color;
+            if (color == RouletteTable.RouletteColor.Red)
+            {
+                await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteRed, true);
+                await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteBlack, false);
+            }
+            else if (color == RouletteTable.RouletteColor.Black)
+            {
+                await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteRed, false);
+                await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteBlack, true);
+            }
         }
     }
 
@@ -225,6 +231,61 @@ internal class GoofsinoModule : GoofbotModule
         return await sqliteCommand.ExecuteReaderAsync();
     }
 
+    private static async Task DeleteAllBetsByType(SqliteConnection sqliteConnection, Bet bet)
+    {
+        using var sqliteCommand = sqliteConnection.CreateCommand();
+        sqliteCommand.CommandText = "DELTE FROM Bets WHERE BetTypeID = @BetTypeID;";
+        sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
+
+        await sqliteCommand.ExecuteNonQueryAsync();
+    }
+
+    private static async Task<bool> ResolveAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet, bool success)
+    {
+        using var transaction = sqliteConnection.BeginTransaction();
+        try
+        {
+            using var sqliteCommand = sqliteConnection.CreateCommand();
+            sqliteCommand.CommandText = "SELECT UserID, Amount FROM Bets WHERE BetTypeID = @BetTypeID;";
+            sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
+
+            var reader = await sqliteCommand.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                string userID = reader.GetInt64(0).ToString();
+                long amount = reader.GetInt64(1);
+
+                if (success)
+                {
+                    amount *= bet.PayoutRatio;
+                }
+                else
+                {
+                    amount *= -1;
+                }
+
+                await AddBalanceAsync(sqliteConnection, userID, amount);
+
+                amount *= -1;
+                await AddBalanceAsync(sqliteConnection, TheHouseID, amount);
+            }
+
+            using var deleteCommand = sqliteConnection.CreateCommand();
+            deleteCommand.CommandText = "DELETE FROM Bets WHERE BetTypeID = @BetTypeID;";
+            deleteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
+            await deleteCommand.ExecuteNonQueryAsync();
+
+            await transaction.CommitAsync();
+            return false;
+        }
+        catch (SqliteException)
+        {
+            await transaction.RollbackAsync();
+            return false;
+        }
+    }
+
     private static async Task<long> GetBalanceAsync(SqliteConnection sqliteConnection, string userID)
     {
         using var sqliteCommand = sqliteConnection.CreateCommand();
@@ -282,15 +343,6 @@ internal class GoofsinoModule : GoofbotModule
         sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
 
         await sqliteCommand.ExecuteNonQueryAsync();
-    }
-
-    private async Task ResolveAllBetsByType(Bet bet, bool success)
-    {
-        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
-        using (var sqliteConnection = this.bot.OpenSqliteConnection())
-        {
-
-        }
     }
 
     private async Task<bool> TryPlaceBetAsync(string userID, Bet bet, long amount)
