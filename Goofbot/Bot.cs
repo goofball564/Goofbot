@@ -43,6 +43,7 @@ internal class Bot : IDisposable
     private readonly TextToSpeechModule textToSpeechModule;
     private readonly CheckInTokenModule checkInTokenModule;
     private readonly RandomModule randomModule;
+    private readonly GoofsinoModule goofsinoModule;
 
     public Bot(string twitchBotUsername, string twitchChannelUsername, CancellationTokenSource cancellationTokenSource)
     {
@@ -89,6 +90,7 @@ internal class Bot : IDisposable
         this.textToSpeechModule = new (this, "TextToSpeechModule");
         this.checkInTokenModule = new (this, "CheckInTokenModule");
         this.randomModule = new (this, "RandomModule");
+        this.goofsinoModule = new GoofsinoModule(this, "GoofsinoModule");
 
         this.CommandDictionary.TryAddCommand(new ("shutdown", this.ShutdownCommand, CommandAccessibilityModifier.StreamerOnly));
     }
@@ -152,6 +154,7 @@ internal class Bot : IDisposable
         this.textToSpeechModule.Dispose();
         this.checkInTokenModule.Dispose();
         this.randomModule.Dispose();
+        this.goofsinoModule.Dispose();
 
         this.twitchAuthenticationManager.Dispose();
         this.ColorDictionary.Dispose();
