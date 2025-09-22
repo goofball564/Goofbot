@@ -121,6 +121,8 @@ internal class GoofsinoModule : GoofbotModule
             {
                 try
                 {
+                    await SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
+
                     if (cancel)
                     {
                         existingBets = await GetBetAmountAsync(sqliteConnection, userID, bet);
@@ -134,10 +136,8 @@ internal class GoofsinoModule : GoofbotModule
                     }
                     else
                     {
-                        await SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
                         existingBets = await GetBetAmountAsync(sqliteConnection, userID, bet);
                         await TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
-
                         await transaction.CommitAsync();
 
                         if (existingBets > 0)
