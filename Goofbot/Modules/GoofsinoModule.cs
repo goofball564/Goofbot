@@ -410,9 +410,6 @@ internal class GoofsinoModule : GoofbotModule
             return false;
         }
 
-        /*using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
-        using (var sqliteConnection = this.bot.OpenSqliteConnection())
-        {*/
         var balanceTask = GetBalanceAsync(sqliteConnection, userID);
         var totalBetsTask = GetTotalBetsAsync(sqliteConnection, userID);
 
@@ -428,7 +425,6 @@ internal class GoofsinoModule : GoofbotModule
         {
             return false;
         }
-        //}
     }
 
     private async Task SetupUserAsync(string userID, string userName)
