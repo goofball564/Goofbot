@@ -124,6 +124,15 @@ internal class GoofsinoModule : GoofbotModule
                     await TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
 
                     await transaction.CommitAsync();
+
+                    if (existingBets > 0)
+                    {
+                        this.bot.SendMessage($"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBets}", isReversed);
+                    }
+                    else
+                    {
+                        this.bot.SendMessage($"{userName} bet {amount} on {bet.BetName}", isReversed);
+                    }
                 }
                 catch (SqliteException e)
                 {
@@ -131,15 +140,6 @@ internal class GoofsinoModule : GoofbotModule
                     Console.WriteLine($"SQLITE EXCEPTION: {e}");
                     await transaction.RollbackAsync();
                 }
-            }
-
-            if (existingBets > 0)
-            {
-                this.bot.SendMessage($"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBets}", isReversed);
-            }
-            else
-            {
-                this.bot.SendMessage($"{userName} bet {amount} on {bet.BetName}", isReversed);
             }
         }
         else
