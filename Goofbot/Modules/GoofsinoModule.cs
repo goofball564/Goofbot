@@ -31,8 +31,8 @@ internal class GoofsinoModule : GoofbotModule
     public GoofsinoModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
-        this.bot.CommandDictionary.TryAddCommand(new Command("red", this.RedCommand, unlisted: true, timeoutSeconds: 0));
-        this.bot.CommandDictionary.TryAddCommand(new Command("black", this.BlackCommand, unlisted: true, timeoutSeconds: 0));
+        this.bot.CommandDictionary.TryAddCommand(new Command("red", this.RedCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new Command("black", this.BlackCommand, unlisted: true));
 
         this.bot.CommandDictionary.TryAddCommand(new Command("balance", this.BalanceCommand));
 
@@ -110,7 +110,9 @@ internal class GoofsinoModule : GoofbotModule
         string userID = eventArgs.Command.ChatMessage.UserId;
         string userName = eventArgs.Command.ChatMessage.Username;
 
-        if (long.TryParse(commandArgs, out long amount) && amount >= RouletteMinimumBet)
+        bool cancel = commandArgs.Equals("cancel", StringComparison.OrdinalIgnoreCase);
+
+        if ((long.TryParse(commandArgs, out long amount) && amount >= RouletteMinimumBet) || cancel)
         {
             long existingBets = 0;
             using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
@@ -119,19 +121,33 @@ internal class GoofsinoModule : GoofbotModule
             {
                 try
                 {
-                    await SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
-                    existingBets = await GetBetAmountAsync(sqliteConnection, userID, bet);
-                    await TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
-
-                    await transaction.CommitAsync();
-
-                    if (existingBets > 0)
+                    if (cancel)
                     {
-                        this.bot.SendMessage($"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBets}", isReversed);
+                        existingBets = await GetBetAmountAsync(sqliteConnection, userID, bet);
+                        await DeleteBetFromTableAsync(sqliteConnection, userID, bet);
+                        await transaction.CommitAsync();
+
+                        if (existingBets > 0)
+                        {
+                            this.bot.SendMessage($"{userName} withdrew their {existingBets} point bet on {bet.BetName}", isReversed);
+                        }
                     }
                     else
                     {
-                        this.bot.SendMessage($"{userName} bet {amount} on {bet.BetName}", isReversed);
+                        await SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
+                        existingBets = await GetBetAmountAsync(sqliteConnection, userID, bet);
+                        await TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
+
+                        await transaction.CommitAsync();
+
+                        if (existingBets > 0)
+                        {
+                            this.bot.SendMessage($"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBets}", isReversed);
+                        }
+                        else
+                        {
+                            this.bot.SendMessage($"{userName} bet {amount} on {bet.BetName}", isReversed);
+                        }
                     }
                 }
                 catch (SqliteException e)
@@ -198,20 +214,31 @@ internal class GoofsinoModule : GoofbotModule
     {
         using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
+        using (var transaction = sqliteConnection.BeginTransaction())
         {
-            var balanceTask = GetBalanceAsync(sqliteConnection, userID);
-            var totalBetsTask = GetTotalBetsAsync(sqliteConnection, userID);
-
-            long balance = await balanceTask;
-            long totalBets = await totalBetsTask;
-
-            if (totalBets + balance <= 0)
+            try
             {
-                await ResetUserGambaPointsBalanceAndIncrementBankruptciesAsync(sqliteConnection, userID);
-                return true;
+                var balanceTask = GetBalanceAsync(sqliteConnection, userID);
+                var totalBetsTask = GetTotalBetsAsync(sqliteConnection, userID);
+
+                long balance = await balanceTask;
+                long totalBets = await totalBetsTask;
+
+                if (totalBets + balance <= 0)
+                {
+                    await ResetUserGambaPointsBalanceAndIncrementBankruptciesAsync(sqliteConnection, userID);
+                    await transaction.CommitAsync();
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
             }
-            else
+            catch (SqliteException e)
             {
+
+                await transaction.RollbackAsync();
                 return false;
             }
         }

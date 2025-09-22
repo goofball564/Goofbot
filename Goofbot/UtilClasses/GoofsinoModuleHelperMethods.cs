@@ -217,7 +217,7 @@ internal static class GoofsinoModuleHelperMethods
     public static async Task DeleteBetFromTableAsync(SqliteConnection sqliteConnection, string userID, Bet bet)
     {
         using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "DELTE FROM Bets WHERE UserID = @UserID AND BetTypeID = @BetTypeID;";
+        sqliteCommand.CommandText = "DELETE FROM Bets WHERE UserID = @UserID AND BetTypeID = @BetTypeID;";
         sqliteCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
         sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
 
