@@ -73,7 +73,7 @@ internal static class GoofsinoModuleHelperMethods
         sqliteCommand.CommandText = "SELECT Bets.UserID, TwitchUsers.UserName, Bets.Amount FROM Bets INNER JOIN TwitchUsers ON TwitchUsers.UserID = Bets.UserID WHERE BetTypeID = @BetTypeID;";
         sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
 
-        var reader = await sqliteCommand.ExecuteReaderAsync();
+        using var reader = await sqliteCommand.ExecuteReaderAsync();
 
         while (await reader.ReadAsync())
         {
@@ -156,15 +156,6 @@ internal static class GoofsinoModuleHelperMethods
             return false;
         }
     }*/
-
-    public static async Task<SqliteDataReader> GetAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet)
-    {
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "SELECT Bets.UserID, TwitchUsers.UserName, Bets.Amount FROM Bets INNER JOIN TwitchUsers ON TwitchUsers.UserID = Bets.UserID WHERE BetTypeID = @BetTypeID;";
-        sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
-
-        return await sqliteCommand.ExecuteReaderAsync();
-    }
 
     public static async Task DeleteAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet)
     {
