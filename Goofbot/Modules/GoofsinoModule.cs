@@ -78,7 +78,7 @@ internal class GoofsinoModule : GoofbotModule
 
                 if (totalBets > 0)
                 {
-                    this.bot.SendMessage($"@{userName} {balance} gamba points - {totalBets} active bets = {balance - totalBets} points available", isReversed);
+                    this.bot.SendMessage($"@{userName} {balance} gamba points - {totalBets} in active bets = {balance - totalBets} points available", isReversed);
                 }
                 else
                 {
