@@ -11,6 +11,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api;
+using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets;
@@ -132,6 +133,32 @@ internal class Bot : IDisposable
 
         // Start the bot
         this.twitchClient.Connect();
+    }
+
+    public async Task<string> GetUserIDAsync(string userName)
+    {
+        var response = await this.twitchAPI.Helix.Users.GetUsersAsync(logins: [userName.ToLowerInvariant()]);
+        var user = response.Users[0];
+        return user.Id;
+    }
+
+    public async Task TimeoutUserAsync(string userID, int duration)
+    {
+        string channelID = await this.GetUserIDAsync(this.TwitchChannelUsername);
+        var banUserRequest = new BanUserRequest();
+
+        banUserRequest.UserId = userID;
+        banUserRequest.Duration = duration;
+        banUserRequest.Reason = string.Empty;
+
+        if (channelID.Equals(userID))
+        {
+            return;
+        }
+        else
+        {
+            await this.twitchAPI.Helix.Moderation.BanUserAsync(channelID, channelID, banUserRequest);
+        }
     }
 
     public void SendMessage(string message, bool reverseMessage)
