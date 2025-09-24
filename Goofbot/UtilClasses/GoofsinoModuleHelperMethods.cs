@@ -56,6 +56,15 @@ internal static class GoofsinoModuleHelperMethods
         await sqliteCommand.ExecuteNonQueryAsync();
     }
 
+    public static async Task<long> GetBankruptcyCountAsync(SqliteConnection sqliteConnection, string userID)
+    {
+        using var sqliteCommand = sqliteConnection.CreateCommand();
+        sqliteCommand.CommandText = "SELECT Count from Bankruptcies WHERE UserID = @UserID";
+        sqliteCommand.Parameters.AddWithValue("@UserID", userID);
+
+        return Convert.ToInt64(await sqliteCommand.ExecuteScalarAsync());
+    }
+
     public static async Task AddUserToGambaPointsTableAsync(SqliteConnection sqliteConnection, string userID)
     {
         using var sqliteCommand = sqliteConnection.CreateCommand();
@@ -63,6 +72,11 @@ internal static class GoofsinoModuleHelperMethods
         sqliteCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
 
         await sqliteCommand.ExecuteNonQueryAsync();
+    }
+
+    public static async Task<long> GetHouseBalance(SqliteConnection sqliteConnection)
+    {
+        return await GetBalanceAsync(sqliteConnection, TheHouseID);
     }
 
     public static async Task<List<string>> ResolveAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet, bool success)
