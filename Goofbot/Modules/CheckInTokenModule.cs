@@ -1,9 +1,13 @@
 ﻿namespace Goofbot.Modules;
 
+using Goofbot.Structs;
 using Goofbot.UtilClasses;
 using Microsoft.Data.Sqlite;
 using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
+using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 
 internal class CheckInTokenModule : GoofbotModule
@@ -12,6 +16,8 @@ internal class CheckInTokenModule : GoofbotModule
         : base(bot, moduleDataFolder)
     {
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
+
+        this.bot.CommandDictionary.TryAddCommand(new Command("gcl", this.GoofCoinLeaderboardCommand));
     }
 
     public async Task InitializeAsync()
@@ -33,6 +39,47 @@ internal class CheckInTokenModule : GoofbotModule
 
         await updateCommand.ExecuteNonQueryAsync();
         return Convert.ToInt64(await selectCommand.ExecuteScalarAsync());
+    }
+
+    private async Task GoofCoinLeaderboardCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        List<UserNameAndTokenCount> leaderboardEntries = [];
+
+        using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
+        using (var sqliteConnection = this.bot.OpenSqliteConnection())
+        using (var transaction = sqliteConnection.BeginTransaction())
+        using (var sqliteCommand = sqliteConnection.CreateCommand())
+        {
+            sqliteCommand.CommandText =
+                @$"SELECT TwitchUsers.UserName, TokenCounts.TokenCount
+                    FROM TwitchUsers
+                    INNER JOIN TokenCounts ON TwitchUsers.UserID = TokenCounts.UserID
+                    ORDER BY TokenCounts.TokenCount DESC, TokenCounts.LastUpdateTimestamp ASC LIMIT 5;
+            ";
+
+            using var reader = await sqliteCommand.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                leaderboardEntries.Add(new UserNameAndTokenCount(reader.GetString(0), reader.GetInt64(1)));
+            }
+        }
+
+        int i = 0;
+        var stringBuilder = new StringBuilder();
+        foreach (var user in leaderboardEntries)
+        {
+            string pluralizer = user.TokenCount > 1 ? "s" : string.Empty;
+            stringBuilder = stringBuilder.Append($"{i + 1}. {user.UserName} - {user.TokenCount} GoofCoin{pluralizer}");
+            if (i < leaderboardEntries.Count - 1)
+            {
+                stringBuilder = stringBuilder.Append(" | ");
+            }
+
+            i++;
+        }
+
+        this.bot.SendMessage(stringBuilder.ToString(), isReversed);
     }
 
     private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)
@@ -80,4 +127,6 @@ internal class CheckInTokenModule : GoofbotModule
             await createTableCommand.ExecuteNonQueryAsync();
         }
     }
+
+
 }
