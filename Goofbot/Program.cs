@@ -26,6 +26,31 @@ internal class Program
         }
     }
 
+    public static string GetSuffix(long num)
+    {
+        long ones = num % 10;
+        long tens = (num % 100) - ones;
+
+        if (tens != 10)
+        {
+            switch (ones)
+            {
+                case 1:
+                    return "st";
+                case 2:
+                    return "nd";
+                case 3:
+                    return "rd";
+                default:
+                    return "th";
+            }
+        }
+        else
+        {
+            return "th";
+        }
+    }
+
     public static dynamic ParseJsonFile(string file)
     {
         string jsonString = File.ReadAllText(file);
