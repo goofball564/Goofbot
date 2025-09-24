@@ -7,8 +7,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
-internal readonly struct UserNameAndTokenCount(string userName, long tokenCount)
+internal readonly struct UserNameAndCount(string userName, long count)
 {
     public readonly string UserName = userName;
-    public readonly long TokenCount = tokenCount;
+    public readonly long Count = count;
 }

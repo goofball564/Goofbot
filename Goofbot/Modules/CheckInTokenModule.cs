@@ -17,7 +17,7 @@ internal class CheckInTokenModule : GoofbotModule
     {
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
 
-        this.bot.CommandDictionary.TryAddCommand(new Command("gcl", this.GoofCoinLeaderboardCommand));
+        this.bot.CommandDictionary.TryAddCommand(new Command("coinboard", this.GoofCoinLeaderboardCommand));
     }
 
     public async Task InitializeAsync()
@@ -43,7 +43,7 @@ internal class CheckInTokenModule : GoofbotModule
 
     private async Task GoofCoinLeaderboardCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        List<UserNameAndTokenCount> leaderboardEntries = [];
+        List<UserNameAndCount> leaderboardEntries = [];
 
         using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
@@ -61,7 +61,7 @@ internal class CheckInTokenModule : GoofbotModule
 
             while (await reader.ReadAsync())
             {
-                leaderboardEntries.Add(new UserNameAndTokenCount(reader.GetString(0), reader.GetInt64(1)));
+                leaderboardEntries.Add(new UserNameAndCount(reader.GetString(0), reader.GetInt64(1)));
             }
         }
 
@@ -69,8 +69,8 @@ internal class CheckInTokenModule : GoofbotModule
         var stringBuilder = new StringBuilder();
         foreach (var user in leaderboardEntries)
         {
-            string pluralizer = user.TokenCount > 1 ? "s" : string.Empty;
-            stringBuilder = stringBuilder.Append($"{i + 1}. {user.UserName} - {user.TokenCount} GoofCoin{pluralizer}");
+            string s = user.Count > 1 ? "s" : string.Empty;
+            stringBuilder = stringBuilder.Append($"{i + 1}. {user.UserName} - {user.Count} GoofCoin{s}");
             if (i < leaderboardEntries.Count - 1)
             {
                 stringBuilder = stringBuilder.Append(" | ");
