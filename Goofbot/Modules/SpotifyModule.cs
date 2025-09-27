@@ -19,6 +19,8 @@ internal class SpotifyModule : GoofbotModule
 
     private readonly System.Timers.Timer timer = new (TimeSpan.FromSeconds(20));
     private readonly SpotifyAPI spotifyAPI;
+    private readonly AudioSessionControl spotifyVolume;
+
     private bool queueModeBackingValue;
 
     private bool removedFromPlaylist = false;
@@ -35,6 +37,7 @@ internal class SpotifyModule : GoofbotModule
         string clientSecret = Convert.ToString(spotifyCredentials.client_secret);
 
         this.spotifyAPI = new SpotifyAPI(clientID, clientSecret);
+        this.spotifyVolume = new AudioSessionControl("Spotify");
 
         this.timer.AutoReset = true;
         this.timer.Elapsed += this.QueueModeCallback;
@@ -42,6 +45,7 @@ internal class SpotifyModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new Command("song", this.SongCommand));
         this.bot.CommandDictionary.TryAddCommand(new Command("album", this.AlbumCommand));
         this.bot.CommandDictionary.TryAddCommand(new Command("queuemode", this.QueueModeCommand, CommandAccessibilityModifier.StreamerOnly));
+        this.bot.CommandDictionary.TryAddCommand(new Command("spotvol", this.SpotifyVolumeCommand, CommandAccessibilityModifier.StreamerOnly));
     }
 
     public bool QueueMode
@@ -184,6 +188,18 @@ internal class SpotifyModule : GoofbotModule
         this.QueueMode = !this.QueueMode;
         string chatMessage = this.QueueMode ? "Queue Mode has been enabled" : "Queue mode has been disabled";
         this.bot.SendMessage(chatMessage, isReversed);
+    }
+
+    private async Task SpotifyVolumeCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        if (int.TryParse(commandArgs, out int newVolume))
+        {
+            this.spotifyVolume.Volume = newVolume;
+        }
+        else
+        {
+            this.bot.SendMessage("Invalid input MrDestructoid", isReversed);
+        }
     }
 
     private async void QueueModeCallback(object source, ElapsedEventArgs e)
