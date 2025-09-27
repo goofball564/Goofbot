@@ -22,6 +22,13 @@ internal class MiscCommandsModule : GoofbotModule
 
         this.bot.CommandDictionary.TryAddCommand(new ("lock", this.LockCommand, CommandAccessibilityModifier.StreamerOnly));
         this.bot.CommandDictionary.TryAddCommand(new ("unlock", this.UnlockCommand, CommandAccessibilityModifier.StreamerOnly));
+        this.bot.CommandDictionary.TryAddCommand(new ("createreward", this.CreateRewardCommand, CommandAccessibilityModifier.StreamerOnly));
+    }
+
+    private async Task CreateRewardCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        await this.bot.CreateCustomReward(commandArgs);
+        this.bot.SendMessage("Done MrDestructoid", isReversed);
     }
 
     public async Task LockCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)

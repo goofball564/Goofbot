@@ -19,7 +19,7 @@ internal class TwitchAuthenticationManager : IDisposable
     public const string TwitchTokenRequestUrl = "https://id.twitch.tv/oauth2/token";
 
     private static readonly List<string> BotScopes = ["user:read:chat", "user:write:chat", "user:bot", "chat:read", "chat:edit", "moderator:manage:banned_users"];
-    private static readonly List<string> ChannelScopes = ["channel:bot", "channel:read:redemptions"];
+    private static readonly List<string> ChannelScopes = ["channel:bot", "channel:read:redemptions", "channel:manage:redemptions"];
 
     private readonly HttpClient httpClient = new ();
     private readonly WebServer server = new (TwitchAppRedirectUrl);

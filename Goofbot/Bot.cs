@@ -11,6 +11,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api;
+using TwitchLib.Api.Core.Enums;
+using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
@@ -162,6 +165,26 @@ internal class Bot : IDisposable
         {
             await this.twitchBotAPI.Helix.Moderation.BanUserAsync(channelID, botID, banUserRequest);
         }
+    }
+
+    public async Task UpdateRedemptionStatus(string rewardID, string redemptionID, CustomRewardRedemptionStatus status)
+    {
+        string channelID = await this.GetUserIDAsync(this.TwitchChannelUsername);
+        var request = new UpdateCustomRewardRedemptionStatusRequest();
+        request.Status = status;
+
+        await this.twitchChannelAPI.Helix.ChannelPoints.UpdateRedemptionStatusAsync(channelID, rewardID, [redemptionID], request);
+    }
+
+    public async Task CreateCustomReward(string rewardName)
+    {
+        string channelID = await this.GetUserIDAsync(this.TwitchChannelUsername);
+
+        var request = new CreateCustomRewardsRequest();
+        request.Cost = 1;
+        request.Title = rewardName;
+
+        await this.twitchChannelAPI.Helix.ChannelPoints.CreateCustomRewardsAsync(channelID, request);
     }
 
     public void SendMessage(string message, bool reverseMessage)
