@@ -202,7 +202,7 @@ internal class GoofsinoModule : GoofbotModule
                     string suffix = Program.GetSuffix(count);
                     this.bot.SendMessage($"{userName} has declared bankruptcy for the {count}{suffix} time. They now have 1000 Gamba Points", isReversed);
 
-                    int timeoutDuration = Random.Shared.Next(151) + 30;
+                    int timeoutDuration = Random.Shared.Next(151 + (int)count) + 30;
                     await this.bot.TimeoutUserAsync(userID, timeoutDuration);
                 }
                 else
