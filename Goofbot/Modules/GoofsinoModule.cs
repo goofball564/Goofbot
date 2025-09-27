@@ -678,8 +678,10 @@ internal class GoofsinoModule : GoofbotModule
 
                 await transaction.CommitAsync();
 
+                await Task.Delay(2000);
                 foreach (string message in messages)
                 {
+                    await Task.Delay(333);
                     this.bot.SendMessage(message, isReversed);
                 }
             }
