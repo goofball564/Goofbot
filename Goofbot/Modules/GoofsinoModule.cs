@@ -54,9 +54,9 @@ internal class GoofsinoModule : GoofbotModule
 
     public async Task InitializeAsync()
     {
-        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (var transaction = sqliteConnection.BeginTransaction())
+        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
             try
             {
@@ -74,23 +74,23 @@ internal class GoofsinoModule : GoofbotModule
     private async Task HouseRevenueCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         long balance;
-        using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
+        using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
         {
             balance = await GetHouseBalance(sqliteConnection);
         }
 
-        this.bot.SendMessage($"The house has earned {balance} gamba points in revenue.", isReversed);
+        this.bot.SendMessage($"The House has earned {balance} gamba points in revenue.", isReversed);
     }
 
     private async Task GambaPointLeaderboardCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         List<UserNameAndCount> leaderboardEntries = [];
 
-        using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (var transaction = sqliteConnection.BeginTransaction())
         using (var sqliteCommand = sqliteConnection.CreateCommand())
+        using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
         {
             sqliteCommand.CommandText =
                 @$"SELECT TwitchUsers.UserName, GambaPoints.Balance
@@ -149,9 +149,9 @@ internal class GoofsinoModule : GoofbotModule
 
         long balance;
         long totalBets;
-        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (var transaction = sqliteConnection.BeginTransaction())
+        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
             try
             {
@@ -184,9 +184,9 @@ internal class GoofsinoModule : GoofbotModule
         string userID = eventArgs.Command.ChatMessage.UserId;
         string userName = eventArgs.Command.ChatMessage.Username;
 
-        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (var transaction = sqliteConnection.BeginTransaction())
+        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
             try
             {
@@ -268,9 +268,9 @@ internal class GoofsinoModule : GoofbotModule
         if ((long.TryParse(commandArgs, out long amount) && amount >= RouletteMinimumBet) || withdraw || allIn)
         {
             long existingBets = 0;
-            using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
             using (var sqliteConnection = this.bot.OpenSqliteConnection())
             using (var transaction = sqliteConnection.BeginTransaction())
+            using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
             {
                 try
                 {
@@ -348,9 +348,9 @@ internal class GoofsinoModule : GoofbotModule
         this.bot.SendMessage($"The wheel landed on {this.rouletteTable.LastSpinResult} ({Enum.GetName(color)})", isReversed);
 
         List<string> messages = [];
-        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (var transaction = sqliteConnection.BeginTransaction())
+        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
             try
             {
@@ -417,40 +417,6 @@ internal class GoofsinoModule : GoofbotModule
                 this.bot.SendMessage("Hey, Goof, your bot broke! (Roulette Wheel Spin)", false);
                 Console.WriteLine($"SQLITE EXCEPTION: {e}");
                 await transaction.RollbackAsync();
-            }
-        }
-    }
-
-    private async Task<bool> TryDeclareBankruptcy(string userID)
-    {
-        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
-        using (var sqliteConnection = this.bot.OpenSqliteConnection())
-        using (var transaction = sqliteConnection.BeginTransaction())
-        {
-            try
-            {
-                var balanceTask = GetBalanceAsync(sqliteConnection, userID);
-                var totalBetsTask = GetTotalBetsAsync(sqliteConnection, userID);
-
-                long balance = await balanceTask;
-                long totalBets = await totalBetsTask;
-
-                if (totalBets + balance <= 0)
-                {
-                    await ResetUserGambaPointsBalanceAndIncrementBankruptciesAsync(sqliteConnection, userID);
-                    await transaction.CommitAsync();
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            catch (SqliteException e)
-            {
-
-                await transaction.RollbackAsync();
-                return false;
             }
         }
     }
