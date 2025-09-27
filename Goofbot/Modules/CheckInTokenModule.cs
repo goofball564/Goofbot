@@ -18,6 +18,7 @@ internal class CheckInTokenModule : GoofbotModule
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
 
         this.bot.CommandDictionary.TryAddCommand(new Command("coinboard", this.GoofCoinLeaderboardCommand));
+        this.bot.CommandDictionary.TryAddCommand(new Command("coins", this.CoinsCommand));
     }
 
     public async Task InitializeAsync()
@@ -39,6 +40,32 @@ internal class CheckInTokenModule : GoofbotModule
 
         await updateCommand.ExecuteNonQueryAsync();
         return Convert.ToInt64(await selectCommand.ExecuteScalarAsync());
+    }
+
+    private static async Task<long> GetTokenCount(SqliteConnection sqliteConnection, string userID)
+    {
+        using var sqliteCommand = sqliteConnection.CreateCommand();
+        sqliteCommand.CommandText = "SELECT TokenCount FROM TokenCounts WHERE UserID = @UserID";
+        sqliteCommand.Parameters.AddWithValue("@UserID", userID);
+
+        return Convert.ToInt64(await sqliteCommand.ExecuteScalarAsync());
+    }
+
+    private async Task CoinsCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        string userID = eventArgs.Command.ChatMessage.UserId;
+        string userName = eventArgs.Command.ChatMessage.DisplayName;
+
+        long coins;
+        using (var sqliteConnection = this.bot.OpenSqliteConnection())
+        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
+        {
+            await Bot.InsertOrUpdateTwitchUserAsync(sqliteConnection, userID, userName);
+            coins = await GetTokenCount(sqliteConnection, userID);
+        }
+
+        string s = coins == 1 ? string.Empty : "s";
+        this.bot.SendMessage($"{userName} has {coins} GoofCoin{s}", isReversed);
     }
 
     private async Task GoofCoinLeaderboardCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
