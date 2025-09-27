@@ -171,6 +171,8 @@ internal class GoofsinoModule : GoofbotModule
                     await ResetUserGambaPointsBalanceAndIncrementBankruptciesAsync(sqliteConnection, userID);
                     long count = await GetBankruptcyCountAsync(sqliteConnection, userID);
 
+                    await transaction.CommitAsync();
+
                     string suffix = Program.GetSuffix(count);
                     this.bot.SendMessage($"{userName} has declared bankruptcy for the {count}{suffix} time. They now have 1000 Gamba Points", isReversed);
 
@@ -179,10 +181,9 @@ internal class GoofsinoModule : GoofbotModule
                 }
                 else
                 {
-                    this.bot.SendMessage($"Come back when you're broke, bud", isReversed);
+                    await transaction.CommitAsync();
+                    this.bot.SendMessage("Come back when you're broke, bud", isReversed);
                 }
-
-                await transaction.CommitAsync();
             }
             catch (SqliteException e)
             {
@@ -190,7 +191,6 @@ internal class GoofsinoModule : GoofbotModule
                 Console.WriteLine($"SQLITE EXCEPTION!!!\n{e.ToString()}");
                 await transaction.RollbackAsync();
             }
-
         }
     }
 
