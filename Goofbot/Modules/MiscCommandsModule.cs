@@ -27,7 +27,7 @@ internal class MiscCommandsModule : GoofbotModule
 
     private async Task CreateRewardCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        await this.bot.CreateCustomReward(commandArgs);
+        await this.bot.CreateCustomRewardAsync(commandArgs);
         this.bot.SendMessage("Done MrDestructoid", isReversed);
     }
 

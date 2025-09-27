@@ -53,6 +53,9 @@ internal class Bot : IDisposable
     private readonly RandomModule randomModule;
     private readonly GoofsinoModule goofsinoModule;
 
+    private string twitchChannelID;
+    private string twitchBotID;
+
     public Bot(string twitchBotUsername, string twitchChannelUsername, CancellationTokenSource cancellationTokenSource)
     {
         this.TwitchBotUsername = twitchBotUsername;
@@ -151,11 +154,17 @@ internal class Bot : IDisposable
 
         await Task.WhenAll(tasks);
 
+        Task<string> twitchChannelIDTask = this.GetUserIDAsync(this.TwitchChannelUsername);
+        Task<string> twitchBotIDTask = this.GetUserIDAsync(this.TwitchBotUsername);
+
         // Requires TwitchAPI to be initialized
         this.channelPointRedemptionEventSub.Start();
 
         // Requires TwitchClient to be initialized
         this.twitchClient.AddChatCommandIdentifier('!');
+
+        this.twitchChannelID = await twitchChannelIDTask;
+        this.twitchBotID = await twitchBotIDTask;
 
         // Start the bot
         this.twitchClient.Connect();
@@ -168,44 +177,44 @@ internal class Bot : IDisposable
         return user.Id;
     }
 
-    public async Task TimeoutUserAsync(string userID, int duration)
+    public async Task TimeoutUserAsync(string userID, int duration, string reason = "")
     {
-        string channelID = await this.GetUserIDAsync(this.TwitchChannelUsername);
-        string botID = await this.GetUserIDAsync(this.TwitchBotUsername);
+        var banUserRequest = new BanUserRequest
+        {
+            UserId = userID,
+            Duration = duration,
+            Reason = reason,
+        };
 
-        var banUserRequest = new BanUserRequest();
-        banUserRequest.UserId = userID;
-        banUserRequest.Duration = duration;
-        banUserRequest.Reason = string.Empty;
-
-        if (channelID.Equals(userID) || botID.Equals(userID))
+        if (userID.Equals(this.twitchChannelID) || userID.Equals(this.twitchBotID))
         {
             return;
         }
         else
         {
-            await this.twitchBotAPI.Helix.Moderation.BanUserAsync(channelID, botID, banUserRequest);
+            await this.twitchBotAPI.Helix.Moderation.BanUserAsync(this.twitchChannelID, this.twitchBotID, banUserRequest);
         }
     }
 
-    public async Task UpdateRedemptionStatus(string rewardID, string redemptionID, CustomRewardRedemptionStatus status)
+    public async Task UpdateRedemptionStatusAsync(string rewardID, string redemptionID, CustomRewardRedemptionStatus status)
     {
-        string channelID = await this.GetUserIDAsync(this.TwitchChannelUsername);
-        var request = new UpdateCustomRewardRedemptionStatusRequest();
-        request.Status = status;
+        var request = new UpdateCustomRewardRedemptionStatusRequest
+        {
+            Status = status,
+        };
 
-        await this.twitchChannelAPI.Helix.ChannelPoints.UpdateRedemptionStatusAsync(channelID, rewardID, [redemptionID], request);
+        await this.twitchChannelAPI.Helix.ChannelPoints.UpdateRedemptionStatusAsync(this.twitchChannelID, rewardID, [redemptionID], request);
     }
 
-    public async Task CreateCustomReward(string rewardName)
+    public async Task CreateCustomRewardAsync(string rewardName)
     {
-        string channelID = await this.GetUserIDAsync(this.TwitchChannelUsername);
+        var request = new CreateCustomRewardsRequest
+        {
+            Cost = 1,
+            Title = rewardName,
+        };
 
-        var request = new CreateCustomRewardsRequest();
-        request.Cost = 1;
-        request.Title = rewardName;
-
-        await this.twitchChannelAPI.Helix.ChannelPoints.CreateCustomRewardsAsync(channelID, request);
+        await this.twitchChannelAPI.Helix.ChannelPoints.CreateCustomRewardsAsync(this.twitchChannelID, request);
     }
 
     public void SendMessage(string message, bool reverseMessage)
@@ -266,7 +275,6 @@ internal class Bot : IDisposable
 
     private async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
     {
-        string message = string.Empty;
         string commandName = e.Command.CommandText.ToLowerInvariant().Trim();
         string commandArgs = e.Command.ArgumentsAsString.Trim();
 
@@ -297,9 +305,9 @@ internal class Bot : IDisposable
 
     private async Task InitializeDatabaseAsync()
     {
-        using (await this.SqliteReaderWriterLock.WriteLockAsync())
         using (var sqliteConnection = this.OpenSqliteConnection())
         using (var command = sqliteConnection.CreateCommand())
+        using (await this.SqliteReaderWriterLock.WriteLockAsync())
         {
             try
             {
