@@ -618,6 +618,8 @@ internal class GoofsinoModule : GoofbotModule
 
         this.bot.SendMessage($"The wheel landed on {this.rouletteTable.LastSpinResult} ({Enum.GetName(color)})", isReversed);
 
+        Task delayTask = Task.Delay(2000);
+
         List<string> messages = [];
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (var transaction = sqliteConnection.BeginTransaction())
@@ -678,7 +680,7 @@ internal class GoofsinoModule : GoofbotModule
 
                 await transaction.CommitAsync();
 
-                await Task.Delay(2000);
+                await delayTask;
                 foreach (string message in messages)
                 {
                     await Task.Delay(333);
