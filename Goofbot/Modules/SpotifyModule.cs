@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using TwitchLib.Api.Core.Enums;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 
@@ -195,7 +196,7 @@ internal partial class SpotifyModule : GoofbotModule
             if (userInput.Contains("youtube.com/watch?v=") || userInput.Contains("youtu.be/watch?v="))
             {
                 this.bot.SendMessage("This redeem works with Spotify links or song/artist names (not YouTube links lol) (you've been automatically refunded)", false);
-                await this.bot.UpdateRedemptionStatus(rewardID, redemptionID, TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.CANCELED);
+                await this.bot.UpdateRedemptionStatus(rewardID, redemptionID, CustomRewardRedemptionStatus.CANCELED);
                 return;
             }
 
@@ -210,7 +211,7 @@ internal partial class SpotifyModule : GoofbotModule
             if (requestedSong == null)
             {
                 this.bot.SendMessage("Song not found (you've been automatically refunded) MrDestructoid", false);
-                await this.bot.UpdateRedemptionStatus(rewardID, redemptionID, TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.CANCELED);
+                await this.bot.UpdateRedemptionStatus(rewardID, redemptionID, CustomRewardRedemptionStatus.CANCELED);
             }
             else
             {
