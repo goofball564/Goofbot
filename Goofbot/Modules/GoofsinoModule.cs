@@ -254,7 +254,6 @@ internal class GoofsinoModule : GoofbotModule
 
         if ((long.TryParse(commandArgs, out long amount) && amount >= RouletteMinimumBet) || withdraw || allIn)
         {
-            long existingBets = 0;
             using (var sqliteConnection = this.bot.OpenSqliteConnection())
             using (var transaction = sqliteConnection.BeginTransaction())
             using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
@@ -263,6 +262,8 @@ internal class GoofsinoModule : GoofbotModule
                 {
                     await SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
 
+                    long existingBets;
+                    string message;
                     if (withdraw)
                     {
                         existingBets = await GetBetAmountAsync(sqliteConnection, userID, bet);
@@ -271,11 +272,11 @@ internal class GoofsinoModule : GoofbotModule
 
                         if (existingBets > 0)
                         {
-                            this.bot.SendMessage($"{userName} withdrew their {existingBets} point bet on {bet.BetName}", isReversed);
+                            message = $"{userName} withdrew their {existingBets} point bet on {bet.BetName}";
                         }
                         else
                         {
-                            this.bot.SendMessage($"@{userName}, you haven't bet anything on {bet.BetName}", isReversed);
+                            message = $"@{userName}, you haven't bet anything on {bet.BetName}";
                         }
                     }
                     else
@@ -295,18 +296,20 @@ internal class GoofsinoModule : GoofbotModule
                         {
                             if (existingBets > 0)
                             {
-                                this.bot.SendMessage($"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBets}", isReversed);
+                                message = $"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBets}";
                             }
                             else
                             {
-                                this.bot.SendMessage($"{userName} bet {amount} on {bet.BetName}", isReversed);
+                                message = $"{userName} bet {amount} on {bet.BetName}";
                             }
                         }
                         else
                         {
-                            this.bot.SendMessage($"@{userName}, you don't have that many points", isReversed);
+                            message = $"@{userName}, you don't have that many points";
                         }
                     }
+
+                    this.bot.SendMessage(message, isReversed);
                 }
                 catch (SqliteException e)
                 {
