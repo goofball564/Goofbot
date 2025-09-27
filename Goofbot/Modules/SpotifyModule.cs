@@ -1,18 +1,22 @@
 ﻿namespace Goofbot.Modules;
 
 using Goofbot.UtilClasses;
+using HonkSharp.Fluency;
 using Microsoft.VisualStudio.Threading;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using TwitchLib.Client.Events;
+using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 
-internal class SpotifyModule : GoofbotModule
+internal partial class SpotifyModule : GoofbotModule
 {
     private const double QueueModeRemainingDurationThreshold = 60;
     private const string QueueModePlaylistID = "3du4cQHr1wlUagJ0UGf5sR";
@@ -46,6 +50,8 @@ internal class SpotifyModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new Command("album", this.AlbumCommand));
         this.bot.CommandDictionary.TryAddCommand(new Command("queuemode", this.QueueModeCommand, CommandAccessibilityModifier.StreamerOnly));
         this.bot.CommandDictionary.TryAddCommand(new Command("spotvol", this.SpotifyVolumeCommand, CommandAccessibilityModifier.StreamerOnly));
+
+        this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
     }
 
     public bool QueueMode
@@ -79,6 +85,18 @@ internal class SpotifyModule : GoofbotModule
     {
         this.spotifyAPI.Dispose();
         base.Dispose();
+    }
+
+    private static string FullTrackToSongString(FullTrack track)
+    {
+        var artistNames = track.Artists.Select(artist => artist.Name).ToList();
+        return $"{track.Name} by {string.Join(", ", artistNames)}";
+    }
+
+    private static string FullTrackToAlbumString(FullTrack track)
+    {
+        var artistNames = track.Album.Artists.Select(artist => artist.Name).ToList();
+        return $"{track.Album.Name} by {string.Join(", ", artistNames)}";
     }
 
     private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
@@ -152,34 +170,79 @@ internal class SpotifyModule : GoofbotModule
         }
     }
 
+    [GeneratedRegex("(?<=spotify\\.com).+(?=track)")]
+    private static partial Regex SpotifyLinkRegex();
+
+    [GeneratedRegex("(?<=track/).+")]
+    private static partial Regex SpotifyTrackIDRegex();
+
+    private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender, ChannelPointsCustomRewardRedemptionArgs e)
+    {
+        string reward = e.Notification.Payload.Event.Reward.Title;
+        string userID = e.Notification.Payload.Event.UserId;
+        string userName = e.Notification.Payload.Event.UserName;
+        string userInput = e.Notification.Payload.Event.UserInput;
+
+        string rewardID = e.Notification.Payload.Event.Reward.Id;
+        string redemptionID = e.Notification.Payload.Event.Id;
+
+        if (reward.Equals("Song Request", StringComparison.OrdinalIgnoreCase))
+        {
+            int indexOfChar = userInput.IndexOf('?');
+            string filteredUserInput = indexOfChar >= 0 ? userInput.Substring(0, indexOfChar) : userInput;
+            filteredUserInput = SpotifyLinkRegex().Replace(filteredUserInput, "/");
+
+            if (userInput.Contains("youtube.com/watch?v=") || userInput.Contains("youtu.be/watch?v="))
+            {
+                this.bot.SendMessage("This redeem works with Spotify links or song/artist names (not YouTube links lol) (you've been automatically refunded)", false);
+                await this.bot.UpdateRedemptionStatus(rewardID, redemptionID, TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.CANCELED);
+                return;
+            }
+
+            FullTrack? requestedSong;
+
+            requestedSong = await this.spotifyAPI.AddSongToQueueAsync(filteredUserInput);
+            if (requestedSong == null)
+            {
+                requestedSong = await this.spotifyAPI.AddSongToQueueWithSearchQueryAsync(userInput);
+            }
+
+            if (requestedSong == null)
+            {
+                this.bot.SendMessage("Song not found (you've been automatically refunded) MrDestructoid", false);
+                await this.bot.UpdateRedemptionStatus(rewardID, redemptionID, TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.CANCELED);
+            }
+            else
+            {
+                this.bot.SendMessage($"{userName} requested {FullTrackToSongString(requestedSong)}", false);
+            }
+        }
+    }
+
     private async Task SongCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string message = string.Empty;
-        NameAndArtistNames songAndArtistNames = await this.spotifyAPI.GetCurrentlyPlayingSongAndArtistsAsync();
-        string currentlyPlayingSongName = songAndArtistNames.Name;
-        string currentlyPlayingArtistNames = string.Join(", ", songAndArtistNames.ArtistNames);
-        if (currentlyPlayingSongName.Equals(string.Empty) || currentlyPlayingArtistNames.Equals(string.Empty))
+        FullTrack currentlyPlaying = await this.spotifyAPI.GetCurrentlyPlayingAsync();
+        if (currentlyPlaying == null)
         {
             this.bot.SendMessage("Ain't nothing playing", isReversed);
         }
         else
         {
-            this.bot.SendMessage(currentlyPlayingSongName + " by " + currentlyPlayingArtistNames, isReversed);
+            this.bot.SendMessage($"{FullTrackToSongString(currentlyPlaying)}", isReversed);
         }
     }
 
     private async Task AlbumCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        NameAndArtistNames currentlyPlayingAlbum = await this.spotifyAPI.GetCurrentlyPlayingAlbumAndArtistsAsync();
-        string currentlyPlayingAlbumName = currentlyPlayingAlbum.Name;
-        string currentlyPlayingArtistNames = string.Join(", ", currentlyPlayingAlbum.ArtistNames);
-        if (currentlyPlayingAlbumName.Equals(string.Empty) || currentlyPlayingArtistNames.Equals(string.Empty))
+        FullTrack currentlyPlaying = await this.spotifyAPI.GetCurrentlyPlayingAsync();
+        if (currentlyPlaying == null)
         {
             this.bot.SendMessage("Ain't nothing playing", isReversed);
         }
         else
         {
-            this.bot.SendMessage(currentlyPlayingAlbumName + " by " + currentlyPlayingArtistNames, isReversed);
+            this.bot.SendMessage($"{FullTrackToAlbumString(currentlyPlaying)}", isReversed);
         }
     }
 
@@ -262,12 +325,6 @@ internal class SpotifyModule : GoofbotModule
         }
     }
 
-    private readonly struct NameAndArtistNames(string songName, List<string> artistNames)
-    {
-        public readonly string Name = songName;
-        public readonly List<string> ArtistNames = artistNames;
-    }
-
     private readonly struct ContextAndQueue(CurrentlyPlayingContext context, QueueResponse queue)
     {
         public readonly CurrentlyPlayingContext Context = context;
@@ -315,25 +372,28 @@ internal class SpotifyModule : GoofbotModule
             await this.spotifyClientConnected.WaitAsync();
         }
 
-        public async Task<NameAndArtistNames> GetCurrentlyPlayingSongAndArtistsAsync()
+        public async Task<FullTrack?> GetCurrentlyPlayingAsync()
         {
             await this.semaphore.WaitAsync();
             try
             {
-                return await this.GetCurrentlyPlayingHelperAsync(false);
-            }
-            finally
-            {
-                this.semaphore.Release();
-            }
-        }
+                await this.RefreshCachedApiResponsesAsync();
 
-        public async Task<NameAndArtistNames> GetCurrentlyPlayingAlbumAndArtistsAsync()
-        {
-            await this.semaphore.WaitAsync();
-            try
+                var context = this.context;
+                var queue = this.queue;
+
+                if (context != null && context.IsPlaying)
+                {
+                    return GetCurrentlyPlaying(queue);
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            catch
             {
-                return await this.GetCurrentlyPlayingHelperAsync(true);
+                return null;
             }
             finally
             {
@@ -362,9 +422,43 @@ internal class SpotifyModule : GoofbotModule
             await this.spotify.Playlists.RemoveItems(playlist.Id, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
         }
 
-        public async Task AddSongToQueueAsync(string songURI)
+        public async Task<FullTrack?> AddSongToQueueAsync(string songURI)
         {
-            await this.spotify.Player.AddToQueue(new PlayerAddToQueueRequest(songURI));
+            try
+            {
+                bool success = await this.spotify.Player.AddToQueue(new PlayerAddToQueueRequest(songURI));
+                if (success)
+                {
+                    string trackID = SpotifyTrackIDRegex().Match(songURI).Value;
+                    return await this.spotify.Tracks.Get(trackID);
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<FullTrack?> AddSongToQueueWithSearchQueryAsync(string query)
+        {
+            var searchRequest = new SearchRequest(SearchRequest.Types.Track, query);
+            var searchResponse = await this.spotify.Search.Item(searchRequest);
+            var firstResults = searchResponse.Tracks.Items;
+
+            if (firstResults != null && firstResults.Count > 0)
+            {
+                var firstResult = firstResults[0];
+                string trackID = firstResult.Uri.Split(":")[^1];
+                return await this.AddSongToQueueAsync($"https://open.spotify.com/track/{trackID}");
+            }
+            else
+            {
+                return null;
+            }
         }
 
         public async Task<FullPlaylist> GetPlaylistAsync(string playlistID)
@@ -376,40 +470,6 @@ internal class SpotifyModule : GoofbotModule
         {
             this.semaphore.Dispose();
             this.server.Dispose();
-        }
-
-        private async Task<NameAndArtistNames> GetCurrentlyPlayingHelperAsync(bool album = false)
-        {
-            string name = string.Empty;
-            List<string> artistNames = [];
-
-            await this.RefreshCachedApiResponsesAsync();
-
-            var context = this.context;
-            var queue = this.queue;
-
-            List<SimpleArtist> artists = [];
-            if (context != null && context.IsPlaying)
-            {
-                var currentlyPlaying = GetCurrentlyPlaying(queue);
-                if (album)
-                {
-                    name = currentlyPlaying?.Album.Name;
-                    artists = currentlyPlaying?.Album.Artists;
-                }
-                else
-                {
-                    name = currentlyPlaying?.Name;
-                    artists = currentlyPlaying?.Artists;
-                }
-            }
-
-            foreach (var artist in artists)
-            {
-                artistNames.Add(artist.Name);
-            }
-
-            return new NameAndArtistNames(name, artistNames);
         }
 
         private async Task RefreshCachedApiResponsesAsync()
