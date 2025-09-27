@@ -234,8 +234,23 @@ internal class GoofsinoModule : GoofbotModule
         string userID = eventArgs.Command.ChatMessage.UserId;
         string userName = eventArgs.Command.ChatMessage.DisplayName;
 
-        bool withdraw = commandArgs.Equals("withdraw", StringComparison.OrdinalIgnoreCase) || commandArgs.Equals("w", StringComparison.OrdinalIgnoreCase);
-        bool allIn = commandArgs.Equals("all", StringComparison.OrdinalIgnoreCase) || commandArgs.Equals("all in", StringComparison.OrdinalIgnoreCase);
+        bool withdraw = false;
+        bool allIn = false;
+
+        switch (commandArgs.ToLowerInvariant())
+        {
+            case "w":
+                withdraw = true;
+                break;
+            case "withdraw":
+                goto case "w";
+            case "all":
+                allIn = true;
+                break;
+            case "all in":
+                goto case "all";
+        }
+
 
         if ((long.TryParse(commandArgs, out long amount) && amount >= RouletteMinimumBet) || withdraw || allIn)
         {
@@ -258,12 +273,21 @@ internal class GoofsinoModule : GoofbotModule
                         {
                             this.bot.SendMessage($"{userName} withdrew their {existingBets} point bet on {bet.BetName}", isReversed);
                         }
+                        else
+                        {
+                            this.bot.SendMessage($"@{userName}, you haven't bet anything on {bet.BetName}", isReversed);
+                        }
                     }
-                    else if (allIn)
+                    else
                     {
-                        long balance = await GetBalanceAsync(sqliteConnection, userID);
                         existingBets = await GetBetAmountAsync(sqliteConnection, userID, bet);
-                        amount = balance - existingBets;
+
+                        if (allIn)
+                        {
+                            long balance = await GetBalanceAsync(sqliteConnection, userID);
+                            amount = balance - existingBets;
+                        }
+
                         bool success = await TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
                         await transaction.CommitAsync();
 
@@ -278,23 +302,9 @@ internal class GoofsinoModule : GoofbotModule
                                 this.bot.SendMessage($"{userName} bet {amount} on {bet.BetName}", isReversed);
                             }
                         }
-                    }
-                    else
-                    {
-                        existingBets = await GetBetAmountAsync(sqliteConnection, userID, bet);
-                        bool success = await TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
-                        await transaction.CommitAsync();
-
-                        if (success)
+                        else
                         {
-                            if (existingBets > 0)
-                            {
-                                this.bot.SendMessage($"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBets}", isReversed);
-                            }
-                            else
-                            {
-                                this.bot.SendMessage($"{userName} bet {amount} on {bet.BetName}", isReversed);
-                            }
+                            this.bot.SendMessage($"@{userName}, you don't have that many points", isReversed);
                         }
                     }
                 }
@@ -308,7 +318,7 @@ internal class GoofsinoModule : GoofbotModule
         }
         else
         {
-            this.bot.SendMessage($"Minimum bet: {RouletteMinimumBet}", isReversed);
+            this.bot.SendMessage($"Include an amount (minimum: {RouletteMinimumBet}), \"all\" to bet everything, or \"w\" to withdraw your bet", isReversed);
         }
     }
 
