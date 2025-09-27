@@ -107,7 +107,7 @@ internal class CheckInTokenModule : GoofbotModule
             leaderboardEntries = await GetTopGoofCoinUsersAsync(sqliteConnection);
         }
 
-        string leaderboardString = Bot.GetLeaderboardString(leaderboardEntries);
+        string leaderboardString = Bot.GetLeaderboardString(leaderboardEntries, "GoofCoin");
 
         this.bot.SendMessage(leaderboardString, isReversed);
     }

@@ -120,14 +120,14 @@ internal class Bot : IDisposable
         await replaceCommand.ExecuteNonQueryAsync();
     }
 
-    public static string GetLeaderboardString(List<UserNameAndCount> list)
+    public static string GetLeaderboardString(List<UserNameAndCount> list, string theThingBeingCounted)
     {
         int i = 0;
         var stringBuilder = new StringBuilder();
         foreach (var user in list)
         {
             string s = user.Count > 1 ? "s" : string.Empty;
-            stringBuilder = stringBuilder.Append($"{i + 1}. {user.UserName} - {user.Count} Gamba Point{s}");
+            stringBuilder = stringBuilder.Append($"{i + 1}. {user.UserName} - {user.Count} {theThingBeingCounted}{s}");
             if (i < list.Count - 1)
             {
                 stringBuilder = stringBuilder.Append(" | ");

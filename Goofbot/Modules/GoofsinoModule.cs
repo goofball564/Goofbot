@@ -374,7 +374,7 @@ internal class GoofsinoModule : GoofbotModule
             leaderboardEntries = await GetTopGambaPointsUsersAsync(sqliteConnection);
         }
 
-        string leaderboardString = Bot.GetLeaderboardString(leaderboardEntries);
+        string leaderboardString = Bot.GetLeaderboardString(leaderboardEntries, "Gamba Point");
 
         this.bot.SendMessage(leaderboardString, isReversed);
     }
