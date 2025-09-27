@@ -531,6 +531,10 @@ internal class GoofsinoModule : GoofbotModule
                 break;
             case "all in":
                 goto case "all";
+            case "allin":
+                goto case "all";
+            case "a":
+                goto case "all";
         }
 
 
