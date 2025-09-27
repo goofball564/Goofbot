@@ -355,7 +355,7 @@ internal class GoofsinoModule : GoofbotModule
                 {
                     messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteRed, false));
                     messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteBlack, false));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteBlack, true));
+                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteGreen, true));
                 }
 
                 if (this.rouletteTable.Even)
