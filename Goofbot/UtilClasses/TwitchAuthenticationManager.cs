@@ -18,8 +18,8 @@ internal class TwitchAuthenticationManager : IDisposable
     public const string TwitchAuthorizationCodeRequestUrlBase = "https://id.twitch.tv/oauth2/authorize";
     public const string TwitchTokenRequestUrl = "https://id.twitch.tv/oauth2/token";
 
-    private static readonly List<string> BotScopes = ["user:read:chat", "user:write:chat", "user:bot", "chat:read", "chat:edit"];
-    private static readonly List<string> ChannelScopes = ["channel:bot", "channel:read:redemptions", "moderator:manage:banned_users"];
+    private static readonly List<string> BotScopes = ["user:read:chat", "user:write:chat", "user:bot", "chat:read", "chat:edit", "moderator:manage:banned_users"];
+    private static readonly List<string> ChannelScopes = ["channel:bot", "channel:read:redemptions"];
 
     private readonly HttpClient httpClient = new ();
     private readonly WebServer server = new (TwitchAppRedirectUrl);
@@ -29,18 +29,20 @@ internal class TwitchAuthenticationManager : IDisposable
 
     private readonly Bot bot;
     private readonly TwitchClient twitchClient;
-    private readonly TwitchAPI twitchAPI;
+    private readonly TwitchAPI twitchChannelAPI;
+    private readonly TwitchAPI twitchBotAPI;
     private readonly string twitchClientID;
     private readonly string twitchClientSecret;
 
     private string twitchBotAccessToken;
     private string twitchChannelAccessToken;
 
-    public TwitchAuthenticationManager(Bot bot, TwitchClient twitchClient, TwitchAPI twitchAPI, string twitchClientID, string twitchClientSecret)
+    public TwitchAuthenticationManager(Bot bot, TwitchClient twitchClient, TwitchAPI twitchChannelAPI, TwitchAPI twitchBotAPI, string twitchClientID, string twitchClientSecret)
     {
         this.bot = bot;
         this.twitchClient = twitchClient;
-        this.twitchAPI = twitchAPI;
+        this.twitchChannelAPI = twitchChannelAPI;
+        this.twitchBotAPI = twitchBotAPI;
         this.twitchClientID = twitchClientID;
         this.twitchClientSecret = twitchClientSecret;
     }
@@ -55,14 +57,14 @@ internal class TwitchAuthenticationManager : IDisposable
 
     public async Task InitializeAsync()
     {
-        Task<string> botAccessTokenTask = this.RefreshTwitchAccessToken(true);
-        Task<string> channelAccessTokenTask = this.RefreshTwitchAccessToken(false);
+        this.twitchBotAccessToken = await this.RefreshTwitchAccessToken(true);
+        this.twitchChannelAccessToken = await this.RefreshTwitchAccessToken(false);
 
-        this.twitchBotAccessToken = await botAccessTokenTask;
-        this.twitchChannelAccessToken = await channelAccessTokenTask;
+        this.twitchChannelAPI.Settings.ClientId = this.twitchClientID;
+        this.twitchChannelAPI.Settings.AccessToken = this.twitchChannelAccessToken;
 
-        this.twitchAPI.Settings.ClientId = this.twitchClientID;
-        this.twitchAPI.Settings.AccessToken = this.twitchChannelAccessToken;
+        this.twitchBotAPI.Settings.ClientId = this.twitchClientID;
+        this.twitchBotAPI.Settings.AccessToken = this.twitchBotAccessToken;
 
         var credentials = new ConnectionCredentials(this.bot.TwitchBotUsername, this.twitchBotAccessToken);
         this.twitchClient.Initialize(credentials, this.bot.TwitchChannelUsername);

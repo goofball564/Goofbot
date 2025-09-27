@@ -31,7 +31,9 @@ internal class Bot : IDisposable
     private readonly CancellationTokenSource cancellationTokenSource;
 
     private readonly TwitchClient twitchClient = new ();
-    private readonly TwitchAPI twitchAPI = new ();
+    private readonly TwitchAPI twitchChannelAPI = new ();
+    private readonly TwitchAPI twitchBotAPI = new ();
+
     private readonly TwitchAuthenticationManager twitchAuthenticationManager;
     private readonly ChannelPointRedemptionEventSub channelPointRedemptionEventSub;
 
@@ -65,7 +67,7 @@ internal class Bot : IDisposable
         dynamic twitchAppCredentials = Program.ParseJsonFile(twitchAppCredentialsFile);
         string clientID = twitchAppCredentials.client_id;
         string clientSecret = twitchAppCredentials.client_secret;
-        this.twitchAuthenticationManager = new (this, this.twitchClient, this.twitchAPI, clientID, clientSecret);
+        this.twitchAuthenticationManager = new (this, this.twitchClient, this.twitchChannelAPI, this.twitchBotAPI, clientID, clientSecret);
 
         // Subscribe to TwitchClient events
         this.twitchClient.OnLog += this.Client_OnLog;
@@ -78,7 +80,7 @@ internal class Bot : IDisposable
         MagickNET.Initialize();
 
         // Subscribe to Twitch EventSub for Channel Point Redemption
-        this.channelPointRedemptionEventSub = new (this.twitchAPI);
+        this.channelPointRedemptionEventSub = new (this.twitchChannelAPI);
         this.EventSubWebsocketClient = this.channelPointRedemptionEventSub.EventSubWebsocketClient;
 
         // Instantiate modules
@@ -137,7 +139,7 @@ internal class Bot : IDisposable
 
     public async Task<string> GetUserIDAsync(string userName)
     {
-        var response = await this.twitchAPI.Helix.Users.GetUsersAsync(logins: [userName.ToLowerInvariant()]);
+        var response = await this.twitchChannelAPI.Helix.Users.GetUsersAsync(logins: [userName.ToLowerInvariant()]);
         var user = response.Users[0];
         return user.Id;
     }
@@ -145,19 +147,20 @@ internal class Bot : IDisposable
     public async Task TimeoutUserAsync(string userID, int duration)
     {
         string channelID = await this.GetUserIDAsync(this.TwitchChannelUsername);
-        var banUserRequest = new BanUserRequest();
+        string botID = await this.GetUserIDAsync(this.TwitchBotUsername);
 
+        var banUserRequest = new BanUserRequest();
         banUserRequest.UserId = userID;
         banUserRequest.Duration = duration;
         banUserRequest.Reason = string.Empty;
 
-        if (channelID.Equals(userID))
+        if (channelID.Equals(userID) || botID.Equals(userID))
         {
             return;
         }
         else
         {
-            await this.twitchAPI.Helix.Moderation.BanUserAsync(channelID, channelID, banUserRequest);
+            await this.twitchBotAPI.Helix.Moderation.BanUserAsync(channelID, botID, banUserRequest);
         }
     }
 
