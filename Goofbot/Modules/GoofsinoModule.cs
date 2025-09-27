@@ -5,7 +5,6 @@ using Goofbot.UtilClasses;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 using static Goofbot.UtilClasses.GoofsinoModuleHelperMethods;
@@ -88,51 +87,24 @@ internal class GoofsinoModule : GoofbotModule
         List<UserNameAndCount> leaderboardEntries = [];
 
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
-        using (var transaction = sqliteConnection.BeginTransaction())
-        using (var sqliteCommand = sqliteConnection.CreateCommand())
         using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
         {
-            sqliteCommand.CommandText =
-                @$"SELECT TwitchUsers.UserName, GambaPoints.Balance
-                    FROM TwitchUsers
-                    INNER JOIN GambaPoints ON TwitchUsers.UserID = GambaPoints.UserID
-                    ORDER BY GambaPoints.Balance DESC, GambaPoints.LastUpdateTimestamp ASC 
-                    LIMIT 5;
-            ";
-
-            using var reader = await sqliteCommand.ExecuteReaderAsync();
-
-            while (await reader.ReadAsync())
-            {
-                leaderboardEntries.Add(new UserNameAndCount(reader.GetString(0), reader.GetInt64(1)));
-            }
+            leaderboardEntries = await GetTopGambaPointsUsersAsync(sqliteConnection);
         }
 
-        int i = 0;
-        var stringBuilder = new StringBuilder();
-        foreach (var user in leaderboardEntries)
-        {
-            string s = user.Count > 1 ? "s" : string.Empty;
-            stringBuilder = stringBuilder.Append($"{i + 1}. {user.UserName} - {user.Count} Gamba Point{s}");
-            if (i < leaderboardEntries.Count - 1)
-            {
-                stringBuilder = stringBuilder.Append(" | ");
-            }
+        string leaderboardString = Bot.GetLeaderboardString(leaderboardEntries);
 
-            i++;
-        }
-
-        this.bot.SendMessage(stringBuilder.ToString(), isReversed);
+        this.bot.SendMessage(leaderboardString, isReversed);
     }
 
     private async Task BankruptcyCountCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string userID = eventArgs.Command.ChatMessage.UserId;
-        string userName = eventArgs.Command.ChatMessage.Username;
+        string userName = eventArgs.Command.ChatMessage.DisplayName;
 
         long bankruptcyCount = 0;
-        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
+        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
             await SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
             bankruptcyCount = await GetBankruptcyCountAsync(sqliteConnection, userID);
@@ -145,7 +117,7 @@ internal class GoofsinoModule : GoofbotModule
     private async Task BalanceCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string userID = eventArgs.Command.ChatMessage.UserId;
-        string userName = eventArgs.Command.ChatMessage.Username;
+        string userName = eventArgs.Command.ChatMessage.DisplayName;
 
         long balance;
         long totalBets;
@@ -182,7 +154,7 @@ internal class GoofsinoModule : GoofbotModule
     private async Task DeclareBankruptcyCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         string userID = eventArgs.Command.ChatMessage.UserId;
-        string userName = eventArgs.Command.ChatMessage.Username;
+        string userName = eventArgs.Command.ChatMessage.DisplayName;
 
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (var transaction = sqliteConnection.BeginTransaction())
@@ -215,7 +187,7 @@ internal class GoofsinoModule : GoofbotModule
             catch (SqliteException e)
             {
                 this.bot.SendMessage("Hey, Goof, your bot broke! (Declare Bankruptcy Command)", false);
-                Console.WriteLine($"SQLITE EXCEPTION!!!\ne.ToString()");
+                Console.WriteLine($"SQLITE EXCEPTION!!!\n{e.ToString()}");
                 await transaction.RollbackAsync();
             }
 
@@ -260,7 +232,7 @@ internal class GoofsinoModule : GoofbotModule
     private async Task BetCommandHelperAsync(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs, Bet bet)
     {
         string userID = eventArgs.Command.ChatMessage.UserId;
-        string userName = eventArgs.Command.ChatMessage.Username;
+        string userName = eventArgs.Command.ChatMessage.DisplayName;
 
         bool withdraw = commandArgs.Equals("withdraw", StringComparison.OrdinalIgnoreCase) || commandArgs.Equals("w", StringComparison.OrdinalIgnoreCase);
         bool allIn = commandArgs.Equals("all", StringComparison.OrdinalIgnoreCase) || commandArgs.Equals("all in", StringComparison.OrdinalIgnoreCase);

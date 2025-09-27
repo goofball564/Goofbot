@@ -1,6 +1,7 @@
 ﻿namespace Goofbot;
 
 using Goofbot.Modules;
+using Goofbot.Structs;
 using Goofbot.UtilClasses;
 using ImageMagick;
 using Microsoft.Data.Sqlite;
@@ -8,6 +9,7 @@ using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api;
@@ -116,6 +118,25 @@ internal class Bot : IDisposable
         replaceCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
         replaceCommand.Parameters.AddWithValue("@UserName", userName);
         await replaceCommand.ExecuteNonQueryAsync();
+    }
+
+    public static string GetLeaderboardString(List<UserNameAndCount> list)
+    {
+        int i = 0;
+        var stringBuilder = new StringBuilder();
+        foreach (var user in list)
+        {
+            string s = user.Count > 1 ? "s" : string.Empty;
+            stringBuilder = stringBuilder.Append($"{i + 1}. {user.UserName} - {user.Count} Gamba Point{s}");
+            if (i < list.Count - 1)
+            {
+                stringBuilder = stringBuilder.Append(" | ");
+            }
+
+            i++;
+        }
+
+        return stringBuilder.ToString();
     }
 
     public async Task StartAsync()

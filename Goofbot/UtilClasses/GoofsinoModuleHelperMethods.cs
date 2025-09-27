@@ -1,5 +1,6 @@
 ﻿namespace Goofbot.UtilClasses;
 
+using Goofbot.Structs;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
@@ -77,6 +78,29 @@ internal static class GoofsinoModuleHelperMethods
     public static async Task<long> GetHouseBalance(SqliteConnection sqliteConnection)
     {
         return await GetBalanceAsync(sqliteConnection, TheHouseID);
+    }
+
+    public static async Task<List<UserNameAndCount>> GetTopGambaPointsUsersAsync(SqliteConnection sqliteConnection)
+    {
+        List<UserNameAndCount> leaderboardEntries = [];
+
+        using var sqliteCommand = sqliteConnection.CreateCommand();
+        sqliteCommand.CommandText =
+            @$"SELECT TwitchUsers.UserName, GambaPoints.Balance
+                    FROM TwitchUsers
+                    INNER JOIN GambaPoints ON TwitchUsers.UserID = GambaPoints.UserID
+                    ORDER BY GambaPoints.Balance DESC, GambaPoints.LastUpdateTimestamp DESC 
+                    LIMIT 5;
+            ";
+
+        using var reader = await sqliteCommand.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            leaderboardEntries.Add(new UserNameAndCount(reader.GetString(0), reader.GetInt64(1)));
+        }
+
+        return leaderboardEntries;
     }
 
     public static async Task<List<string>> ResolveAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet, bool success)
