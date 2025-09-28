@@ -30,10 +30,8 @@ internal class GoofsinoModule : GoofbotModule
     private static readonly RouletteBet RouletteTopLine = new (14, 6, "top line");
     private static readonly RouletteBet RouletteGreen = new (15, 17, "green");
 
-    private readonly AsyncReaderWriterLock rouletteBetsOpenLock = new ();
+    private readonly GoofsinoGameBetLock rouletteBetLock = new ();
     private readonly RouletteTable rouletteTable = new ();
-
-    private bool rouletteBetsOpen = true;
 
     public GoofsinoModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
@@ -523,13 +521,10 @@ internal class GoofsinoModule : GoofbotModule
 
         if (bet is RouletteBet)
         {
-            using (await this.rouletteBetsOpenLock.ReadLockAsync())
+            if (!(await this.rouletteBetLock.GetBetsOpenAsync()))
             {
-                if (!this.rouletteBetsOpen)
-                {
-                    this.bot.SendMessage($"@{userName}, bets are closed on the roulette table. Wait for them to open again.", isReversed);
-                    return;
-                }
+                this.bot.SendMessage($"@{userName}, bets are closed on the roulette table. Wait for them to open again.", isReversed);
+                return;
             }
         }
 
@@ -630,10 +625,7 @@ internal class GoofsinoModule : GoofbotModule
 
     private async Task SpinCommand(string commandArgs = "", bool isReversed = false, OnChatCommandReceivedArgs eventArgs = null)
     {
-        using (await this.rouletteBetsOpenLock.WriteLockAsync())
-        {
-            this.rouletteBetsOpen = false;
-        }
+        await this.rouletteBetLock.SetBetsOpenAsync(false);
 
         this.bot.SendMessage("Roulette bets are closed. Spinning the wheel...", isReversed);
         await Task.Delay(2000);
@@ -713,11 +705,7 @@ internal class GoofsinoModule : GoofbotModule
                 }
 
                 delayTask = Task.Delay(333);
-                using (await this.rouletteBetsOpenLock.WriteLockAsync())
-                {
-                    this.rouletteBetsOpen = true;
-                }
-
+                await this.rouletteBetLock.SetBetsOpenAsync(true);
                 await delayTask;
                 this.bot.SendMessage("Roulette bets are open again!", isReversed);
             }
