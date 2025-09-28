@@ -13,21 +13,20 @@ internal class GoofsinoModule : GoofbotModule
     private const long RouletteMinimumBet = 1;
     private const string TheHouseID = "-1";
 
-    private static readonly Bet RouletteColumn1 = new (2, 2, "column 1");
-    private static readonly Bet RouletteColumn2 = new (3, 2, "column 2");
-    private static readonly Bet RouletteColumn3 = new (4, 2, "column 3");
-    private static readonly Bet RouletteDozen1 = new (5, 2, "first dozen");
-    private static readonly Bet RouletteDozen2 = new (6, 2, "second dozen");
-    private static readonly Bet RouletteDozen3 = new (7, 2, "third dozen");
-    private static readonly Bet RouletteHigh = new (8, 1, "high");
-    private static readonly Bet RouletteLow = new (9, 1, "low");
-    private static readonly Bet RouletteEven = new (10, 1, "even");
-    private static readonly Bet RouletteOdd = new (11, 1, "odd");
-    private static readonly Bet RouletteRed = new (12, 1, "red");
-    private static readonly Bet RouletteBlack = new (13, 1, "black");
-    private static readonly Bet RouletteTopLine = new (14, 6, "top line");
-    private static readonly Bet RouletteGreen = new (15, 17, "green");
-
+    private static readonly RouletteBet RouletteColumn1 = new (2, 2, "column 1");
+    private static readonly RouletteBet RouletteColumn2 = new (3, 2, "column 2");
+    private static readonly RouletteBet RouletteColumn3 = new (4, 2, "column 3");
+    private static readonly RouletteBet RouletteDozen1 = new (5, 2, "first dozen");
+    private static readonly RouletteBet RouletteDozen2 = new (6, 2, "second dozen");
+    private static readonly RouletteBet RouletteDozen3 = new (7, 2, "third dozen");
+    private static readonly RouletteBet RouletteHigh = new (8, 1, "high");
+    private static readonly RouletteBet RouletteLow = new (9, 1, "low");
+    private static readonly RouletteBet RouletteEven = new (10, 1, "even");
+    private static readonly RouletteBet RouletteOdd = new (11, 1, "odd");
+    private static readonly RouletteBet RouletteRed = new (12, 1, "red");
+    private static readonly RouletteBet RouletteBlack = new (13, 1, "black");
+    private static readonly RouletteBet RouletteTopLine = new (14, 6, "top line");
+    private static readonly RouletteBet RouletteGreen = new (15, 17, "green");
     private readonly RouletteTable rouletteTable = new ();
 
     public GoofsinoModule(Bot bot, string moduleDataFolder)
