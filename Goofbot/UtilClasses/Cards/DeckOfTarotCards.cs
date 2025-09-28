@@ -1,4 +1,4 @@
-﻿namespace Goofbot.UtilClasses;
+﻿namespace Goofbot.UtilClasses.Cards;
 
 using System;
 using System.Collections.Generic;
@@ -19,13 +19,13 @@ internal class DeckOfTarotCards
         {
             foreach (TarotRank rank in Enum.GetValues(typeof(TarotRank)))
             {
-                this.cards.Add(new TarotSuitCard(suit, rank));
+                cards.Add(new TarotSuitCard(suit, rank));
             }
         }
 
-        foreach (string trump in this.trumps)
+        foreach (string trump in trumps)
         {
-            this.cards.Add(new TarotTrumpCard(trump));
+            cards.Add(new TarotTrumpCard(trump));
         }
     }
 
@@ -59,13 +59,13 @@ internal class DeckOfTarotCards
     {
         get
         {
-            return this.cards.Count;
+            return cards.Count;
         }
     }
 
     public TarotCard Peek(int index)
     {
-        return this.cards[index];
+        return cards[index];
     }
 
     public abstract class TarotCard
@@ -80,13 +80,13 @@ internal class DeckOfTarotCards
 
         public TarotSuitCard(TarotSuit suit, TarotRank rank)
         {
-            this.Suit = suit;
-            this.Rank = rank;
+            Suit = suit;
+            Rank = rank;
         }
 
         public override string ToString()
         {
-            return $"{Enum.GetName(this.Rank)} of {Enum.GetName(this.Suit)}";
+            return $"{Enum.GetName(Rank)} of {Enum.GetName(Suit)}";
         }
     }
 
@@ -96,12 +96,12 @@ internal class DeckOfTarotCards
 
         public TarotTrumpCard(string trump)
         {
-            this.Trump = trump;
+            Trump = trump;
         }
 
         public override string ToString()
         {
-            return this.Trump;
+            return Trump;
         }
     }
 }

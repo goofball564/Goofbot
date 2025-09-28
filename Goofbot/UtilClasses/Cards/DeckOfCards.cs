@@ -1,4 +1,4 @@
-﻿namespace Goofbot.UtilClasses;
+﻿namespace Goofbot.UtilClasses.Cards;
 
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ internal class DeckOfCards
         {
             foreach (CardRank rank in Enum.GetValues(typeof(CardRank)))
             {
-                this.cards.Add(new Card(suit, rank));
+                cards.Add(new Card(suit, rank));
             }
         }
     }
@@ -49,27 +49,27 @@ internal class DeckOfCards
     {
         get
         {
-            return this.cards.Count;
+            return cards.Count;
         }
     }
 
     public void ShuffleDeck()
     {
-        this.currentIndex = 0;
+        currentIndex = 0;
 
         // Knuth Shuffle
-        for (int i = this.cards.Count - 1; i >= 0; i--)
+        for (int i = cards.Count - 1; i >= 0; i--)
         {
             int j = RandomNumberGenerator.GetInt32(i + 1);
-            (this.cards[j], this.cards[i]) = (this.cards[i], this.cards[j]);
+            (cards[j], cards[i]) = (cards[i], cards[j]);
         }
     }
 
     public Card? GetNextCard()
     {
-        if (this.currentIndex < this.cards.Count)
+        if (currentIndex < cards.Count)
         {
-            return this.cards[this.currentIndex++];
+            return cards[currentIndex++];
         }
         else
         {
@@ -79,7 +79,7 @@ internal class DeckOfCards
 
     public Card Peek(int index)
     {
-        return this.cards[index];
+        return cards[index];
     }
 
     public readonly struct Card(CardSuit suit, CardRank rank)
@@ -89,7 +89,7 @@ internal class DeckOfCards
 
         public override string ToString()
         {
-            return $"{Enum.GetName(this.Rank)} of {Enum.GetName(this.Suit)}";
+            return $"{Enum.GetName(Rank)} of {Enum.GetName(Suit)}";
         }
     }
 }
