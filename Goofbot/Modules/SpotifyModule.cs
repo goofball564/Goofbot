@@ -77,7 +77,7 @@ internal partial class SpotifyModule : GoofbotModule
         }
     }
 
-    public async Task InitializeAsync()
+    public override async Task InitializeAsync()
     {
         await this.spotifyAPI.InitializeAsync();
     }

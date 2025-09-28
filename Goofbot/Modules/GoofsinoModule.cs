@@ -54,7 +54,7 @@ internal class GoofsinoModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new Command("thehouse", this.HouseRevenueCommand));
     }
 
-    public async Task InitializeAsync()
+    public override async Task InitializeAsync()
     {
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (var transaction = sqliteConnection.BeginTransaction())

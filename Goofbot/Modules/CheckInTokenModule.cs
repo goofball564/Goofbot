@@ -20,7 +20,7 @@ internal class CheckInTokenModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new Command("coins", this.CoinsCommand));
     }
 
-    public async Task InitializeAsync()
+    public override async Task InitializeAsync()
     {
         await this.CreateTokenCountsTableAsync();
     }

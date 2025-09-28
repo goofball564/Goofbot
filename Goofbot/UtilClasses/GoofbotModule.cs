@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 internal abstract class GoofbotModule : IDisposable
 {
@@ -17,6 +18,10 @@ internal abstract class GoofbotModule : IDisposable
     }
 
     public virtual void Dispose()
+    {
+    }
+
+    public virtual async Task InitializeAsync()
     {
     }
 }

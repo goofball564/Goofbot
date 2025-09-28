@@ -9,6 +9,8 @@ using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,16 +44,7 @@ internal class Bot : IDisposable
     private readonly TwitchAuthenticationManager twitchAuthenticationManager;
     private readonly ChannelPointRedemptionEventSub channelPointRedemptionEventSub;
 
-    private readonly SpotifyModule spotifyModule;
-    private readonly SoundAlertModule soundAlertModule;
-    private readonly MiscCommandsModule miscCommandsModule;
-    private readonly CalculatorModule calculatorModule;
-    private readonly EmoteSoundModule emoteSoundModule;
-    private readonly BlueGuyModule blueGuyModule;
-    private readonly TextToSpeechModule textToSpeechModule;
-    private readonly CheckInTokenModule checkInTokenModule;
-    private readonly RandomModule randomModule;
-    private readonly GoofsinoModule goofsinoModule;
+    private readonly List<GoofbotModule> goofbotModules = [];
 
     private string twitchChannelID;
     private string twitchBotID;
@@ -92,16 +85,10 @@ internal class Bot : IDisposable
         this.EventSubWebsocketClient = this.channelPointRedemptionEventSub.EventSubWebsocketClient;
 
         // Instantiate modules
-        this.spotifyModule = new (this, "SpotifyModule");
-        this.soundAlertModule = new (this, "SoundAlertModule");
-        this.miscCommandsModule = new (this, "MiscCommandsModule");
-        this.calculatorModule = new (this, "CalculatorModule");
-        this.emoteSoundModule = new (this, "EmoteSoundModule");
-        this.blueGuyModule = new (this, "BlueGuyModule");
-        this.textToSpeechModule = new (this, "TextToSpeechModule");
-        this.checkInTokenModule = new (this, "CheckInTokenModule");
-        this.randomModule = new (this, "RandomModule");
-        this.goofsinoModule = new GoofsinoModule(this, "GoofsinoModule");
+        foreach (Type t in GetTypesInNamespace(Assembly.GetExecutingAssembly(), "Goofbot.Modules"))
+        {
+            this.goofbotModules.Add((GoofbotModule)Activator.CreateInstance(t, this, t.Name));
+        }
 
         this.CommandDictionary.TryAddCommand(new ("shutdown", this.ShutdownCommand, CommandAccessibilityModifier.StreamerOnly));
     }
@@ -147,10 +134,12 @@ internal class Bot : IDisposable
         List<Task> tasks = [];
         tasks.Add(this.ColorDictionary.InitializeAsync());
         tasks.Add(this.twitchAuthenticationManager.InitializeAsync());
-        tasks.Add(this.spotifyModule.InitializeAsync());
         tasks.Add(this.InitializeDatabaseAsync());
-        tasks.Add(this.checkInTokenModule.InitializeAsync());
-        tasks.Add(this.goofsinoModule.InitializeAsync());
+
+        foreach (GoofbotModule module in this.goofbotModules)
+        {
+            tasks.Add(module.InitializeAsync());
+        }
 
         await Task.WhenAll(tasks);
 
@@ -229,16 +218,10 @@ internal class Bot : IDisposable
 
     public void Dispose()
     {
-        this.spotifyModule.Dispose();
-        this.soundAlertModule.Dispose();
-        this.miscCommandsModule.Dispose();
-        this.calculatorModule.Dispose();
-        this.emoteSoundModule.Dispose();
-        this.blueGuyModule.Dispose();
-        this.textToSpeechModule.Dispose();
-        this.checkInTokenModule.Dispose();
-        this.randomModule.Dispose();
-        this.goofsinoModule.Dispose();
+        foreach (GoofbotModule module in this.goofbotModules)
+        {
+            module.Dispose();
+        }
 
         this.twitchAuthenticationManager.Dispose();
         this.ColorDictionary.Dispose();
@@ -252,6 +235,14 @@ internal class Bot : IDisposable
         var sqliteConnection = new SqliteConnection(connectionStringBuilder.ConnectionString);
         sqliteConnection.Open();
         return sqliteConnection;
+    }
+
+    private static List<Type> GetTypesInNamespace(Assembly assembly, string nameSpace)
+    {
+        return
+          assembly.GetTypes()
+                  .Where(t => string.Equals(t.Namespace, nameSpace, StringComparison.Ordinal))
+                  .ToList();
     }
 
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
