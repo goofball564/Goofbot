@@ -172,7 +172,7 @@ internal partial class SpotifyModule : GoofbotModule
     }
 
     [GeneratedRegex("(?<=spotify\\.com).+(?=track)")]
-    private static partial Regex SpotifyLinkRegex();
+    private static partial Regex SpotifyIntlLinkRegex();
 
     [GeneratedRegex("(?<=track/).+")]
     private static partial Regex SpotifyTrackIDRegex();
@@ -191,7 +191,7 @@ internal partial class SpotifyModule : GoofbotModule
         {
             int indexOfChar = userInput.IndexOf('?');
             string filteredUserInput = indexOfChar >= 0 ? userInput.Substring(0, indexOfChar) : userInput;
-            filteredUserInput = SpotifyLinkRegex().Replace(filteredUserInput, "/");
+            filteredUserInput = SpotifyIntlLinkRegex().Replace(filteredUserInput, "/");
 
             if (userInput.Contains("youtube.com/watch?v=") || userInput.Contains("youtu.be/watch?v="))
             {
