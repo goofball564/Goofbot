@@ -36,6 +36,7 @@ internal partial class SpotifyModule : GoofbotModule
     public SpotifyModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
+        Directory.CreateDirectory(this.moduleDataFolder);
         string spotifyCredentialsFile = Path.Join(this.moduleDataFolder, "spotify_credentials.json");
         dynamic spotifyCredentials = Program.ParseJsonFile(spotifyCredentialsFile);
         string clientID = Convert.ToString(spotifyCredentials.client_id);

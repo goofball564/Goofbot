@@ -13,6 +13,7 @@ internal class SoundAlertModule : GoofbotModule
     public SoundAlertModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
+        Directory.CreateDirectory(this.moduleDataFolder);
         this.soundAlertsCSVFile = Path.Join(this.moduleDataFolder, "SoundAlerts.csv");
         this.soundAlertDictionary = new SoundAlertDictionary(this.soundAlertsCSVFile);
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;

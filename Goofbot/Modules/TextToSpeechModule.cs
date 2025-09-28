@@ -30,6 +30,8 @@ internal class TextToSpeechModule : GoofbotModule
     public TextToSpeechModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
+        Directory.CreateDirectory(this.moduleDataFolder);
+
         this.currentTTS = new (string.Empty, string.Empty, this.SpeakSAPI5);
 
         this.decTalkExeFile = Path.Join(this.moduleDataFolder, "DECTalk", "say.exe");

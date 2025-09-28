@@ -12,9 +12,7 @@ internal abstract class GoofbotModule : IDisposable
     protected GoofbotModule(Bot bot, string moduleDataFolder)
     {
         this.bot = bot;
-
         this.moduleDataFolder = Path.Join(this.bot.StuffFolder, moduleDataFolder);
-        Directory.CreateDirectory(this.moduleDataFolder);
     }
 
     public virtual void Dispose()

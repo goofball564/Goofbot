@@ -40,6 +40,7 @@ internal partial class BlueGuyModule : GoofbotModule
     public BlueGuyModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
+        Directory.CreateDirectory(this.moduleDataFolder);
         this.blueGuyGrayscaleFile = Path.Join(this.moduleDataFolder, "BlueGuyGrayscale.png");
         this.blueGuyColorFile = Path.Join(this.moduleDataFolder, "BlueGuyColor.png");
         this.blueGuyEyesFile = Path.Join(this.moduleDataFolder, "BlueGuyEyes.png");
