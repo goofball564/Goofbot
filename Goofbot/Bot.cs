@@ -261,7 +261,10 @@ internal class Bot : IDisposable
         this.SendMessage("Goofbot is activated and at your service MrDestructoid", false);
 
         // Start timers after bot has connected
-        this.blueGuyModule.StartTimer();
+        foreach (GoofbotModule module in this.goofbotModules)
+        {
+            module.StartTimers();
+        }
     }
 
     private async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)

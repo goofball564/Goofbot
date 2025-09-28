@@ -24,4 +24,12 @@ internal abstract class GoofbotModule : IDisposable
     public virtual async Task InitializeAsync()
     {
     }
+
+    public virtual void StartTimers()
+    {
+    }
+
+    public virtual void StopTimers()
+    {
+    }
 }

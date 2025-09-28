@@ -64,12 +64,12 @@ internal partial class BlueGuyModule : GoofbotModule
         base.Dispose();
     }
 
-    public void StartTimer()
+    public override void StartTimers()
     {
         this.timer.Start();
     }
 
-    public void StopTimer()
+    public override void StopTimers()
     {
         this.timer.Stop();
     }
