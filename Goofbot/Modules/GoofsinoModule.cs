@@ -528,6 +528,8 @@ internal class GoofsinoModule : GoofbotModule
             }
         }
 
+        long amount = 0;
+        bool amountProvided = false;
         bool withdraw = false;
         bool allIn = false;
 
@@ -538,6 +540,7 @@ internal class GoofsinoModule : GoofbotModule
                 break;
             case "withdraw":
                 goto case "w";
+
             case "all":
                 allIn = true;
                 break;
@@ -547,10 +550,13 @@ internal class GoofsinoModule : GoofbotModule
                 goto case "all";
             case "a":
                 goto case "all";
+
+            case string providedAmount when long.TryParse(providedAmount, out amount) && amount >= RouletteMinimumBet:
+                amountProvided = true;
+                break;
         }
 
-
-        if ((long.TryParse(commandArgs, out long amount) && amount >= RouletteMinimumBet) || withdraw || allIn)
+        if (amountProvided || withdraw || allIn)
         {
             using (var sqliteConnection = this.bot.OpenSqliteConnection())
             using (var transaction = sqliteConnection.BeginTransaction())
