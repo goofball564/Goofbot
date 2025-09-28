@@ -1,13 +1,9 @@
 ﻿namespace Goofbot.UtilClasses;
 
 using Microsoft.VisualStudio.Threading;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
-internal class GoofsinoGameBetLock
+internal class GoofsinoGameBetsOpenStatus
 {
     private readonly AsyncReaderWriterLock betsOpenLock = new ();
 

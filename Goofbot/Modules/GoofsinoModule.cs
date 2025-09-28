@@ -30,7 +30,7 @@ internal class GoofsinoModule : GoofbotModule
     private static readonly RouletteBet RouletteTopLine = new (14, 6, "top line");
     private static readonly RouletteBet RouletteGreen = new (15, 17, "green");
 
-    private readonly GoofsinoGameBetLock rouletteBetLock = new ();
+    private readonly GoofsinoGameBetsOpenStatus rouletteBetsOpenStatus = new ();
     private readonly RouletteTable rouletteTable = new ();
 
     public GoofsinoModule(Bot bot, string moduleDataFolder)
@@ -521,7 +521,7 @@ internal class GoofsinoModule : GoofbotModule
 
         if (bet is RouletteBet)
         {
-            if (!(await this.rouletteBetLock.GetBetsOpenAsync()))
+            if (!(await this.rouletteBetsOpenStatus.GetBetsOpenAsync()))
             {
                 this.bot.SendMessage($"@{userName}, bets are closed on the roulette table. Wait for them to open again.", isReversed);
                 return;
@@ -625,7 +625,7 @@ internal class GoofsinoModule : GoofbotModule
 
     private async Task SpinCommand(string commandArgs = "", bool isReversed = false, OnChatCommandReceivedArgs eventArgs = null)
     {
-        await this.rouletteBetLock.SetBetsOpenAsync(false);
+        await this.rouletteBetsOpenStatus.SetBetsOpenAsync(false);
 
         this.bot.SendMessage("Roulette bets are closed. Spinning the wheel...", isReversed);
         await Task.Delay(2000);
@@ -705,7 +705,7 @@ internal class GoofsinoModule : GoofbotModule
                 }
 
                 delayTask = Task.Delay(333);
-                await this.rouletteBetLock.SetBetsOpenAsync(true);
+                await this.rouletteBetsOpenStatus.SetBetsOpenAsync(true);
                 await delayTask;
                 this.bot.SendMessage("Roulette bets are open again!", isReversed);
             }
