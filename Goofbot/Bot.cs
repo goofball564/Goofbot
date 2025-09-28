@@ -238,12 +238,11 @@ internal class Bot : IDisposable
         return sqliteConnection;
     }
 
-    private static List<Type> GetTypesInNamespace(Assembly assembly, string nameSpace)
+    private static IEnumerable<Type> GetTypesInNamespace(Assembly assembly, string nameSpace)
     {
         return
           assembly.GetTypes()
-                  .Where(t => string.Equals(t.Namespace, nameSpace, StringComparison.Ordinal))
-                  .ToList();
+                  .Where(t => string.Equals(t.Namespace, nameSpace, StringComparison.Ordinal));
     }
 
     private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
