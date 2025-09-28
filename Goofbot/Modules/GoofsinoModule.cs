@@ -2,7 +2,9 @@
 
 using Goofbot.Structs;
 using Goofbot.UtilClasses;
+using Goofbot.UtilClasses.Bets;
 using Microsoft.Data.Sqlite;
+using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -27,7 +29,11 @@ internal class GoofsinoModule : GoofbotModule
     private static readonly RouletteBet RouletteBlack = new (13, 1, "black");
     private static readonly RouletteBet RouletteTopLine = new (14, 6, "top line");
     private static readonly RouletteBet RouletteGreen = new (15, 17, "green");
+
+    private readonly AsyncReaderWriterLock rouletteBetsOpenLock = new ();
     private readonly RouletteTable rouletteTable = new ();
+
+    private bool rouletteBetsOpen = true;
 
     public GoofsinoModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
@@ -612,6 +618,14 @@ internal class GoofsinoModule : GoofbotModule
 
     private async Task SpinCommand(string commandArgs = "", bool isReversed = false, OnChatCommandReceivedArgs eventArgs = null)
     {
+        using (await this.rouletteBetsOpenLock.WriteLockAsync())
+        {
+            this.rouletteBetsOpen = false;
+        }
+
+        this.bot.SendMessage("Roulette bets are closed. Spinning the wheel...", isReversed);
+        await Task.Delay(2000);
+
         this.rouletteTable.Spin();
         var color = this.rouletteTable.Color;
 
@@ -685,6 +699,15 @@ internal class GoofsinoModule : GoofbotModule
                     await Task.Delay(333);
                     this.bot.SendMessage(message, isReversed);
                 }
+
+                delayTask = Task.Delay(333);
+                using (await this.rouletteBetsOpenLock.WriteLockAsync())
+                {
+                    this.rouletteBetsOpen = true;
+                }
+
+                await delayTask;
+                this.bot.SendMessage("Roulette bets are open again!", isReversed);
             }
             catch (SqliteException e)
             {
