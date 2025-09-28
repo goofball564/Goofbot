@@ -19,6 +19,7 @@ internal partial class EmoteSoundModule : GoofbotModule
     public EmoteSoundModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
+        Directory.CreateDirectory(this.moduleDataFolder);
         this.emoteListFile = Path.Join(this.moduleDataFolder, "emotes.txt");
         this.ParseTheThing();
 
