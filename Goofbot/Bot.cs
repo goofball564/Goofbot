@@ -143,6 +143,7 @@ internal class Bot : IDisposable
 
         await Task.WhenAll(tasks);
 
+        // Save Twitch user IDs of channel and bot accounts
         Task<string> twitchChannelIDTask = this.GetUserIDAsync(this.TwitchChannelUsername);
         Task<string> twitchBotIDTask = this.GetUserIDAsync(this.TwitchBotUsername);
 
