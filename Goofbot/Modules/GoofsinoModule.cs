@@ -521,6 +521,18 @@ internal class GoofsinoModule : GoofbotModule
         string userID = eventArgs.Command.ChatMessage.UserId;
         string userName = eventArgs.Command.ChatMessage.DisplayName;
 
+        if (bet is RouletteBet)
+        {
+            using (await this.rouletteBetsOpenLock.ReadLockAsync())
+            {
+                if (!this.rouletteBetsOpen)
+                {
+                    this.bot.SendMessage($"@{userName}, bets are closed on the roulette table. Wait for them to open again.", isReversed);
+                    return;
+                }
+            }
+        }
+
         bool withdraw = false;
         bool allIn = false;
 
