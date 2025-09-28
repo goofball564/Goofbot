@@ -87,7 +87,10 @@ internal class Bot : IDisposable
         // Instantiate modules
         foreach (Type t in GetTypesInNamespace(Assembly.GetExecutingAssembly(), "Goofbot.Modules"))
         {
-            this.goofbotModules.Add((GoofbotModule)Activator.CreateInstance(t, this, t.Name));
+            if (t.IsSubclassOf(typeof(GoofbotModule)))
+            {
+                this.goofbotModules.Add((GoofbotModule)Activator.CreateInstance(t, this, t.Name));
+            }
         }
 
         this.CommandDictionary.TryAddCommand(new ("shutdown", this.ShutdownCommand, CommandAccessibilityModifier.StreamerOnly));
