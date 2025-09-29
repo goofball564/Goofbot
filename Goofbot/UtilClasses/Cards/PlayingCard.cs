@@ -36,6 +36,6 @@ internal class PlayingCard(PlayingCardSuit suit, PlayingCardRank rank)
 
     public override string ToString()
     {
-        return $"{Enum.GetName(Rank)} of {Enum.GetName(Suit)}";
+        return $"{Enum.GetName(this.Rank)} of {Enum.GetName(this.Suit)}";
     }
 }
