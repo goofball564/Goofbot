@@ -7,9 +7,10 @@ using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TwitchLib.Client.Events;
+using Goofbot.UtilClasses.Cards;
 using static Goofbot.UtilClasses.ColorDictionary;
-using static Goofbot.UtilClasses.DeckOfCards;
-using static Goofbot.UtilClasses.DeckOfTarotCards;
+using static Goofbot.UtilClasses.Cards.DeckOfCards;
+using static Goofbot.UtilClasses.Cards.DeckOfTarotCards;
 
 internal partial class RandomModule : GoofbotModule
 {
