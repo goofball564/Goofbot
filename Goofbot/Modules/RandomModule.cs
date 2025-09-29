@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 using Goofbot.UtilClasses.Cards;
 using static Goofbot.UtilClasses.ColorDictionary;
-using static Goofbot.UtilClasses.Cards.DeckOfCards;
 using static Goofbot.UtilClasses.Cards.DeckOfTarotCards;
 
 internal partial class RandomModule : GoofbotModule
@@ -17,7 +16,7 @@ internal partial class RandomModule : GoofbotModule
     private readonly List<string> listOfDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     private readonly List<string> listOfMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-    private readonly DeckOfCards cards = new ();
+    private readonly DeckOfPlayingCards cards = new ();
     private readonly DeckOfTarotCards tarotCards = new ();
 
     public RandomModule(Bot bot, string moduleDataFolder)
