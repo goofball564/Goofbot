@@ -30,7 +30,7 @@ internal class CheckInTokenModule : GoofbotModule
         using var updateCommand = sqliteConnection.CreateCommand();
         updateCommand.CommandText =
             @"INSERT INTO TokenCounts VALUES (@UserID, 1, unixepoch('now','subsec'))
-                ON CONFLICT(UserID) DO UPDATE SET TokenCount = TokenCount + 1;";
+                ON CONFLICT(UserID) DO UPDATE SET TokenCount = TokenCount + 1, LastUpdateTimestamp = unixepoch('now','subsec');";
         updateCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
 
         using var selectCommand = sqliteConnection.CreateCommand();
@@ -59,7 +59,7 @@ internal class CheckInTokenModule : GoofbotModule
             @$"SELECT TwitchUsers.UserName, TokenCounts.TokenCount
                     FROM TwitchUsers
                     INNER JOIN TokenCounts ON TwitchUsers.UserID = TokenCounts.UserID
-                    ORDER BY TokenCounts.TokenCount DESC, TokenCounts.LastUpdateTimestamp DESC LIMIT 5;
+                    ORDER BY TokenCounts.TokenCount DESC, TokenCounts.LastUpdateTimestamp ASC LIMIT 5;
             ";
 
         using var reader = await sqliteCommand.ExecuteReaderAsync();

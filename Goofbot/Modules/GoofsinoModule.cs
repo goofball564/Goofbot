@@ -168,7 +168,7 @@ internal class GoofsinoModule : GoofbotModule
             @$"SELECT TwitchUsers.UserName, GambaPoints.Balance
                     FROM TwitchUsers
                     INNER JOIN GambaPoints ON TwitchUsers.UserID = GambaPoints.UserID
-                    ORDER BY GambaPoints.Balance DESC, GambaPoints.LastUpdateTimestamp DESC 
+                    ORDER BY GambaPoints.Balance DESC, GambaPoints.LastUpdateTimestamp ASC
                     LIMIT 5;
             ";
 
@@ -234,7 +234,7 @@ internal class GoofsinoModule : GoofbotModule
         using var updateCommand = sqliteConnection.CreateCommand();
         updateCommand.CommandText =
             @"INSERT INTO Bankruptcies VALUES (@UserID, 1, unixepoch('now','subsec'))
-                            ON CONFLICT(UserID) DO UPDATE SET Count = Count + 1;";
+                            ON CONFLICT(UserID) DO UPDATE SET Count = Count + 1, LastUpdateTimestamp = unixepoch('now','subsec');";
         updateCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
 
         await replaceCommand.ExecuteNonQueryAsync();

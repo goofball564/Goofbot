@@ -118,7 +118,7 @@ internal class Bot : IDisposable
         var stringBuilder = new StringBuilder();
         foreach (var user in list)
         {
-            string s = user.Count > 1 ? "s" : string.Empty;
+            string s = user.Count == 1 ? string.Empty : "s";
             stringBuilder = stringBuilder.Append($"{i + 1}. {user.UserName} - {user.Count} {theThingBeingCounted}{s}");
             if (i < list.Count - 1)
             {
