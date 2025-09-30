@@ -596,7 +596,7 @@ internal class GoofsinoModule : GoofbotModule
             case "a":
                 goto case "all";
 
-            case string providedAmount when long.TryParse(providedAmount, out amount) && amount >= minimumBet:
+            case string providedAmount when long.TryParse(providedAmount, out amount):
                 amountProvided = true;
                 break;
         }
@@ -611,17 +611,17 @@ internal class GoofsinoModule : GoofbotModule
                 {
                     await SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
 
-                    long existingBets;
+                    long existingBet;
                     string message;
                     if (withdraw)
                     {
-                        existingBets = await GetBetAmountAsync(sqliteConnection, userID, bet);
+                        existingBet = await GetBetAmountAsync(sqliteConnection, userID, bet);
                         await DeleteBetFromTableAsync(sqliteConnection, userID, bet);
                         await transaction.CommitAsync();
 
-                        if (existingBets > 0)
+                        if (existingBet > 0)
                         {
-                            message = $"{userName} withdrew their {existingBets} point bet on {bet.BetName}";
+                            message = $"{userName} withdrew their {existingBet} point bet on {bet.BetName}";
                         }
                         else
                         {
@@ -630,12 +630,13 @@ internal class GoofsinoModule : GoofbotModule
                     }
                     else
                     {
-                        existingBets = await GetBetAmountAsync(sqliteConnection, userID, bet);
+                        existingBet = await GetBetAmountAsync(sqliteConnection, userID, bet);
 
                         if (allIn)
                         {
                             long balance = await GetBalanceAsync(sqliteConnection, userID);
-                            amount = balance - existingBets;
+                            long existingTotalBets = await GetTotalBetsAsync(sqliteConnection, userID);
+                            amount = balance - existingTotalBets;
                         }
 
                         bool success = await TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
@@ -643,9 +644,9 @@ internal class GoofsinoModule : GoofbotModule
 
                         if (success)
                         {
-                            if (existingBets > 0)
+                            if (existingBet > 0)
                             {
-                                message = $"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBets}";
+                                message = $"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBet}";
                             }
                             else
                             {
