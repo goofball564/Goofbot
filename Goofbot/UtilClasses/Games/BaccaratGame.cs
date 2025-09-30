@@ -172,7 +172,6 @@ internal class BaccaratGame
         this.bankerHand[2] = (PlayingCard)this.cards.GetNextCard();
     }
 
-
     public void ResetHands()
     {
         Array.Clear(this.playerHand, 0, this.playerHand.Length);
