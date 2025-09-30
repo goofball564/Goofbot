@@ -1,4 +1,4 @@
-﻿namespace Goofbot.UtilClasses;
+﻿namespace Goofbot.UtilClasses.Games;
 
 using System;
 using System.Security.Cryptography;
@@ -18,13 +18,13 @@ internal class RouletteTable
     {
         get
         {
-            if (this.lastSpinResultBackValue < 0)
+            if (lastSpinResultBackValue < 0)
             {
                 return "00";
             }
             else
             {
-                return this.lastSpinResultBackValue.ToString();
+                return lastSpinResultBackValue.ToString();
             }
         }
     }
@@ -33,13 +33,13 @@ internal class RouletteTable
     {
         get
         {
-            if ((this.lastSpinResultBackValue >= 1 && this.lastSpinResultBackValue <= 10) || (this.lastSpinResultBackValue >= 19 && this.lastSpinResultBackValue <= 28))
+            if (lastSpinResultBackValue >= 1 && lastSpinResultBackValue <= 10 || lastSpinResultBackValue >= 19 && lastSpinResultBackValue <= 28)
             {
-                return this.lastSpinResultBackValue % 2 == 0 ? RouletteColor.Black : RouletteColor.Red;
+                return lastSpinResultBackValue % 2 == 0 ? RouletteColor.Black : RouletteColor.Red;
             }
-            else if ((this.lastSpinResultBackValue >= 11 && this.lastSpinResultBackValue <= 18) || (this.lastSpinResultBackValue >= 29 && this.lastSpinResultBackValue <= 36))
+            else if (lastSpinResultBackValue >= 11 && lastSpinResultBackValue <= 18 || lastSpinResultBackValue >= 29 && lastSpinResultBackValue <= 36)
             {
-                return this.lastSpinResultBackValue % 2 == 0 ? RouletteColor.Red : RouletteColor.Black;
+                return lastSpinResultBackValue % 2 == 0 ? RouletteColor.Red : RouletteColor.Black;
             }
             else
             {
@@ -53,13 +53,13 @@ internal class RouletteTable
     {
         get
         {
-            if (this.lastSpinResultBackValue <= 0)
+            if (lastSpinResultBackValue <= 0)
             {
                 return 0;
             }
             else
             {
-                int column = this.lastSpinResultBackValue % 3;
+                int column = lastSpinResultBackValue % 3;
                 return column > 0 ? column : 3;
             }
         }
@@ -69,7 +69,7 @@ internal class RouletteTable
     {
         get
         {
-            return Math.Max(Convert.ToInt32(Math.Ceiling(this.lastSpinResultBackValue / 12.0)), 0);
+            return Math.Max(Convert.ToInt32(Math.Ceiling(lastSpinResultBackValue / 12.0)), 0);
         }
     }
 
@@ -77,7 +77,7 @@ internal class RouletteTable
     {
         get
         {
-            return this.lastSpinResultBackValue >= 19;
+            return lastSpinResultBackValue >= 19;
         }
     }
 
@@ -85,7 +85,7 @@ internal class RouletteTable
     {
         get
         {
-            return this.lastSpinResultBackValue <= 18 && this.lastSpinResultBackValue >= 1;
+            return lastSpinResultBackValue <= 18 && lastSpinResultBackValue >= 1;
         }
     }
 
@@ -93,7 +93,7 @@ internal class RouletteTable
     {
         get
         {
-            return this.lastSpinResultBackValue > 0 && this.lastSpinResultBackValue % 2 == 0;
+            return lastSpinResultBackValue > 0 && lastSpinResultBackValue % 2 == 0;
         }
     }
 
@@ -101,7 +101,7 @@ internal class RouletteTable
     {
         get
         {
-            return this.lastSpinResultBackValue > 0 && this.lastSpinResultBackValue % 2 == 1;
+            return lastSpinResultBackValue > 0 && lastSpinResultBackValue % 2 == 1;
         }
     }
 
@@ -109,7 +109,7 @@ internal class RouletteTable
     {
         get
         {
-            return this.lastSpinResultBackValue <= 3;
+            return lastSpinResultBackValue <= 3;
         }
     }
 
@@ -117,12 +117,12 @@ internal class RouletteTable
     {
         get
         {
-            return Math.Max(Convert.ToInt32(Math.Ceiling(this.lastSpinResultBackValue / 3.0)), 0);
+            return Math.Max(Convert.ToInt32(Math.Ceiling(lastSpinResultBackValue / 3.0)), 0);
         }
     }
 
     public void Spin()
     {
-        this.lastSpinResultBackValue = RandomNumberGenerator.GetInt32(38) - 1;
+        lastSpinResultBackValue = RandomNumberGenerator.GetInt32(38) - 1;
     }
 }

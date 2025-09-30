@@ -16,7 +16,7 @@ internal partial class RandomModule : GoofbotModule
     private readonly List<string> listOfDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     private readonly List<string> listOfMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-    private readonly DeckOfPlayingCards cards = new ();
+    private readonly DeckOfPlayingCards cards = new (0);
     private readonly DeckOfTarotCards tarotCards = new ();
 
     public RandomModule(Bot bot, string moduleDataFolder)

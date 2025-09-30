@@ -3,16 +3,20 @@
 using Goofbot.Structs;
 using Goofbot.UtilClasses;
 using Goofbot.UtilClasses.Bets;
+using Goofbot.UtilClasses.Cards;
+using Goofbot.UtilClasses.Games;
 using Microsoft.Data.Sqlite;
 using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using TwitchLib.Client.Events;
+using static Goofbot.UtilClasses.Games.BaccaratGame;
 
 internal class GoofsinoModule : GoofbotModule
 {
     private const long RouletteMinimumBet = 1;
+    private const int BaccaratDelay = 2000;
     private const string TheHouseID = "-1";
 
     private static readonly RouletteBet RouletteColumn1 = new (2, 2, "column 1");
@@ -30,8 +34,15 @@ internal class GoofsinoModule : GoofbotModule
     private static readonly RouletteBet RouletteTopLine = new (14, 6, "top line");
     private static readonly RouletteBet RouletteGreen = new (15, 17, "green");
 
+    private static readonly BaccaratBet BaccaratPlayer = new (16, 1, "player");
+    private static readonly BaccaratBet BaccaratBanker = new (17, 1, "banker");
+    private static readonly BaccaratBet BaccaratTie = new (18, 8, "a tie");
+
     private readonly GoofsinoGameBetsOpenStatus rouletteBetsOpenStatus = new ();
+    private readonly GoofsinoGameBetsOpenStatus baccaratBetsOpenStatus = new ();
+
     private readonly RouletteTable rouletteTable = new ();
+    private readonly BaccaratGame baccaratGame = new ();
 
     public GoofsinoModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
@@ -44,9 +55,14 @@ internal class GoofsinoModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new Command("low", this.LowCommand, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new Command("green", this.GreenCommand, unlisted: true));
 
+        this.bot.CommandDictionary.TryAddCommand(new Command("player", this.PlayerCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new Command("banker", this.BankerCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new Command("tie", this.TieCommand, unlisted: true));
+
         this.bot.CommandDictionary.TryAddCommand(new Command("declarebankruptcy", this.DeclareBankruptcyCommand));
 
         this.bot.CommandDictionary.TryAddCommand(new Command("spin", this.SpinCommand, CommandAccessibilityModifier.StreamerOnly));
+        this.bot.CommandDictionary.TryAddCommand(new Command("deal", this.DealCommand, CommandAccessibilityModifier.StreamerOnly));
 
         this.bot.CommandDictionary.TryAddCommand(new Command("creditscore", this.BankruptcyCountCommand));
         this.bot.CommandDictionary.TryAddCommand(new Command("balance", this.BalanceCommand));
@@ -479,6 +495,21 @@ internal class GoofsinoModule : GoofbotModule
         }
     }
 
+    private async Task PlayerCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, BaccaratPlayer);
+    }
+
+    private async Task BankerCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, BaccaratBanker);
+    }
+
+    private async Task TieCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, BaccaratTie);
+    }
+
     private async Task RedCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, RouletteRed);
@@ -519,13 +550,24 @@ internal class GoofsinoModule : GoofbotModule
         string userID = eventArgs.Command.ChatMessage.UserId;
         string userName = eventArgs.Command.ChatMessage.DisplayName;
 
-        if (bet is RouletteBet)
+        switch (bet)
         {
-            if (!(await this.rouletteBetsOpenStatus.GetBetsOpenAsync()))
-            {
-                this.bot.SendMessage($"@{userName}, bets are closed on the roulette table. Wait for them to open again.", isReversed);
-                return;
-            }
+            case RouletteBet:
+                if (!await this.rouletteBetsOpenStatus.GetBetsOpenAsync())
+                {
+                    this.bot.SendMessage($"@{userName}, bets are closed on the Roulette table. Wait for them to open again.", isReversed);
+                    return;
+                }
+
+                break;
+            case BaccaratBet:
+                if (!await this.baccaratBetsOpenStatus.GetBetsOpenAsync())
+                {
+                    this.bot.SendMessage($"@{userName}, bets are closed on the Baccarat table. Wait for them to open again.", isReversed);
+                    return;
+                }
+
+                break;
         }
 
         long amount = 0;
@@ -629,6 +671,137 @@ internal class GoofsinoModule : GoofbotModule
         }
     }
 
+    private async Task DealCommand(string commandArgs = "", bool isReversed = false, OnChatCommandReceivedArgs eventArgs = null)
+    {
+        await this.baccaratBetsOpenStatus.SetBetsOpenAsync(false);
+
+        this.bot.SendMessage("Baccarat bets are closed. The dealer is getting ready to deal...", isReversed);
+        await Task.Delay(BaccaratDelay);
+
+        this.baccaratGame.ResetHands();
+
+        if (this.baccaratGame.ReshuffleRequired)
+        {
+            this.baccaratGame.ShuffleShoe();
+            PlayingCard firstCard = this.baccaratGame.BurnCards(out int numCardsBurned);
+            this.bot.SendMessage($"Reshuffling the cards. The dealer draws a {firstCard} and burns {numCardsBurned} cards face down", isReversed);
+            await Task.Delay(BaccaratDelay);
+        }
+
+        this.baccaratGame.DealFirstCards();
+        int playerHandValue = this.baccaratGame.GetPlayerHandValue();
+        int bankerHandValue = this.baccaratGame.GetBankerHandValue();
+
+        this.bot.SendMessage(
+            $"The dealer deals two cards to Banker and two cards to Player. The Player's hand: {this.baccaratGame.PlayerFirstCard} and {this.baccaratGame.PlayerSecondCard}. Value: {playerHandValue}",
+            isReversed);
+        await Task.Delay(BaccaratDelay);
+
+        this.bot.SendMessage(
+            $"The Banker's hand: {this.baccaratGame.BankerFirstCard} and {this.baccaratGame.BankerSecondCard}. Value: {this.baccaratGame.GetBankerHandValue()}",
+            isReversed);
+        await Task.Delay(BaccaratDelay);
+
+        BaccaratOutcome outcome;
+        if (playerHandValue >= 8 || bankerHandValue >= 8)
+        {
+            outcome = this.baccaratGame.DetermineOutcome();
+        }
+        else
+        {
+            if (this.baccaratGame.PlayerShouldDrawThirdCard())
+            {
+                this.baccaratGame.DealThirdCardToPlayer();
+                playerHandValue = this.baccaratGame.GetPlayerHandValue();
+                this.bot.SendMessage($"The Player is dealt a third card: {this.baccaratGame.PlayerThirdCard}. The new value of their hand: {playerHandValue}", isReversed);
+            }
+            else
+            {
+                this.bot.SendMessage($"The Player stands. The final value of their hand: {playerHandValue}", isReversed);
+            }
+
+            await Task.Delay(BaccaratDelay);
+
+            if (this.baccaratGame.BankerShouldDrawThirdCard())
+            {
+                this.baccaratGame.DealThirdCardToBanker();
+                bankerHandValue = this.baccaratGame.GetBankerHandValue();
+                this.bot.SendMessage($"The Banker is dealt a third card: {this.baccaratGame.BankerThirdCard}. The new value of their hand: {bankerHandValue}", isReversed);
+            }
+            else
+            {
+                this.bot.SendMessage($"The Banker stands. The final value of their hand: {bankerHandValue}", isReversed);
+            }
+
+            await Task.Delay(BaccaratDelay);
+
+            outcome = this.baccaratGame.DetermineOutcome();
+        }
+
+        if (outcome == BaccaratOutcome.Tie)
+        {
+            this.bot.SendMessage("It's a tie!", isReversed);
+        }
+        else
+        {
+            this.bot.SendMessage($"{Enum.GetName(outcome)} wins!", isReversed);
+        }
+
+        Task delayTask = Task.Delay(BaccaratDelay);
+
+        List<string> messages = [];
+        using (var sqliteConnection = this.bot.OpenSqliteConnection())
+        using (var transaction = sqliteConnection.BeginTransaction())
+        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
+        {
+            try
+            {
+                switch (outcome)
+                {
+                    case BaccaratOutcome.Player:
+
+                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratPlayer, true));
+                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratBanker, false));
+                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratTie, false));
+                        break;
+                    case BaccaratOutcome.Banker:
+                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratPlayer, false));
+                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratBanker, true));
+                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratTie, false));
+                        break;
+                    case BaccaratOutcome.Tie:
+                        await DeleteAllBetsByTypeAsync(sqliteConnection, BaccaratPlayer);
+                        await DeleteAllBetsByTypeAsync(sqliteConnection, BaccaratBanker);
+                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratTie, true));
+                        messages.Add("All other bets have been returned to the players");
+                        break;
+                }
+
+                await transaction.CommitAsync();
+
+                await delayTask;
+                foreach (string message in messages)
+                {
+                    await delayTask;
+                    this.bot.SendMessage(message, isReversed);
+                    delayTask = Task.Delay(333);
+                }
+
+                await this.baccaratBetsOpenStatus.SetBetsOpenAsync(true);
+                await delayTask;
+                this.bot.SendMessage("Baccarat bets are open again!", isReversed);
+            }
+            catch (SqliteException e)
+            {
+                this.bot.SendMessage("Hey, Goof, your bot broke! (Baccarat)", false);
+                Console.WriteLine($"SQLITE EXCEPTION: {e}");
+                await transaction.RollbackAsync();
+            }
+        }
+
+
+    }
+
     private async Task SpinCommand(string commandArgs = "", bool isReversed = false, OnChatCommandReceivedArgs eventArgs = null)
     {
         await this.rouletteBetsOpenStatus.SetBetsOpenAsync(false);
@@ -706,11 +879,11 @@ internal class GoofsinoModule : GoofbotModule
                 await delayTask;
                 foreach (string message in messages)
                 {
-                    await Task.Delay(333);
+                    await delayTask;
                     this.bot.SendMessage(message, isReversed);
+                    delayTask = Task.Delay(333);
                 }
 
-                delayTask = Task.Delay(333);
                 await this.rouletteBetsOpenStatus.SetBetsOpenAsync(true);
                 await delayTask;
                 this.bot.SendMessage("Roulette bets are open again!", isReversed);

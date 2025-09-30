@@ -31,7 +31,7 @@ internal class ShoeOfPlayingCards : DeckOfCards
     {
         get
         {
-            return this.Remaining <= this.remainingCardsToRequireReshuffle;
+            return this.Remaining <= this.remainingCardsToRequireReshuffle || this.Remaining == this.Count;
         }
     }
 }

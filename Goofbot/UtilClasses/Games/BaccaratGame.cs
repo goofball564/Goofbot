@@ -38,8 +38,8 @@ internal class BaccaratGame
 
     private readonly ShoeOfPlayingCards cards = new (6, 7);
 
-    private PlayingCard[] puntoHand = new PlayingCard[3];
-    private PlayingCard[] bancoHand = new PlayingCard[3];
+    private PlayingCard[] playerHand = new PlayingCard[3];
+    private PlayingCard[] bankerHand = new PlayingCard[3];
 
     public BaccaratGame()
     {
@@ -47,53 +47,63 @@ internal class BaccaratGame
 
     public enum BaccaratOutcome
     {
-        Punto,
-        Banco,
+        Player,
+        Banker,
         Tie,
     }
 
-    public PlayingCard PuntoFirstCard
+    public PlayingCard PlayerFirstCard
     {
-        get { return this.puntoHand[0]; }
+        get { return this.playerHand[0]; }
     }
 
-    public PlayingCard PuntoSecondCard
+    public PlayingCard PlayerSecondCard
     {
-        get { return this.puntoHand[1]; }
+        get { return this.playerHand[1]; }
     }
 
-    public PlayingCard PuntoThirdCard
+    public PlayingCard PlayerThirdCard
     {
-        get { return this.puntoHand[2]; }
+        get { return this.playerHand[2]; }
     }
 
-    public PlayingCard BancoFirstCard
+    public PlayingCard BankerFirstCard
     {
-        get { return this.bancoHand[0]; }
+        get { return this.bankerHand[0]; }
     }
 
-    public PlayingCard BancoSecondCard
+    public PlayingCard BankerSecondCard
     {
-        get { return this.bancoHand[1]; }
+        get { return this.bankerHand[1]; }
     }
 
-    public PlayingCard BancoThirdCard
+    public PlayingCard BankerThirdCard
     {
-        get { return this.bancoHand[2]; }
+        get { return this.bankerHand[2]; }
+    }
+
+    public bool ReshuffleRequired
+    {
+        get { return this.cards.ReshuffleRequired; }
+    }
+
+    public void ShuffleShoe()
+    {
+        this.cards.ShuffleDeck();
     }
 
     public BaccaratOutcome DetermineOutcome()
     {
-        int puntoHandValue = this.GetPuntoHandValue();
-        int bancoHandValue = this.GetBancoHandValue();
+        int playerHandValue = this.GetPlayerHandValue();
+        int bankerHandValue = this.GetBankerHandValue();
 
-        if (puntoHandValue < bancoHandValue)
+        if (playerHandValue < bankerHandValue)
         {
-            return BaccaratOutcome.Banco;
+            return BaccaratOutcome.Banker;
         }
-        else if (puntoHandValue > bancoHandValue)
+        else if (playerHandValue > bankerHandValue)
         {
-            return BaccaratOutcome.Punto;
+            return BaccaratOutcome.Player;
         }
         else
         {
@@ -101,34 +111,34 @@ internal class BaccaratGame
         }
     }
 
-    public bool ShouldPuntoDrawThirdCard()
+    public bool PlayerShouldDrawThirdCard()
     {
-        int puntoHandValue = this.GetPuntoHandValue();
-        return puntoHandValue == 6 || puntoHandValue == 7;
+        int playerHandValue = this.GetPlayerHandValue();
+        return !(playerHandValue == 6 || playerHandValue == 7);
     }
 
-    public bool ShouldBancoDrawThirdCard()
+    public bool BankerShouldDrawThirdCard()
     {
-        int bancoHandValue = this.GetBancoHandValue();
+        int bankerHandValue = this.GetBankerHandValue();
 
-        if (this.PuntoThirdCard == null)
+        if (this.PlayerThirdCard == null)
         {
-            return bancoHandValue == 6 || bancoHandValue == 7;
+            return bankerHandValue == 6 || bankerHandValue == 7;
         }
         else
         {
-            switch (bancoHandValue)
+            switch (bankerHandValue)
             {
                 case <= 2:
                     return true;
                 case 3:
-                    return this.PuntoThirdCard.Rank != PlayingCardRank.Eight;
+                    return this.PlayerThirdCard.Rank != PlayingCardRank.Eight;
                 case 4:
-                    return Case4Ranks.Contains(this.PuntoThirdCard.Rank);
+                    return Case4Ranks.Contains(this.PlayerThirdCard.Rank);
                 case 5:
-                    return Case5Ranks.Contains(this.PuntoThirdCard.Rank);
+                    return Case5Ranks.Contains(this.PlayerThirdCard.Rank);
                 case 6:
-                    return Case6Ranks.Contains(this.PuntoThirdCard.Rank);
+                    return Case6Ranks.Contains(this.PlayerThirdCard.Rank);
                 case 7:
                     return false;
                 default:
@@ -137,28 +147,39 @@ internal class BaccaratGame
         }
     }
 
-    public int GetPuntoHandValue()
+    public int GetPlayerHandValue()
     {
-        return GetHandValueHelper(this.puntoHand);
+        return GetHandValueHelper(this.playerHand);
     }
 
-    public int GetBancoHandValue()
+    public int GetBankerHandValue()
     {
-        return GetHandValueHelper(this.bancoHand);
+        return GetHandValueHelper(this.bankerHand);
     }
 
     public void DealFirstCards()
     {
-        this.puntoHand[0] = (PlayingCard)this.cards.GetNextCard();
-        this.bancoHand[0] = (PlayingCard)this.cards.GetNextCard();
-        this.puntoHand[1] = (PlayingCard)this.cards.GetNextCard();
-        this.bancoHand[1] = (PlayingCard)this.cards.GetNextCard();
+        this.playerHand[0] = (PlayingCard)this.cards.GetNextCard();
+        this.bankerHand[0] = (PlayingCard)this.cards.GetNextCard();
+        this.playerHand[1] = (PlayingCard)this.cards.GetNextCard();
+        this.bankerHand[1] = (PlayingCard)this.cards.GetNextCard();
     }
+
+    public void DealThirdCardToPlayer()
+    {
+        this.playerHand[2] = (PlayingCard)this.cards.GetNextCard();
+    }
+
+    public void DealThirdCardToBanker()
+    {
+        this.bankerHand[2] = (PlayingCard)this.cards.GetNextCard();
+    }
+
 
     public void ResetHands()
     {
-        Array.Clear(this.puntoHand, 0, this.puntoHand.Length);
-        Array.Clear(this.bancoHand, 0, this.bancoHand.Length);
+        Array.Clear(this.playerHand, 0, this.playerHand.Length);
+        Array.Clear(this.bankerHand, 0, this.bankerHand.Length);
     }
 
     public PlayingCard BurnCards(out int numBurned)
