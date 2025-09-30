@@ -1,8 +1,8 @@
 ﻿namespace Goofbot.UtilClasses.Bets;
 
-internal class Bet(long typeID, long payoutRatio, string betName)
+internal class Bet(long typeID, double payoutRatio, string betName)
 {
     public readonly long TypeID = typeID;
-    public readonly long PayoutRatio = payoutRatio;
+    public readonly double PayoutRatio = payoutRatio;
     public readonly string BetName = betName;
 }

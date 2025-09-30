@@ -1,7 +1,6 @@
 ﻿namespace Goofbot.UtilClasses.Cards;
 
 using System;
-using System.Runtime.CompilerServices;
 using static Goofbot.UtilClasses.Cards.PlayingCard;
 
 internal class ShoeOfPlayingCards : DeckOfCards

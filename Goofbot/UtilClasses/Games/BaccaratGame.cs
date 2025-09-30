@@ -3,9 +3,6 @@
 using Goofbot.UtilClasses.Cards;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static Goofbot.UtilClasses.Cards.PlayingCard;
 
 internal class BaccaratGame
@@ -123,7 +120,7 @@ internal class BaccaratGame
 
         if (this.PlayerThirdCard == null)
         {
-            return bankerHandValue == 6 || bankerHandValue == 7;
+            return !(bankerHandValue == 6 || bankerHandValue == 7);
         }
         else
         {

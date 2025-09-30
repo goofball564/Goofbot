@@ -16,7 +16,8 @@ using static Goofbot.UtilClasses.Games.BaccaratGame;
 internal class GoofsinoModule : GoofbotModule
 {
     private const long RouletteMinimumBet = 1;
-    private const int BaccaratDelay = 2000;
+    private const long BaccaratMinimumBet = 500;
+    private const int OneThousandMilliseconds = 1000;
     private const string TheHouseID = "-1";
 
     private static readonly RouletteBet RouletteColumn1 = new (2, 2, "column 1");
@@ -35,7 +36,7 @@ internal class GoofsinoModule : GoofbotModule
     private static readonly RouletteBet RouletteGreen = new (15, 17, "green");
 
     private static readonly BaccaratBet BaccaratPlayer = new (16, 1, "player");
-    private static readonly BaccaratBet BaccaratBanker = new (17, 1, "banker");
+    private static readonly BaccaratBet BaccaratBanker = new (17, 0.95, "banker");
     private static readonly BaccaratBet BaccaratTie = new (18, 8, "a tie");
 
     private readonly GoofsinoGameBetsOpenStatus rouletteBetsOpenStatus = new ();
@@ -202,7 +203,7 @@ internal class GoofsinoModule : GoofbotModule
             if (success)
             {
                 verb = "won";
-                amount *= bet.PayoutRatio;
+                amount = Convert.ToInt64(Math.Floor(amount * bet.PayoutRatio));
             }
             else
             {
@@ -549,10 +550,12 @@ internal class GoofsinoModule : GoofbotModule
     {
         string userID = eventArgs.Command.ChatMessage.UserId;
         string userName = eventArgs.Command.ChatMessage.DisplayName;
+        long minimumBet = 0;
 
         switch (bet)
         {
             case RouletteBet:
+                minimumBet = RouletteMinimumBet;
                 if (!await this.rouletteBetsOpenStatus.GetBetsOpenAsync())
                 {
                     this.bot.SendMessage($"@{userName}, bets are closed on the Roulette table. Wait for them to open again.", isReversed);
@@ -561,6 +564,7 @@ internal class GoofsinoModule : GoofbotModule
 
                 break;
             case BaccaratBet:
+                minimumBet = BaccaratMinimumBet;
                 if (!await this.baccaratBetsOpenStatus.GetBetsOpenAsync())
                 {
                     this.bot.SendMessage($"@{userName}, bets are closed on the Baccarat table. Wait for them to open again.", isReversed);
@@ -593,7 +597,7 @@ internal class GoofsinoModule : GoofbotModule
             case "a":
                 goto case "all";
 
-            case string providedAmount when long.TryParse(providedAmount, out amount) && amount >= RouletteMinimumBet:
+            case string providedAmount when long.TryParse(providedAmount, out amount) && amount >= minimumBet:
                 amountProvided = true;
                 break;
         }
@@ -667,16 +671,14 @@ internal class GoofsinoModule : GoofbotModule
         }
         else
         {
-            this.bot.SendMessage($"Include an amount (minimum: {RouletteMinimumBet}), \"all\" to bet everything, or \"w\" to withdraw your bet", isReversed);
+            this.bot.SendMessage($"Minimum bet for this game: {minimumBet}", isReversed);
         }
     }
 
     private async Task DealCommand(string commandArgs = "", bool isReversed = false, OnChatCommandReceivedArgs eventArgs = null)
     {
         await this.baccaratBetsOpenStatus.SetBetsOpenAsync(false);
-
-        this.bot.SendMessage("Baccarat bets are closed. The dealer is getting ready to deal...", isReversed);
-        await Task.Delay(BaccaratDelay);
+        await Task.Delay(1000);
 
         this.baccaratGame.ResetHands();
 
@@ -684,23 +686,42 @@ internal class GoofsinoModule : GoofbotModule
         {
             this.baccaratGame.ShuffleShoe();
             PlayingCard firstCard = this.baccaratGame.BurnCards(out int numCardsBurned);
-            this.bot.SendMessage($"Reshuffling the cards. The dealer draws a {firstCard} and burns {numCardsBurned} cards face down", isReversed);
-            await Task.Delay(BaccaratDelay);
+            this.bot.SendMessage(
+                $"Reshuffling the cards... The dealer draws the {firstCard} and burns {numCardsBurned} cards face down. The dealer then deals two cards to the Banker and two cards to the Player",
+                isReversed);
+            await Task.Delay(8000);
+        }
+        else
+        {
+            this.bot.SendMessage("The dealer deals two cards to the Banker and two cards to the Player", isReversed);
+            await Task.Delay(4000);
         }
 
         this.baccaratGame.DealFirstCards();
         int playerHandValue = this.baccaratGame.GetPlayerHandValue();
         int bankerHandValue = this.baccaratGame.GetBankerHandValue();
 
-        this.bot.SendMessage(
-            $"The dealer deals two cards to Banker and two cards to Player. The Player's hand: {this.baccaratGame.PlayerFirstCard} and {this.baccaratGame.PlayerSecondCard}. Value: {playerHandValue}",
-            isReversed);
-        await Task.Delay(BaccaratDelay);
+        string playerFirstCard = Enum.GetName(this.baccaratGame.PlayerFirstCard.Rank).ToLowerInvariant();
+        string playerSecondCard = Enum.GetName(this.baccaratGame.PlayerSecondCard.Rank).ToLowerInvariant();
+
+        string n = Program.StartsWithVowel(playerFirstCard) ? "n" : string.Empty;
+        string n2 = Program.StartsWithVowel(playerSecondCard) ? "n" : string.Empty;
 
         this.bot.SendMessage(
-            $"The Banker's hand: {this.baccaratGame.BankerFirstCard} and {this.baccaratGame.BankerSecondCard}. Value: {this.baccaratGame.GetBankerHandValue()}",
+            $"The Player's hand: a{n} {playerFirstCard} and a{n2} {playerSecondCard}. Value: {playerHandValue}",
             isReversed);
-        await Task.Delay(BaccaratDelay);
+        await Task.Delay(4000);
+
+        string bankerFirstCard = Enum.GetName(this.baccaratGame.BankerFirstCard.Rank).ToLowerInvariant();
+        string bankerSecondCard = Enum.GetName(this.baccaratGame.BankerSecondCard.Rank).ToLowerInvariant();
+
+        n = Program.StartsWithVowel(bankerFirstCard) ? "n" : string.Empty;
+        n2 = Program.StartsWithVowel(bankerSecondCard) ? "n" : string.Empty;
+
+        this.bot.SendMessage(
+            $"The Banker's hand: a{n} {bankerFirstCard} and a{n2} {bankerSecondCard}. Value: {bankerHandValue}",
+            isReversed);
+        await Task.Delay(4000);
 
         BaccaratOutcome outcome;
         if (playerHandValue >= 8 || bankerHandValue >= 8)
@@ -712,28 +733,34 @@ internal class GoofsinoModule : GoofbotModule
             if (this.baccaratGame.PlayerShouldDrawThirdCard())
             {
                 this.baccaratGame.DealThirdCardToPlayer();
+
                 playerHandValue = this.baccaratGame.GetPlayerHandValue();
-                this.bot.SendMessage($"The Player is dealt a third card: {this.baccaratGame.PlayerThirdCard}. The new value of their hand: {playerHandValue}", isReversed);
+                string playerThirdCard = Enum.GetName(this.baccaratGame.PlayerThirdCard.Rank).ToLowerInvariant();
+                n = Program.StartsWithVowel(playerThirdCard) ? "n" : string.Empty;
+
+                this.bot.SendMessage($"The Player is dealt a third card: a{n} {playerThirdCard}. The final value of their hand: {playerHandValue}", isReversed);
             }
             else
             {
                 this.bot.SendMessage($"The Player stands. The final value of their hand: {playerHandValue}", isReversed);
             }
 
-            await Task.Delay(BaccaratDelay);
+            await Task.Delay(4000);
 
             if (this.baccaratGame.BankerShouldDrawThirdCard())
             {
                 this.baccaratGame.DealThirdCardToBanker();
                 bankerHandValue = this.baccaratGame.GetBankerHandValue();
-                this.bot.SendMessage($"The Banker is dealt a third card: {this.baccaratGame.BankerThirdCard}. The new value of their hand: {bankerHandValue}", isReversed);
+                string bankerThirdCard = Enum.GetName(this.baccaratGame.BankerThirdCard.Rank).ToLowerInvariant();
+                n = Program.StartsWithVowel(bankerThirdCard) ? "n" : string.Empty;
+                this.bot.SendMessage($"The Banker is dealt a third card: a{n} {bankerThirdCard}. The final value of their hand: {bankerHandValue}", isReversed);
             }
             else
             {
                 this.bot.SendMessage($"The Banker stands. The final value of their hand: {bankerHandValue}", isReversed);
             }
 
-            await Task.Delay(BaccaratDelay);
+            await Task.Delay(4000);
 
             outcome = this.baccaratGame.DetermineOutcome();
         }
@@ -747,7 +774,7 @@ internal class GoofsinoModule : GoofbotModule
             this.bot.SendMessage($"{Enum.GetName(outcome)} wins!", isReversed);
         }
 
-        Task delayTask = Task.Delay(BaccaratDelay);
+        Task delayTask = Task.Delay(2000);
 
         List<string> messages = [];
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
@@ -773,7 +800,15 @@ internal class GoofsinoModule : GoofbotModule
                         await DeleteAllBetsByTypeAsync(sqliteConnection, BaccaratPlayer);
                         await DeleteAllBetsByTypeAsync(sqliteConnection, BaccaratBanker);
                         messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratTie, true));
-                        messages.Add("All other bets have been returned to the players");
+                        if (messages.Count == 0)
+                        {
+                            messages.Add("All bets have been returned to the players");
+                        }
+                        else
+                        {
+                            messages.Add("All other bets have been returned to the players");
+                        }
+
                         break;
                 }
 
@@ -788,8 +823,6 @@ internal class GoofsinoModule : GoofbotModule
                 }
 
                 await this.baccaratBetsOpenStatus.SetBetsOpenAsync(true);
-                await delayTask;
-                this.bot.SendMessage("Baccarat bets are open again!", isReversed);
             }
             catch (SqliteException e)
             {
@@ -806,7 +839,7 @@ internal class GoofsinoModule : GoofbotModule
     {
         await this.rouletteBetsOpenStatus.SetBetsOpenAsync(false);
 
-        this.bot.SendMessage("Roulette bets are closed. Spinning the wheel...", isReversed);
+        this.bot.SendMessage("Spinning the wheel...", isReversed);
         await Task.Delay(2000);
 
         this.rouletteTable.Spin();
@@ -885,8 +918,6 @@ internal class GoofsinoModule : GoofbotModule
                 }
 
                 await this.rouletteBetsOpenStatus.SetBetsOpenAsync(true);
-                await delayTask;
-                this.bot.SendMessage("Roulette bets are open again!", isReversed);
             }
             catch (SqliteException e)
             {

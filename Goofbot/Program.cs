@@ -1,6 +1,7 @@
 ﻿namespace Goofbot;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,6 +25,12 @@ internal class Program
         catch
         {
         }
+    }
+
+    public static bool StartsWithVowel(string s)
+    {
+        List<char> vowels = ['a', 'e', 'i', 'o', 'u'];
+        return vowels.Contains(s[0]);
     }
 
     public static string GetSuffix(long num)
