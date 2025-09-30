@@ -630,8 +630,6 @@ internal class GoofsinoModule : GoofbotModule
                     }
                     else
                     {
-                        existingBet = await GetBetAmountAsync(sqliteConnection, userID, bet);
-
                         if (allIn)
                         {
                             long balance = await GetBalanceAsync(sqliteConnection, userID);
@@ -639,6 +637,7 @@ internal class GoofsinoModule : GoofbotModule
                             amount = balance - existingTotalBets;
                         }
 
+                        existingBet = await GetBetAmountAsync(sqliteConnection, userID, bet);
                         bool success = await TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
                         await transaction.CommitAsync();
 
@@ -671,7 +670,7 @@ internal class GoofsinoModule : GoofbotModule
         }
         else
         {
-            this.bot.SendMessage($"Minimum bet for this game: {minimumBet}", isReversed);
+            this.bot.SendMessage($"@{userName} Minimum bet for this game: {minimumBet}", isReversed);
         }
     }
 
