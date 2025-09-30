@@ -16,8 +16,7 @@ using static Goofbot.UtilClasses.Games.BaccaratGame;
 internal class GoofsinoModule : GoofbotModule
 {
     private const long RouletteMinimumBet = 1;
-    private const long BaccaratMinimumBet = 500;
-    private const int OneThousandMilliseconds = 1000;
+    private const long BaccaratMinimumBet = 200;
     private const string TheHouseID = "-1";
 
     private static readonly RouletteBet RouletteColumn1 = new (2, 2, "column 1");
@@ -381,7 +380,7 @@ internal class GoofsinoModule : GoofbotModule
             balance = await GetHouseBalance(sqliteConnection);
         }
 
-        this.bot.SendMessage($"The House has earned {balance} gamba points in revenue.", isReversed);
+        this.bot.SendMessage($"The House has made {balance} gamba points off you suckers", isReversed);
     }
 
     private async Task GambaPointLeaderboardCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
@@ -686,8 +685,9 @@ internal class GoofsinoModule : GoofbotModule
         {
             this.baccaratGame.ShuffleShoe();
             PlayingCard firstCard = this.baccaratGame.BurnCards(out int numCardsBurned);
+            string s = numCardsBurned == 1 ? string.Empty : "s";
             this.bot.SendMessage(
-                $"Reshuffling the cards... The dealer draws the {firstCard} and burns {numCardsBurned} cards face down. The dealer then deals two cards to the Banker and two cards to the Player",
+                $"Reshuffling the cards... The dealer draws the {firstCard} and burns {numCardsBurned} card{s} face down. The dealer then deals two cards to the Banker and two cards to the Player",
                 isReversed);
             await Task.Delay(8000);
         }
