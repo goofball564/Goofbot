@@ -16,6 +16,14 @@ internal abstract class DeckOfCards
         }
     }
 
+    public int Remaining
+    {
+        get
+        {
+            return this.cards.Count - this.currentIndex;
+        }
+    }
+
     public void ShuffleDeck()
     {
         this.currentIndex = 0;
