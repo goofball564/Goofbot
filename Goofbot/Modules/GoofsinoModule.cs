@@ -683,7 +683,7 @@ internal class GoofsinoModule : GoofbotModule
 
         if (this.baccaratGame.ReshuffleRequired)
         {
-            this.baccaratGame.ShuffleShoe();
+            this.baccaratGame.Shuffle();
             PlayingCard firstCard = this.baccaratGame.BurnCards(out int numCardsBurned);
             string s = numCardsBurned == 1 ? string.Empty : "s";
             this.bot.SendMessage(

@@ -33,7 +33,7 @@ internal class BaccaratGame
     private static readonly List<PlayingCardRank> Case6Ranks
         = [PlayingCardRank.Six, PlayingCardRank.Seven];
 
-    private readonly ShoeOfPlayingCards cards = new (6, 7);
+    private readonly ShoeOfPlayingCards cards = new (8, 6);
 
     private PlayingCard[] playerHand = new PlayingCard[3];
     private PlayingCard[] bankerHand = new PlayingCard[3];
@@ -84,9 +84,9 @@ internal class BaccaratGame
         get { return this.cards.ReshuffleRequired; }
     }
 
-    public void ShuffleShoe()
+    public void Shuffle()
     {
-        this.cards.ShuffleDeck();
+        this.cards.Shuffle();
     }
 
     public BaccaratOutcome DetermineOutcome()

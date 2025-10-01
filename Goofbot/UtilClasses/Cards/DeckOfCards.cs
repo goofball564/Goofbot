@@ -24,7 +24,7 @@ internal abstract class DeckOfCards
         }
     }
 
-    public void ShuffleDeck()
+    public void Shuffle()
     {
         this.currentIndex = 0;
 
