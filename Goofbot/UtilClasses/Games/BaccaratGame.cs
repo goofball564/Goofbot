@@ -24,7 +24,7 @@ internal class BaccaratGame
         { PlayingCardRank.King, 0 },
     };
 
-    private static readonly List<PlayingCardRank> Case4Ranks 
+    private static readonly List<PlayingCardRank> Case4Ranks
         = [PlayingCardRank.Two, PlayingCardRank.Three, PlayingCardRank.Four, PlayingCardRank.Five, PlayingCardRank.Six, PlayingCardRank.Seven];
 
     private static readonly List<PlayingCardRank> Case5Ranks
