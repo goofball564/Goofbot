@@ -3,7 +3,7 @@
 using System;
 using static Goofbot.UtilClasses.Cards.PlayingCard;
 
-internal class ShoeOfPlayingCards : DeckOfCards
+internal class ShoeOfPlayingCards : DeckOfCards<PlayingCard>
 {
     protected readonly int remainingCardsToRequireReshuffle;
 

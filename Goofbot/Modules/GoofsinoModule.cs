@@ -10,13 +10,15 @@ using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using TwitchLib.Api.Helix.Models.Charity.GetCharityCampaign;
 using TwitchLib.Client.Events;
 using static Goofbot.UtilClasses.Games.BaccaratGame;
 
 internal class GoofsinoModule : GoofbotModule
 {
     private const long RouletteMinimumBet = 1;
-    private const long BaccaratMinimumBet = 200;
+    private const long BaccaratMinimumBet = 100;
+    private const long BlackjackMinimumBet = 2;
     private const string TheHouseID = "-1";
 
     private static readonly RouletteBet RouletteColumn1 = new (2, 2, "column 1");
@@ -38,11 +40,21 @@ internal class GoofsinoModule : GoofbotModule
     private static readonly BaccaratBet BaccaratBanker = new (17, 0.95, "banker");
     private static readonly BaccaratBet BaccaratTie = new (18, 8, "a tie");
 
+    private static readonly BlackjackBet Blackjack = new (19, 1, "blackjack");
+    private static readonly BlackjackBet BlackjackSplit = new (20, 1, "their second hand");
+
     private readonly GoofsinoGameBetsOpenStatus rouletteBetsOpenStatus = new ();
     private readonly GoofsinoGameBetsOpenStatus baccaratBetsOpenStatus = new ();
 
     private readonly RouletteTable rouletteTable = new ();
     private readonly BaccaratGame baccaratGame = new ();
+    private readonly BlackjackGame blackjackGame = new ();
+
+    private AsyncReaderWriterLock blackjackStateLock = new ();
+    private string blackjackPlayerID = string.Empty;
+    private bool canHit = false;
+    private bool canStand = false;
+    private bool canDouble = false;
 
     public GoofsinoModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
@@ -59,6 +71,11 @@ internal class GoofsinoModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new Command("banker", this.BankerCommand, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new Command("tie", this.TieCommand, unlisted: true));
 
+        this.bot.CommandDictionary.TryAddCommand(new Command("blackjack", this.BlackjackCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new Command("hit", this.HitCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new Command("stay", this.StayCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new Command("double", this.DoubleCommand, unlisted: true));
+
         this.bot.CommandDictionary.TryAddCommand(new Command("declarebankruptcy", this.DeclareBankruptcyCommand));
 
         this.bot.CommandDictionary.TryAddCommand(new Command("spin", this.SpinCommand, CommandAccessibilityModifier.StreamerOnly));
@@ -68,6 +85,28 @@ internal class GoofsinoModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new Command("balance", this.BalanceCommand));
         this.bot.CommandDictionary.TryAddCommand(new Command("gamboard", this.GambaPointLeaderboardCommand));
         this.bot.CommandDictionary.TryAddCommand(new Command("thehouse", this.HouseRevenueCommand));
+
+        // player bets on blackjack - allowed if blackjackPlayerID isn't set - initialize state
+        // player starts with option to !hit, !stand, !double, and possibly !split
+        // can only split on their very first action, if ranks match - can't split anymore after splitting
+        // can only double on first action for the hand, besides splitting at the start
+        // if they bust, it automatically moves on
+
+        // IF USER ISN'T PLAYING (bet places user in queue if they're not in the queue, updates their bet if they are in the queue)
+    }
+
+    private async Task BlackjackCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        using (await this.blackjackStateLock.WriteLockAsync())
+        {
+            if (this.blackjackPlayerID.Equals(string.Empty) && await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Blackjack))
+            {
+                this.blackjackPlayerID = eventArgs.Command.ChatMessage.UserId;
+                this.canHit = false;
+                this.canStand = false;
+                this.canDouble = false;
+            }
+        }
     }
 
     public override async Task InitializeAsync()
@@ -545,8 +584,10 @@ internal class GoofsinoModule : GoofbotModule
         await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, RouletteLow);
     }
 
-    private async Task BetCommandHelperAsync(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs, Bet bet)
+    private async Task<bool> BetCommandHelperAsync(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs, Bet bet)
     {
+        bool betPlaced = false;
+
         string userID = eventArgs.Command.ChatMessage.UserId;
         string userName = eventArgs.Command.ChatMessage.DisplayName;
         long minimumBet = 0;
@@ -558,18 +599,23 @@ internal class GoofsinoModule : GoofbotModule
                 if (!await this.rouletteBetsOpenStatus.GetBetsOpenAsync())
                 {
                     this.bot.SendMessage($"@{userName}, bets are closed on the Roulette table. Wait for them to open again.", isReversed);
-                    return;
+                    return false;
                 }
 
                 break;
+
             case BaccaratBet:
                 minimumBet = BaccaratMinimumBet;
                 if (!await this.baccaratBetsOpenStatus.GetBetsOpenAsync())
                 {
                     this.bot.SendMessage($"@{userName}, bets are closed on the Baccarat table. Wait for them to open again.", isReversed);
-                    return;
+                    return false;
                 }
 
+                break;
+
+            case BlackjackBet:
+                minimumBet = BlackjackMinimumBet;
                 break;
         }
 
@@ -638,23 +684,31 @@ internal class GoofsinoModule : GoofbotModule
                         }
 
                         existingBet = await GetBetAmountAsync(sqliteConnection, userID, bet);
-                        bool success = await TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
-                        await transaction.CommitAsync();
-
-                        if (success)
+                        if (amount + existingBet >= minimumBet)
                         {
-                            if (existingBet > 0)
+                            betPlaced = await TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
+                            await transaction.CommitAsync();
+
+                            if (betPlaced)
                             {
-                                message = $"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBet}";
+                                if (existingBet > 0)
+                                {
+                                    message = $"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBet}";
+                                }
+                                else
+                                {
+                                    message = $"{userName} bet {amount} on {bet.BetName}";
+                                }
                             }
                             else
                             {
-                                message = $"{userName} bet {amount} on {bet.BetName}";
+                                message = $"@{userName}, you don't have that many points";
                             }
                         }
                         else
                         {
-                            message = $"@{userName}, you don't have that many points";
+                            await transaction.CommitAsync();
+                            message = $"@{userName} Minimum bet for this game: {minimumBet}";
                         }
                     }
 
@@ -670,8 +724,10 @@ internal class GoofsinoModule : GoofbotModule
         }
         else
         {
-            this.bot.SendMessage($"@{userName} Minimum bet for this game: {minimumBet}", isReversed);
+            this.bot.SendMessage($"@{userName}, include an amount, \"withdraw\", or \"all in\"", isReversed);
         }
+
+        return betPlaced;
     }
 
     private async Task DealCommand(string commandArgs = "", bool isReversed = false, OnChatCommandReceivedArgs eventArgs = null)

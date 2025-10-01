@@ -3,9 +3,10 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-internal abstract class DeckOfCards
+internal abstract class DeckOfCards<T>
+    where T : Card
 {
-    protected readonly List<Card> cards = [];
+    protected readonly List<T> cards = [];
     private int currentIndex = 0;
 
     public int Count
@@ -36,7 +37,7 @@ internal abstract class DeckOfCards
         }
     }
 
-    public Card? GetNextCard()
+    public T GetNextCard()
     {
         if (this.currentIndex < this.cards.Count)
         {
@@ -48,7 +49,7 @@ internal abstract class DeckOfCards
         }
     }
 
-    public Card Peek(int index)
+    public T Peek(int index)
     {
         return this.cards[index];
     }
