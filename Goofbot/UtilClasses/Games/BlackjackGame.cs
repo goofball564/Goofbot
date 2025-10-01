@@ -87,11 +87,6 @@ internal class BlackjackGame
         }
     }
 
-    public void DealSecondCardToSecondHand()
-    {
-        this.PlayerHand2.Add((PlayingCard)this.cards.GetNextCard());
-    }
-
     public void Shuffle()
     {
         this.cards.Shuffle();
@@ -111,6 +106,7 @@ internal class BlackjackGame
         this.PlayerHand1.RemoveAt(1);
         this.PlayerHand2.Add(card);
         this.PlayerHand1.Add((PlayingCard)this.cards.GetNextCard());
+        this.PlayerHand2.Add((PlayingCard)this.cards.GetNextCard());
         this.HasSplit = true;
     }
 
