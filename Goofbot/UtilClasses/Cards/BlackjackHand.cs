@@ -1,8 +1,10 @@
 ﻿namespace Goofbot.UtilClasses.Cards;
 
 using Goofbot.UtilClasses.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 internal class BlackjackHand : HandOfCards<PlayingCard>
 {
@@ -22,6 +24,11 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
         { PlayingCardRank.Queen, 10 },
         { PlayingCardRank.King, 10 },
     };
+
+    public override string ToString()
+    {
+        return string.Join(", ", this.cards.Select(c => Enum.GetName(c.Rank).ToLowerInvariant()));
+    }
 
     public int GetValue(out bool soft)
     {

@@ -93,6 +93,7 @@ internal class GoofsinoModule : GoofbotModule
             while (true)
             {
                 string currentPlayerUserID = string.Empty;
+                string currentPlayerUserName = string.Empty;
                 bool canDouble = false;
                 bool canSplit = false;
                 int currentHandIndex = 0;
@@ -116,8 +117,15 @@ internal class GoofsinoModule : GoofbotModule
                 {
                     while (!cancellationToken.IsCancellationRequested)
                     {
-                        var command = this.blackjackCommandQueue.Take();
+                        var command = this.blackjackCommandQueue.Take(cancellationToken);
                     }
+                };
+
+                Action getPlayerHandStatus = () =>
+                {
+                    int playerHandValue = this.blackjackGame.GetPlayerHandValue(currentHandIndex, out bool softValue);
+                    string soft = softValue ? "soft " : string.Empty;
+                    this.bot.SendMessage($"The player's hand: {this.blackjackGame.PlayerHands[currentHandIndex]}. Value: {soft}{playerHandValue}", false);
                 };
 
                 // WAITING FOR SOMEONE TO JOIN THE GAME
@@ -127,6 +135,7 @@ internal class GoofsinoModule : GoofbotModule
                     if (command.CommandType == BlackjackCommandType.Join)
                     {
                         currentPlayerUserID = command.UserID;
+                        currentPlayerUserName = command.UserName;
 
                         bool withdraw = WithdrawAliases.Contains(command.Args);
                         bool success = false;
@@ -148,12 +157,20 @@ internal class GoofsinoModule : GoofbotModule
                 {
                     this.blackjackGame.Shuffle();
                     this.bot.SendMessage("The deck is being reshuffled...", false);
+
+                    using CancellationTokenSource cancellationTokenSource = new ();
+
+                    Task ig = Task.Run(() => ignoreAllCommands(cancellationTokenSource.Token));
                     await Task.Delay(4000);
+                    await cancellationTokenSource.CancelAsync();
+                    await ig;
                 }
 
                 this.blackjackGame.DealFirstCards();
+                this.bot.SendMessage($"The dealer deals two cards to {currentPlayerUserName} and two to themself", false);
+
                 this.bot.SendMessage($"The dealer's face-up card: {this.blackjackGame.DealerFaceUpCard}", false);
-                this.bot.SendMessage($"The player's hand value: {this.blackjackGame.GetPlayerHandValue(0, out bool _)}", false);
+                getPlayerHandStatus();
 
                 if (this.blackjackGame.DealerHasBlackjack())
                 {
@@ -173,22 +190,19 @@ internal class GoofsinoModule : GoofbotModule
                             {
                                 case BlackjackCommandType.Hit:
                                     this.blackjackGame.Hit(currentHandIndex);
-                                    int value = this.blackjackGame.GetPlayerHandValue(currentHandIndex, out bool _);
+
+                                    getPlayerHandStatus();
 
                                     if (this.blackjackGame.HasBust(currentHandIndex))
                                     {
-                                        this.bot.SendMessage($"Player bust lol: {value}", command.IsReversed);
+                                        this.bot.SendMessage($"That's a bust!", command.IsReversed);
                                         numBusts++;
                                         moveToNextHand();
                                     }
                                     else if (this.blackjackGame.HasBlackjack(currentHandIndex))
                                     {
-                                        this.bot.SendMessage($"Player blackjack woo: {value}", command.IsReversed);
+                                        this.bot.SendMessage($"That's a blackjack!", command.IsReversed);
                                         moveToNextHand();
-                                    }
-                                    else
-                                    {
-                                        this.bot.SendMessage($"Hit hit: {value}", command.IsReversed);
                                     }
 
                                     break;
@@ -204,20 +218,16 @@ internal class GoofsinoModule : GoofbotModule
                                         if (true)
                                         {
                                             this.blackjackGame.Hit(currentHandIndex);
-                                            int value2 = this.blackjackGame.PlayerHands[currentHandIndex].GetValue(out bool _);
+                                            getPlayerHandStatus();
 
                                             if (this.blackjackGame.HasBust(currentHandIndex))
                                             {
-                                                this.bot.SendMessage($"Player bust lol {value2}", command.IsReversed);
+                                                this.bot.SendMessage($"That's a bust!", command.IsReversed);
                                                 numBusts++;
                                             }
                                             else if (this.blackjackGame.HasBlackjack(currentHandIndex))
                                             {
-                                                this.bot.SendMessage($"Player blackjack woo: {value2}", command.IsReversed);
-                                            }
-                                            else
-                                            {
-                                                this.bot.SendMessage($"Hit hit: {value2}", command.IsReversed);
+                                                this.bot.SendMessage($"That's a blackjack!", command.IsReversed);
                                             }
 
                                             moveToNextHand();
@@ -282,21 +292,18 @@ internal class GoofsinoModule : GoofbotModule
                         int handValue = this.blackjackGame.GetPlayerHandValue(i, out bool _);
                         if (handValue > dealerValue)
                         {
-
+                            // win
                         }
                         else if (handValue == dealerValue)
                         {
-
+                            // tie
                         }
-                        else // (handValue < dealerValue)
+                        else
                         {
-
+                            // lose
                         }
                     }
                 }
-
-                // NOW WE DETERMINE RESULTS
-                // 
             }
         });
     }
