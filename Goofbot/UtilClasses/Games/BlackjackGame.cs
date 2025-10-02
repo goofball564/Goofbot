@@ -135,6 +135,11 @@ internal class BlackjackGame
         return this.DealerHand.GetValue(out bool _) == 21;
     }
 
+    public bool DealerHasBust()
+    {
+        return this.DealerHand.GetValue(out bool _) > 21;
+    }
+
     public bool HasBlackjack(int handIndex)
     {
         var hand = this.PlayerHands[handIndex];

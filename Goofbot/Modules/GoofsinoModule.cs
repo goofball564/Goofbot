@@ -11,7 +11,9 @@ using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Documents;
 using TwitchLib.Client.Events;
 
 internal class GoofsinoModule : GoofbotModule
@@ -70,10 +72,11 @@ internal class GoofsinoModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("banker", this.BankerCommand, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("tie", this.TieCommand, unlisted: true));
 
-        // this.bot.CommandDictionary.TryAddCommand(new Command("blackjack", this.BlackjackCommand, unlisted: true));
-        // this.bot.CommandDictionary.TryAddCommand(new Command("hit", this.HitCommand, unlisted: true));
-        // this.bot.CommandDictionary.TryAddCommand(new Command("stay", this.StayCommand, unlisted: true));
-        // this.bot.CommandDictionary.TryAddCommand(new Command("double", this.DoubleCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("blackjack", this.BlackjackCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("hit", this.HitCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("stay", this.StayCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("double", this.DoubleCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("split", this.SplitCommand, unlisted: true));
 
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("declarebankruptcy", this.DeclareBankruptcyCommand));
 
@@ -93,6 +96,7 @@ internal class GoofsinoModule : GoofbotModule
                 bool canDouble = false;
                 bool canSplit = false;
                 int currentHandIndex = 0;
+                int numBusts = 0;
 
                 Action moveToNextHand = () =>
                 {
@@ -100,6 +104,20 @@ internal class GoofsinoModule : GoofbotModule
                     canDouble = this.blackjackGame.CanDouble(currentHandIndex);
                     canSplit = this.blackjackGame.CanSplit(currentHandIndex);
                     this.blackjackGame.Hit(currentHandIndex);
+
+                    if (currentHandIndex < this.blackjackGame.NumPlayerHands)
+                    {
+                        int value = this.blackjackGame.PlayerHands[currentHandIndex].GetValue(out bool _);
+                        this.bot.SendMessage($"Second hand value: {value}", false);
+                    }
+                };
+
+                Action<CancellationToken> ignoreAllCommands = (cancellationToken) =>
+                {
+                    while (!cancellationToken.IsCancellationRequested)
+                    {
+                        var command = this.blackjackCommandQueue.Take();
+                    }
                 };
 
                 // WAITING FOR SOMEONE TO JOIN THE GAME
@@ -114,11 +132,12 @@ internal class GoofsinoModule : GoofbotModule
                         bool success = false;
                         if (!withdraw)
                         {
-                            success = await this.BetCommandHelperAsync(command.Args, command.IsReversed, command.EventArgs, Blackjack);
+                            success = true; // await this.BetCommandHelperAsync(command.Args, command.IsReversed, command.EventArgs, Blackjack);
                         }
 
                         if (success)
                         {
+                            this.bot.SendMessage($"{command.UserID} is gon play blackjack yo", command.IsReversed);
                             break;
                         }
                     }
@@ -128,15 +147,17 @@ internal class GoofsinoModule : GoofbotModule
                 if (this.blackjackGame.ReshuffleRequired)
                 {
                     this.blackjackGame.Shuffle();
-                    // send a message indicating the deck is being shuffled
+                    this.bot.SendMessage("The deck is being reshuffled...", false);
+                    await Task.Delay(4000);
                 }
 
                 this.blackjackGame.DealFirstCards();
-                // announce the dealer's face up card and the player's hand
+                this.bot.SendMessage($"The dealer's face-up card: {this.blackjackGame.DealerFaceUpCard}", false);
+                this.bot.SendMessage($"The player's hand value: {this.blackjackGame.GetPlayerHandValue(0, out bool _)}", false);
 
                 if (this.blackjackGame.DealerHasBlackjack())
                 {
-                    // send appropriate message
+                    this.bot.SendMessage("The dealer has a blackjack!", false);
                 }
                 else
                 {
@@ -152,22 +173,22 @@ internal class GoofsinoModule : GoofbotModule
                             {
                                 case BlackjackCommandType.Hit:
                                     this.blackjackGame.Hit(currentHandIndex);
+                                    int value = this.blackjackGame.GetPlayerHandValue(currentHandIndex, out bool _);
 
                                     if (this.blackjackGame.HasBust(currentHandIndex))
                                     {
-                                        // send appropriate message
-
+                                        this.bot.SendMessage($"Player bust lol: {value}", command.IsReversed);
+                                        numBusts++;
                                         moveToNextHand();
                                     }
                                     else if (this.blackjackGame.HasBlackjack(currentHandIndex))
                                     {
-                                        // send appropriate message
-
+                                        this.bot.SendMessage($"Player blackjack woo: {value}", command.IsReversed);
                                         moveToNextHand();
                                     }
                                     else
                                     {
-                                        // send appropriate message
+                                        this.bot.SendMessage($"Hit hit: {value}", command.IsReversed);
                                     }
 
                                     break;
@@ -178,13 +199,28 @@ internal class GoofsinoModule : GoofbotModule
                                 case BlackjackCommandType.Double:
                                     if (canDouble)
                                     {
-                                        long amount = await this.GetBetAmountAsyncFuckIDK(command.UserID, Blackjack);
-                                        bool success = await this.BetCommandHelperAsync(amount.ToString(), command.IsReversed, command.EventArgs, Blackjack);
-                                        if (success)
+                                        // long amount = await this.GetBetAmountAsyncFuckIDK(command.UserID, Blackjack);
+                                        // bool success = await this.BetCommandHelperAsync(amount.ToString(), command.IsReversed, command.EventArgs, Blackjack);
+                                        if (true)
                                         {
                                             this.blackjackGame.Hit(currentHandIndex);
+                                            int value2 = this.blackjackGame.PlayerHands[currentHandIndex].GetValue(out bool _);
+
+                                            if (this.blackjackGame.HasBust(currentHandIndex))
+                                            {
+                                                this.bot.SendMessage($"Player bust lol {value2}", command.IsReversed);
+                                                numBusts++;
+                                            }
+                                            else if (this.blackjackGame.HasBlackjack(currentHandIndex))
+                                            {
+                                                this.bot.SendMessage($"Player blackjack woo: {value2}", command.IsReversed);
+                                            }
+                                            else
+                                            {
+                                                this.bot.SendMessage($"Hit hit: {value2}", command.IsReversed);
+                                            }
+
                                             moveToNextHand();
-                                            // send appropriate message
                                         }
                                     }
 
@@ -203,7 +239,7 @@ internal class GoofsinoModule : GoofbotModule
                                         {
                                             this.blackjackGame.Split(currentHandIndex);
                                             canSplit = false;
-                                            // send appropriate message
+                                            this.bot.SendMessage("succ split", command.IsReversed);
                                         }
                                     }
 
@@ -213,12 +249,51 @@ internal class GoofsinoModule : GoofbotModule
 
                         if (currentHandIndex >= this.blackjackGame.NumPlayerHands)
                         {
+                            this.bot.SendMessage("k done", false);
                             break;
+                        }
+                        else
+                        {
+
                         }
                     }
                 }
 
-                // DEALER HITS HERE
+                if (numBusts < this.blackjackGame.NumPlayerHands)
+                {
+                    // DEALER HITS HERE
+                }
+
+                int dealerValue = this.blackjackGame.GetDealerHandValue(out bool _);
+                bool dealerBust = this.blackjackGame.DealerHasBust();
+                for (int i = 0; i < this.blackjackGame.NumPlayerHands; i++)
+                {
+                    var bet = i == 0 ? Blackjack : BlackjackSplit;
+                    if (this.blackjackGame.HasBust(i))
+                    {
+                        // lose
+                    }
+                    else if (dealerBust)
+                    {
+                        // win
+                    }
+                    else
+                    {
+                        int handValue = this.blackjackGame.GetPlayerHandValue(i, out bool _);
+                        if (handValue > dealerValue)
+                        {
+
+                        }
+                        else if (handValue == dealerValue)
+                        {
+
+                        }
+                        else // (handValue < dealerValue)
+                        {
+
+                        }
+                    }
+                }
 
                 // NOW WE DETERMINE RESULTS
                 // 
@@ -228,7 +303,27 @@ internal class GoofsinoModule : GoofbotModule
 
     private async Task BlackjackCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        
+        this.blackjackCommandQueue.Add(new BlackjackCommand(BlackjackCommandType.Join, commandArgs, isReversed, eventArgs));
+    }
+
+    private async Task HitCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        this.blackjackCommandQueue.Add(new BlackjackCommand(BlackjackCommandType.Hit, commandArgs, isReversed, eventArgs));
+    }
+
+    private async Task StayCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        this.blackjackCommandQueue.Add(new BlackjackCommand(BlackjackCommandType.Stay, commandArgs, isReversed, eventArgs));
+    }
+
+    private async Task DoubleCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        this.blackjackCommandQueue.Add(new BlackjackCommand(BlackjackCommandType.Double, commandArgs, isReversed, eventArgs));
+    }
+
+    private async Task SplitCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        this.blackjackCommandQueue.Add(new BlackjackCommand(BlackjackCommandType.Split, commandArgs, isReversed, eventArgs));
     }
 
     public override async Task InitializeAsync()
