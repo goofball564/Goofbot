@@ -3,25 +3,25 @@
 using System.Collections;
 using System.Collections.Generic;
 
-internal class CommandDictionary : IEnumerable<KeyValuePair<string, Command>>
+internal class ChatCommandDictionary : IEnumerable<KeyValuePair<string, ChatCommand>>
 {
-    private readonly Dictionary<string, Command> commandDictionary = [];
+    private readonly Dictionary<string, ChatCommand> commandDictionary = [];
 
-    public CommandDictionary()
+    public ChatCommandDictionary()
     {
     }
 
-    public bool TryAddCommand(Command command)
+    public bool TryAddCommand(ChatCommand command)
     {
         return this.commandDictionary.TryAdd(command.Name, command);
     }
 
-    public bool TryGetCommand(string name, out Command command)
+    public bool TryGetCommand(string name, out ChatCommand command)
     {
         return this.commandDictionary.TryGetValue(name, out command);
     }
 
-    public IEnumerator<KeyValuePair<string, Command>> GetEnumerator()
+    public IEnumerator<KeyValuePair<string, ChatCommand>> GetEnumerator()
     {
         return this.commandDictionary.GetEnumerator();
     }

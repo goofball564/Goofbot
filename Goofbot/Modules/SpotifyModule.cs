@@ -48,10 +48,10 @@ internal partial class SpotifyModule : GoofbotModule
         this.timer.AutoReset = true;
         this.timer.Elapsed += this.QueueModeCallback;
 
-        this.bot.CommandDictionary.TryAddCommand(new Command("song", this.SongCommand));
-        this.bot.CommandDictionary.TryAddCommand(new Command("album", this.AlbumCommand));
-        this.bot.CommandDictionary.TryAddCommand(new Command("queuemode", this.QueueModeCommand, CommandAccessibilityModifier.StreamerOnly));
-        this.bot.CommandDictionary.TryAddCommand(new Command("spotvol", this.SpotifyVolumeCommand, CommandAccessibilityModifier.StreamerOnly));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("song", this.SongCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("album", this.AlbumCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("queuemode", this.QueueModeCommand, CommandAccessibilityModifier.StreamerOnly));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("spotvol", this.SpotifyVolumeCommand, CommandAccessibilityModifier.StreamerOnly));
 
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
     }

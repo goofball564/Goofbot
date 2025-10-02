@@ -22,9 +22,9 @@ internal partial class RandomModule : GoofbotModule
     public RandomModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
-        this.bot.CommandDictionary.TryAddCommand(new Command("flip", this.FlipCommand));
-        this.bot.CommandDictionary.TryAddCommand(new Command("roll", this.RollCommand));
-        this.bot.CommandDictionary.TryAddCommand(new Command("random", this.RandomCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("flip", this.FlipCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("roll", this.RollCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("random", this.RandomCommand));
     }
 
     [GeneratedRegex("^[d|D][1-9]{1}[0-9]{0,}$")]

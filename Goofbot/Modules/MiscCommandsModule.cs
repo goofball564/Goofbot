@@ -33,7 +33,7 @@ internal class MiscCommandsModule : GoofbotModule
 
     public async Task LockCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        if (this.bot.CommandDictionary.TryGetCommand(commandArgs, out Command command))
+        if (this.bot.CommandDictionary.TryGetCommand(commandArgs, out ChatCommand command))
         {
             if (command.TryLock())
             {
@@ -52,7 +52,7 @@ internal class MiscCommandsModule : GoofbotModule
 
     public async Task UnlockCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        if (this.bot.CommandDictionary.TryGetCommand(commandArgs, out Command command))
+        if (this.bot.CommandDictionary.TryGetCommand(commandArgs, out ChatCommand command))
         {
             if (command.TryUnlock())
             {
@@ -108,7 +108,7 @@ internal class MiscCommandsModule : GoofbotModule
         for (int i = 0; i < commandNames.Count; i++)
         {
             string commandAccessibilityModifier = string.Empty;
-            if (this.bot.CommandDictionary.TryGetCommand(commandNames[i], out Command command))
+            if (this.bot.CommandDictionary.TryGetCommand(commandNames[i], out ChatCommand command))
             {
                 switch (command.CommandAccessibilityModifier)
                 {

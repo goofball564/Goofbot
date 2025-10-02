@@ -52,7 +52,7 @@ internal partial class BlueGuyModule : GoofbotModule
         this.invertedGuysFolder = Path.Join(this.moduleDataFolder, "InvertedGuys");
         Directory.CreateDirectory(this.invertedGuysFolder);
 
-        this.bot.CommandDictionary.TryAddCommand(new Command("guy", this.GuyCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("guy", this.GuyCommand));
 
         this.timer.AutoReset = true;
         this.timer.Elapsed += this.GuyTimerCallback;

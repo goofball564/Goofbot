@@ -58,13 +58,13 @@ internal class TextToSpeechModule : GoofbotModule
             }
         });
 
-        this.bot.CommandDictionary.TryAddCommand(new Command("voices", this.VoicesCommand));
-        this.bot.CommandDictionary.TryAddCommand(new Command("tts", this.TTSCommand, CommandAccessibilityModifier.SubOnly));
-        this.bot.CommandDictionary.TryAddCommand(new Command("cancel", this.CancelCommand, CommandAccessibilityModifier.StreamerOnly));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("voices", this.VoicesCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("tts", this.TTSCommand, CommandAccessibilityModifier.SubOnly));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("cancel", this.CancelCommand, CommandAccessibilityModifier.StreamerOnly));
 
-        this.bot.CommandDictionary.TryAddCommand(new Command("paul", this.PaulCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("sam", this.SamCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("bonzi", this.BonziCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("paul", this.PaulCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("sam", this.SamCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("bonzi", this.BonziCommand, CommandAccessibilityModifier.SubOnly, unlisted: true));
 
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
     }

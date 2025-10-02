@@ -30,7 +30,7 @@ internal class Bot : IDisposable
     public readonly string TwitchChannelUsername;
 
     public readonly AsyncReaderWriterLock SqliteReaderWriterLock = new ();
-    public readonly CommandDictionary CommandDictionary = new ();
+    public readonly ChatCommandDictionary CommandDictionary = new ();
 
     private readonly string goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");
 
@@ -276,7 +276,7 @@ internal class Bot : IDisposable
 
         bool isReversed = false;
 
-        Command command;
+        ChatCommand command;
         if (this.CommandDictionary.TryGetCommand(commandName, out command))
         {
             await command.ExecuteCommandAsync(commandArgs, isReversed, e);

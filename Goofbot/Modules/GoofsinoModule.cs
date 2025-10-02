@@ -4,15 +4,15 @@ using Goofbot.Structs;
 using Goofbot.UtilClasses;
 using Goofbot.UtilClasses.Bets;
 using Goofbot.UtilClasses.Cards;
+using Goofbot.UtilClasses.Enums;
 using Goofbot.UtilClasses.Games;
 using Microsoft.Data.Sqlite;
 using Microsoft.VisualStudio.Threading;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using TwitchLib.Api.Helix.Models.Charity.GetCharityCampaign;
 using TwitchLib.Client.Events;
-using static Goofbot.UtilClasses.Games.BaccaratGame;
 
 internal class GoofsinoModule : GoofbotModule
 {
@@ -43,6 +43,11 @@ internal class GoofsinoModule : GoofbotModule
     private static readonly BlackjackBet Blackjack = new (19, 1, "blackjack");
     private static readonly BlackjackBet BlackjackSplit = new (20, 1, "their second hand");
 
+    private static readonly List<string> WithdrawAliases = [ "withdraw", "w"];
+    private static readonly List<string> AllInAliases = ["all in", "all", "allin", "a"];
+
+    private readonly BlockingCollection<BlackjackCommand> blackjackCommandQueue = new (new ConcurrentQueue<BlackjackCommand>(), 1000);
+
     private readonly GoofsinoGameBetsOpenStatus rouletteBetsOpenStatus = new ();
     private readonly GoofsinoGameBetsOpenStatus baccaratBetsOpenStatus = new ();
 
@@ -50,63 +55,180 @@ internal class GoofsinoModule : GoofbotModule
     private readonly BaccaratGame baccaratGame = new ();
     private readonly BlackjackGame blackjackGame = new ();
 
-    private AsyncReaderWriterLock blackjackStateLock = new ();
-    private string blackjackPlayerID = string.Empty;
-    private bool canHit = false;
-    private bool canStand = false;
-    private bool canDouble = false;
-
     public GoofsinoModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
-        this.bot.CommandDictionary.TryAddCommand(new Command("red", this.RedCommand, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("black", this.BlackCommand, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("even", this.EvenCommand, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("odd", this.OddCommand, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("high", this.HighCommand, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("low", this.LowCommand, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("green", this.GreenCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("red", this.RedCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("black", this.BlackCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("even", this.EvenCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("odd", this.OddCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("high", this.HighCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("low", this.LowCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("green", this.GreenCommand, unlisted: true));
 
-        this.bot.CommandDictionary.TryAddCommand(new Command("player", this.PlayerCommand, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("banker", this.BankerCommand, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("tie", this.TieCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("player", this.PlayerCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("banker", this.BankerCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("tie", this.TieCommand, unlisted: true));
 
-        this.bot.CommandDictionary.TryAddCommand(new Command("blackjack", this.BlackjackCommand, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("hit", this.HitCommand, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("stay", this.StayCommand, unlisted: true));
-        this.bot.CommandDictionary.TryAddCommand(new Command("double", this.DoubleCommand, unlisted: true));
+        // this.bot.CommandDictionary.TryAddCommand(new Command("blackjack", this.BlackjackCommand, unlisted: true));
+        // this.bot.CommandDictionary.TryAddCommand(new Command("hit", this.HitCommand, unlisted: true));
+        // this.bot.CommandDictionary.TryAddCommand(new Command("stay", this.StayCommand, unlisted: true));
+        // this.bot.CommandDictionary.TryAddCommand(new Command("double", this.DoubleCommand, unlisted: true));
 
-        this.bot.CommandDictionary.TryAddCommand(new Command("declarebankruptcy", this.DeclareBankruptcyCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("declarebankruptcy", this.DeclareBankruptcyCommand));
 
-        this.bot.CommandDictionary.TryAddCommand(new Command("spin", this.SpinCommand, CommandAccessibilityModifier.StreamerOnly));
-        this.bot.CommandDictionary.TryAddCommand(new Command("deal", this.DealCommand, CommandAccessibilityModifier.StreamerOnly));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("spin", this.SpinCommand, CommandAccessibilityModifier.StreamerOnly));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("deal", this.DealCommand, CommandAccessibilityModifier.StreamerOnly));
 
-        this.bot.CommandDictionary.TryAddCommand(new Command("creditscore", this.BankruptcyCountCommand));
-        this.bot.CommandDictionary.TryAddCommand(new Command("balance", this.BalanceCommand));
-        this.bot.CommandDictionary.TryAddCommand(new Command("gamboard", this.GambaPointLeaderboardCommand));
-        this.bot.CommandDictionary.TryAddCommand(new Command("thehouse", this.HouseRevenueCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("creditscore", this.BankruptcyCountCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("balance", this.BalanceCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("gamboard", this.GambaPointLeaderboardCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("thehouse", this.HouseRevenueCommand));
 
-        // player bets on blackjack - allowed if blackjackPlayerID isn't set - initialize state
-        // player starts with option to !hit, !stand, !double, and possibly !split
-        // can only split on their very first action, if ranks match - can't split anymore after splitting
-        // can only double on first action for the hand, besides splitting at the start
-        // if they bust, it automatically moves on
+        Task backgroundTask = Task.Run(async () =>
+        {
+            while (true)
+            {
+                string currentPlayerUserID = string.Empty;
+                bool canDouble = false;
+                bool canSplit = false;
+                int currentHandIndex = 0;
 
-        // IF USER ISN'T PLAYING (bet places user in queue if they're not in the queue, updates their bet if they are in the queue)
+                Action moveToNextHand = () =>
+                {
+                    currentHandIndex++;
+                    canDouble = this.blackjackGame.CanDouble(currentHandIndex);
+                    canSplit = this.blackjackGame.CanSplit(currentHandIndex);
+                    this.blackjackGame.Hit(currentHandIndex);
+                };
+
+                // WAITING FOR SOMEONE TO JOIN THE GAME
+                while (true)
+                {
+                    var command = this.blackjackCommandQueue.Take();
+                    if (command.CommandType == BlackjackCommandType.Join)
+                    {
+                        currentPlayerUserID = command.UserID;
+
+                        bool withdraw = WithdrawAliases.Contains(command.Args);
+                        bool success = false;
+                        if (!withdraw)
+                        {
+                            success = await this.BetCommandHelperAsync(command.Args, command.IsReversed, command.EventArgs, Blackjack);
+                        }
+
+                        if (success)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                this.blackjackGame.ResetHands();
+                if (this.blackjackGame.ReshuffleRequired)
+                {
+                    this.blackjackGame.Shuffle();
+                    // send a message indicating the deck is being shuffled
+                }
+
+                this.blackjackGame.DealFirstCards();
+                // announce the dealer's face up card and the player's hand
+
+                if (this.blackjackGame.DealerHasBlackjack())
+                {
+                    // send appropriate message
+                }
+                else
+                {
+                    // Processing commands related to the game
+                    canDouble = this.blackjackGame.CanDouble(currentHandIndex);
+                    canSplit = this.blackjackGame.CanSplit(currentHandIndex);
+                    while (true)
+                    {
+                        var command = this.blackjackCommandQueue.Take();
+                        if (command.UserID.Equals(currentPlayerUserID))
+                        {
+                            switch (command.CommandType)
+                            {
+                                case BlackjackCommandType.Hit:
+                                    this.blackjackGame.Hit(currentHandIndex);
+
+                                    if (this.blackjackGame.HasBust(currentHandIndex))
+                                    {
+                                        // send appropriate message
+
+                                        moveToNextHand();
+                                    }
+                                    else if (this.blackjackGame.HasBlackjack(currentHandIndex))
+                                    {
+                                        // send appropriate message
+
+                                        moveToNextHand();
+                                    }
+                                    else
+                                    {
+                                        // send appropriate message
+                                    }
+
+                                    break;
+                                case BlackjackCommandType.Stay:
+                                    moveToNextHand();
+
+                                    break;
+                                case BlackjackCommandType.Double:
+                                    if (canDouble)
+                                    {
+                                        long amount = await this.GetBetAmountAsyncFuckIDK(command.UserID, Blackjack);
+                                        bool success = await this.BetCommandHelperAsync(amount.ToString(), command.IsReversed, command.EventArgs, Blackjack);
+                                        if (success)
+                                        {
+                                            this.blackjackGame.Hit(currentHandIndex);
+                                            moveToNextHand();
+                                            // send appropriate message
+                                        }
+                                    }
+
+                                    break;
+                                case BlackjackCommandType.Split:
+                                    if (canSplit)
+                                    {
+                                        bool withdraw = WithdrawAliases.Contains(command.Args);
+                                        bool success = false;
+                                        if (!withdraw)
+                                        {
+                                            success = await this.BetCommandHelperAsync(command.Args, command.IsReversed, command.EventArgs, BlackjackSplit);
+                                        }
+
+                                        if (success)
+                                        {
+                                            this.blackjackGame.Split(currentHandIndex);
+                                            canSplit = false;
+                                            // send appropriate message
+                                        }
+                                    }
+
+                                    break;
+                            }
+                        }
+
+                        if (currentHandIndex >= this.blackjackGame.NumPlayerHands)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                // DEALER HITS HERE
+
+                // NOW WE DETERMINE RESULTS
+                // 
+            }
+        });
     }
 
     private async Task BlackjackCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        using (await this.blackjackStateLock.WriteLockAsync())
-        {
-            if (this.blackjackPlayerID.Equals(string.Empty) && await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Blackjack))
-            {
-                this.blackjackPlayerID = eventArgs.Command.ChatMessage.UserId;
-                this.canHit = false;
-                this.canStand = false;
-                this.canDouble = false;
-            }
-        }
+        
     }
 
     public override async Task InitializeAsync()
@@ -347,6 +469,15 @@ internal class GoofsinoModule : GoofbotModule
         sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
 
         return Convert.ToInt64(await sqliteCommand.ExecuteScalarAsync());
+    }
+
+    private async Task<long> GetBetAmountAsyncFuckIDK(string userID, Bet bet)
+    {
+        using (var sqliteConnection = this.bot.OpenSqliteConnection())
+        using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
+        {
+            return await GetBetAmountAsync(sqliteConnection, userID, bet);
+        }
     }
 
     private static async Task AddBetToTableAsync(SqliteConnection sqliteConnection, string userID, Bet bet, long amount)
@@ -619,33 +750,9 @@ internal class GoofsinoModule : GoofbotModule
                 break;
         }
 
-        long amount = 0;
-        bool amountProvided = false;
-        bool withdraw = false;
-        bool allIn = false;
-
-        switch (commandArgs.ToLowerInvariant())
-        {
-            case "w":
-                withdraw = true;
-                break;
-            case "withdraw":
-                goto case "w";
-
-            case "all":
-                allIn = true;
-                break;
-            case "all in":
-                goto case "all";
-            case "allin":
-                goto case "all";
-            case "a":
-                goto case "all";
-
-            case string providedAmount when long.TryParse(providedAmount, out amount):
-                amountProvided = true;
-                break;
-        }
+        bool withdraw = WithdrawAliases.Contains(commandArgs);
+        bool allIn = AllInAliases.Contains(commandArgs);
+        bool amountProvided = long.TryParse(commandArgs, out long amount);
 
         if (amountProvided || withdraw || allIn)
         {

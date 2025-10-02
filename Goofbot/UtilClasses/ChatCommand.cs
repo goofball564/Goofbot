@@ -4,7 +4,7 @@ using System;
 using System.Threading.Tasks;
 using TwitchLib.Client.Events;
 
-internal class Command
+internal class ChatCommand
 {
     public readonly CommandAccessibilityModifier CommandAccessibilityModifier;
     public readonly string Name;
@@ -15,7 +15,7 @@ internal class Command
 
     private DateTime timeOfLastInvocation = DateTime.MinValue;
 
-    public Command(string name, Func<string, bool, OnChatCommandReceivedArgs, Task> commandAction, CommandAccessibilityModifier commandAccessibilityModifier = CommandAccessibilityModifier.AllChatters, bool unlisted = false, int timeoutSeconds = 1)
+    public ChatCommand(string name, Func<string, bool, OnChatCommandReceivedArgs, Task> commandAction, CommandAccessibilityModifier commandAccessibilityModifier = CommandAccessibilityModifier.AllChatters, bool unlisted = false, int timeoutSeconds = 1)
     {
         this.Name = name;
         this.CommandAccessibilityModifier = commandAccessibilityModifier;

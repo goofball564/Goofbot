@@ -1,17 +1,17 @@
 ﻿namespace Goofbot.UtilClasses.Cards;
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TwitchLib.Api.Helix.Models.Moderation.BlockedTerms;
 
 internal class HandOfCards<T> : IEnumerable
     where T : Card
 {
     protected readonly List<T> cards = [];
+
+    public int Count
+    {
+        get { return this.cards.Count; }
+    }
 
     public T this[int index]
     {

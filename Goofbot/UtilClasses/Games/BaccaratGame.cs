@@ -1,9 +1,9 @@
 ﻿namespace Goofbot.UtilClasses.Games;
 
 using Goofbot.UtilClasses.Cards;
+using Goofbot.UtilClasses.Enums;
 using System;
 using System.Collections.Generic;
-using static Goofbot.UtilClasses.Cards.PlayingCard;
 
 internal class BaccaratGame
 {
@@ -40,13 +40,6 @@ internal class BaccaratGame
 
     public BaccaratGame()
     {
-    }
-
-    public enum BaccaratOutcome
-    {
-        Player,
-        Banker,
-        Tie,
     }
 
     public PlayingCard PlayerFirstCard

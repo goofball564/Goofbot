@@ -16,8 +16,8 @@ internal class CheckInTokenModule : GoofbotModule
     {
         this.bot.EventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += this.OnChannelPointsCustomRewardRedemptionAdd;
 
-        this.bot.CommandDictionary.TryAddCommand(new Command("coinboard", this.GoofCoinLeaderboardCommand));
-        this.bot.CommandDictionary.TryAddCommand(new Command("coins", this.CoinsCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("coinboard", this.GoofCoinLeaderboardCommand));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("coins", this.CoinsCommand));
     }
 
     public override async Task InitializeAsync()

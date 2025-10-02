@@ -1,11 +1,8 @@
 ﻿namespace Goofbot.UtilClasses.Cards;
 
-using System;
+using Goofbot.UtilClasses.Enums;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static Goofbot.UtilClasses.Cards.PlayingCard;
 
 internal class BlackjackHand : HandOfCards<PlayingCard>
 {

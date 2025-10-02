@@ -1,7 +1,7 @@
 ﻿namespace Goofbot.UtilClasses.Cards;
 
+using Goofbot.UtilClasses.Enums;
 using System;
-using static Goofbot.UtilClasses.Cards.PlayingCard;
 
 internal class ShoeOfPlayingCards : DeckOfCards<PlayingCard>
 {
