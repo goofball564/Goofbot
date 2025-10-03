@@ -4,7 +4,6 @@ using Goofbot.UtilClasses.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 internal class BlackjackHand : HandOfCards<PlayingCard>
 {
@@ -48,5 +47,25 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
         }
 
         return value;
+    }
+
+    public bool CanSplit()
+    {
+        return (this.Count == 2) && (this[0].Rank == this[1].Rank);
+    }
+
+    public bool CanDouble()
+    {
+        return this.Count == 2;
+    }
+
+    public bool HasBlackjack()
+    {
+        return this.GetValue(out bool _) == 21;
+    }
+
+    public bool HasBust()
+    {
+        return this.GetValue(out bool _) > 21;
     }
 }

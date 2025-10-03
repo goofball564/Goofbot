@@ -13,4 +13,11 @@ internal class PlayingCard(PlayingCardSuit suit, PlayingCardRank rank)
     {
         return $"{Enum.GetName(this.Rank)} of {Enum.GetName(this.Suit)}";
     }
+
+    public string RankString()
+    {
+        string rank = Enum.GetName(this.Rank).ToLowerInvariant();
+        string n = Program.StartsWithVowel(rank) ? "n" : string.Empty;
+        return $"a{n} {rank}";
+    }
 }
