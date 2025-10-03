@@ -112,6 +112,14 @@ internal class Bot : IDisposable
         await replaceCommand.ExecuteNonQueryAsync();
     }
 
+    public static async Task<string> GetUserNameAsync(SqliteConnection sqliteConnection, string userID)
+    {
+        using var sqliteCommand = sqliteConnection.CreateCommand();
+        sqliteCommand.CommandText = "SELECT UserName FROM TwitchUsers WHERE UserID = @UserID";
+        sqliteCommand.Parameters.AddWithValue("@UserID", userID);
+        return Convert.ToString(await sqliteCommand.ExecuteScalarAsync());
+    }
+
     public static string GetLeaderboardString(List<UserNameAndCount> list, string theThingBeingCounted)
     {
         int i = 0;

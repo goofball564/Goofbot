@@ -35,9 +35,7 @@ internal class GoofsinoModule : GoofbotModule
     public static readonly BaccaratBet BaccaratTie = new (18, 8, "a tie");
 
     public static readonly BlackjackBet Blackjack = new (19, 1, "blackjack");
-    public static readonly BlackjackBet BLackjackBlackjack = new (19, 1.2, "blackjack");
     public static readonly BlackjackBet BlackjackSplit = new (20, 1, "their second hand");
-    public static readonly BlackjackBet BlackjackSplitBlackjack = new (20, 1.2, "their second hand");
 
     public static readonly List<string> WithdrawAliases = ["withdraw", "w"];
     public static readonly List<string> AllInAliases = ["all in", "all", "allin", "a"];
@@ -189,34 +187,16 @@ internal class GoofsinoModule : GoofbotModule
         sqliteCommand.CommandText = "SELECT Bets.UserID, TwitchUsers.UserName, Bets.Amount FROM Bets INNER JOIN TwitchUsers ON TwitchUsers.UserID = Bets.UserID WHERE BetTypeID = @BetTypeID;";
         sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
 
-        using var reader = await sqliteCommand.ExecuteReaderAsync();
-
-        while (await reader.ReadAsync())
+        using (var reader = await sqliteCommand.ExecuteReaderAsync())
         {
-            string userID = reader.GetInt64(0).ToString();
-            string userName = reader.GetString(1);
-            long amount = reader.GetInt64(2);
-            string verb;
-
-            if (success)
+            while (await reader.ReadAsync())
             {
-                verb = "won";
-                amount = Convert.ToInt64(Math.Floor(amount * bet.PayoutRatio));
+                string userID = reader.GetInt64(0).ToString();
+                string userName = reader.GetString(1);
+                long amount = reader.GetInt64(2);
+
+                messages.Add(await ResolveBetHelperAsync(sqliteConnection, userID, userName, amount, bet, success));
             }
-            else
-            {
-                verb = "lost";
-                amount *= -1;
-            }
-
-            long balance = await GetBalanceAsync(sqliteConnection, userID);
-
-            messages.Add($"{userName} {verb} {Math.Abs(amount)} gamba points for betting on {bet.BetName}. Balance: {balance + amount} gamba points");
-
-            await AddBalanceAsync(sqliteConnection, userID, amount);
-
-            amount *= -1;
-            await AddBalanceAsync(sqliteConnection, TheHouseID, amount);
         }
 
         await DeleteAllBetsByTypeAsync(sqliteConnection, bet);
@@ -240,38 +220,14 @@ internal class GoofsinoModule : GoofbotModule
         await updateCommand.ExecuteNonQueryAsync();
     }
 
-    /*public static async Task<bool> ResolveBetAsync(SqliteConnection sqliteConnection, string userID, Bet bet, bool success)
+    public static async Task<string> ResolveBetAsync(SqliteConnection sqliteConnection, string userID, Bet bet, bool success)
     {
-        using var transaction = sqliteConnection.BeginTransaction();
-        try
-        {
-            long amount = await GetBetAmountAsync(sqliteConnection, userID, bet);
-            await DeleteBetFromTableAsync(sqliteConnection, userID, bet);
+        long amount = await GetBetAmountAsync(sqliteConnection, userID, bet);
+        string userName = await Bot.GetUserNameAsync(sqliteConnection, userID);
+        await DeleteBetFromTableAsync(sqliteConnection, userID, bet);
 
-
-            if (success)
-            {
-                amount *= bet.PayoutRatio;
-            }
-            else
-            {
-                amount *= -1;
-            }
-
-            await AddBalanceAsync(sqliteConnection, userID, amount);
-
-            amount *= -1;
-            await AddBalanceAsync(sqliteConnection, TheHouseID, amount);
-
-            await transaction.CommitAsync();
-            return true;
-        }
-        catch (SqliteException)
-        {
-            await transaction.RollbackAsync();
-            return false;
-        }
-    }*/
+        return await ResolveBetHelperAsync(sqliteConnection, userID, userName, amount, bet, success);
+    }
 
     public static async Task DeleteAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet)
     {
@@ -518,6 +474,32 @@ internal class GoofsinoModule : GoofbotModule
         }
 
         return betPlaced;
+    }
+
+    private static async Task<string> ResolveBetHelperAsync(SqliteConnection sqliteConnection, string userID, string userName, long amount, Bet bet, bool success)
+    {
+        string verb;
+        if (success)
+        {
+            verb = "won";
+            amount = Convert.ToInt64(Math.Floor(amount * bet.PayoutRatio));
+        }
+        else
+        {
+            verb = "lost";
+            amount *= -1;
+        }
+
+        long balance = await GetBalanceAsync(sqliteConnection, userID);
+
+        await AddBalanceAsync(sqliteConnection, userID, amount);
+
+        string message = $"{userName} {verb} {Math.Abs(amount)} gamba points for betting on {bet.BetName}. Balance: {balance + amount} gamba points";
+
+        amount *= -1;
+        await AddBalanceAsync(sqliteConnection, TheHouseID, amount);
+
+        return message;
     }
 
     private async Task HouseRevenueCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
@@ -860,12 +842,7 @@ internal class GoofsinoModule : GoofbotModule
                 await transaction.CommitAsync();
 
                 await delayTask;
-                foreach (string message in messages)
-                {
-                    await delayTask;
-                    this.bot.SendMessage(message, isReversed);
-                    delayTask = Task.Delay(333);
-                }
+                await this.SendMessagesAsync(messages, isReversed);
 
                 await this.baccaratBetsOpenStatus.SetBetsOpenAsync(true);
             }
@@ -878,6 +855,17 @@ internal class GoofsinoModule : GoofbotModule
         }
 
 
+    }
+
+    public async Task SendMessagesAsync(List<string> messages, bool isReversed)
+    {
+        Task delayTask = Task.Delay(0);
+        foreach (string message in messages)
+        {
+            await delayTask;
+            this.bot.SendMessage(message, isReversed);
+            delayTask = Task.Delay(500);
+        }
     }
 
     private async Task SpinCommand(string commandArgs = "", bool isReversed = false, OnChatCommandReceivedArgs eventArgs = null)
@@ -955,12 +943,8 @@ internal class GoofsinoModule : GoofbotModule
                 await transaction.CommitAsync();
 
                 await delayTask;
-                foreach (string message in messages)
-                {
-                    await delayTask;
-                    this.bot.SendMessage(message, isReversed);
-                    delayTask = Task.Delay(333);
-                }
+
+                await this.SendMessagesAsync(messages, isReversed);
 
                 await this.rouletteBetsOpenStatus.SetBetsOpenAsync(true);
             }

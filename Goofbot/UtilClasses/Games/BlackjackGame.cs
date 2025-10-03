@@ -1,8 +1,10 @@
 ﻿namespace Goofbot.UtilClasses.Games;
 
 using Goofbot.Modules;
+using Goofbot.UtilClasses.Bets;
 using Goofbot.UtilClasses.Cards;
 using Goofbot.UtilClasses.Enums;
+using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -13,6 +15,8 @@ using System.Threading.Tasks;
 internal class BlackjackGame
 {
     public readonly BlockingCollection<BlackjackCommand> CommandQueue = new (new ConcurrentQueue<BlackjackCommand>());
+
+    private const double BlackjackPayoutRatio = 1.2;
 
     private readonly ShoeOfPlayingCards cards;
     private readonly Bot bot;
@@ -44,11 +48,11 @@ internal class BlackjackGame
             while (true)
             {
                 this.ResetGame();
-                this.WaitForPlayerJoin();
+                await this.WaitForPlayerJoin();
                 await this.StartGameAsync();
-                this.PlayerPlay();
+                await this.PlayerPlayAsync();
                 await this.DealerPlayAsync();
-                this.EndGame();
+                await this.EndGameAsync();
             }
         });
     }
@@ -77,7 +81,7 @@ internal class BlackjackGame
         this.dealerHand = [];
     }
 
-    private void WaitForPlayerJoin()
+    private async Task WaitForPlayerJoin()
     {
         while (true)
         {
@@ -88,10 +92,11 @@ internal class BlackjackGame
                 this.currentPlayerUserName = this.lastCommand.UserName;
 
                 bool withdraw = GoofsinoModule.WithdrawAliases.Contains(this.lastCommand.CommandArgs);
-                bool success = true; // await this.BetCommandHelperAsync(command.Args, command.IsReversed, command.EventArgs, Blackjack);
+                bool success = await this.goofsino.BetCommandHelperAsync(this.lastCommand.CommandArgs, this.lastCommand.IsReversed, this.lastCommand.EventArgs, GoofsinoModule.Blackjack);
 
                 if (success && !withdraw)
                 {
+                    await this.WaitWhileIgnoringAllCommandsAsync(1000);
                     break;
                 }
             }
@@ -108,17 +113,20 @@ internal class BlackjackGame
         }
 
         this.DealFirstCards();
-
-        this.bot.SendMessage($"The dealer's face-up card: {this.DealerFaceUpCard.RankString()}", this.lastCommand.IsReversed);
-
-        await this.WaitWhileIgnoringAllCommandsAsync(1000);
-        this.AnnounceHand(this.playerHands[0], this.currentPlayerUserName);
     }
 
-    private void PlayerPlay()
+    private async Task PlayerPlayAsync()
     {
-        if (!this.dealerHand.HasBlackjack())
+        if (this.dealerHand.HasBlackjack())
         {
+            this.bot.SendMessage($"The dealer's face-up card: {this.DealerFaceUpCard.RankString()}. The dealer reveals their hole card: {this.DealerHoleCard.RankString()}. That's a blackjack!", this.lastCommand.IsReversed);
+        }
+        else
+        {
+            this.bot.SendMessage($"The dealer's face-up card: {this.DealerFaceUpCard.RankString()}", this.lastCommand.IsReversed);
+            await this.WaitWhileIgnoringAllCommandsAsync(1000);
+            this.AnnounceHand(this.playerHands[0], this.currentPlayerUserName);
+
             this.canDouble = this.playerHands[this.currentHandIndex].CanDouble();
             this.canSplit = this.playerHands[this.currentHandIndex].CanSplit();
 
@@ -171,10 +179,10 @@ internal class BlackjackGame
                             break;
 
                         case BlackjackCommandType.Split:
-                            /*if (this.canSplit)
+                            if (this.canSplit)
                             {
                                 bool withdraw = GoofsinoModule.WithdrawAliases.Contains(this.lastCommand.CommandArgs);
-                                bool success = true; // await this.BetCommandHelperAsync(lastCommand.CommandArgs, lastCommand.IsReversed, lastCommand.EventArgs, BlackjackSplit);
+                                bool success = await this.goofsino.BetCommandHelperAsync(this.lastCommand.CommandArgs, this.lastCommand.IsReversed, this.lastCommand.EventArgs, GoofsinoModule.BlackjackSplit);
 
                                 if (success && !withdraw)
                                 {
@@ -184,7 +192,7 @@ internal class BlackjackGame
 
                                     this.bot.SendMessage("You split your cards into two hands", this.lastCommand.IsReversed);
                                 }
-                            }*/
+                            }
 
                             break;
                     }
@@ -200,53 +208,101 @@ internal class BlackjackGame
 
     private async Task DealerPlayAsync()
     {
-        await this.WaitWhileIgnoringAllCommandsAsync(1000);
-
-        int value = this.dealerHand.GetValue(out bool handIsSoft);
-        string soft = handIsSoft ? "soft " : string.Empty;
-        this.bot.SendMessage($"The dealer reveals their hole card: {this.DealerHoleCard.RankString()}. Value of their hand: {soft}{value}", this.lastCommand.IsReversed);
+        if (!this.dealerHand.HasBlackjack())
+        {
+            int value = this.dealerHand.GetValue(out bool handIsSoft);
+            string soft = handIsSoft ? "soft " : string.Empty;
+            this.bot.SendMessage($"The dealer reveals their hole card: {this.DealerHoleCard.RankString()}. Value of their hand: {soft}{value}", this.lastCommand.IsReversed);
+        }
 
         if (this.numBusts < this.playerHands.Count)
         {
-            while ((value = this.dealerHand.GetValue(out bool _)) < 17)
+            int value;
+            while ((value = this.dealerHand.GetValue(out bool soft)) < 18)
             {
-                await this.WaitWhileIgnoringAllCommandsAsync(1000);
-                this.HitAndAnnounceStatus(this.dealerHand, "The dealer");
+                if (value == 17)
+                {
+                    if (soft && this.hitOnSoft17)
+                    {
+                        await this.WaitWhileIgnoringAllCommandsAsync(1000);
+                        this.HitAndAnnounceStatus(this.dealerHand, "The dealer");
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    await this.WaitWhileIgnoringAllCommandsAsync(1000);
+                    this.HitAndAnnounceStatus(this.dealerHand, "The dealer");
+                }
             }
         }
+
+        await this.WaitWhileIgnoringAllCommandsAsync(1000);
     }
 
-    private void EndGame()
+    private async Task EndGameAsync()
     {
         int dealerValue = this.dealerHand.GetValue(out bool _);
         bool dealerBust = this.dealerHand.HasBust();
 
-        for (int i = 0; i < this.playerHands.Count; i++)
+        using (var sqliteConnection = this.bot.OpenSqliteConnection())
+        using (var transaction = sqliteConnection.BeginTransaction())
+        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
-            var bet = i == 0 ? GoofsinoModule.Blackjack : GoofsinoModule.BlackjackSplit;
-            if (this.playerHands[i].HasBust())
+            try
             {
-                this.bot.SendMessage($"{this.currentPlayerUserName} loses :(", this.lastCommand.IsReversed);
+                List<string> messages = [];
+                for (int i = 0; i < this.playerHands.Count; i++)
+                {
+                    var bet = i == 0 ? GoofsinoModule.Blackjack : GoofsinoModule.BlackjackSplit;
+                    if (this.playerHands[i].HasBlackjack())
+                    {
+                        bet = new BlackjackBet(bet.TypeID, BlackjackPayoutRatio, bet.BetName);
+                    }
+
+                    if (this.playerHands[i].HasBust())
+                    {
+                        // this.bot.SendMessage($"{this.currentPlayerUserName} loses :(", this.lastCommand.IsReversed);
+                        messages.Add(await GoofsinoModule.ResolveBetAsync(sqliteConnection, this.currentPlayerUserID, bet, false));
+                    }
+                    else if (dealerBust)
+                    {
+                        // this.bot.SendMessage($"{this.currentPlayerUserName} wins!", this.lastCommand.IsReversed);
+                        messages.Add(await GoofsinoModule.ResolveBetAsync(sqliteConnection, this.currentPlayerUserID, bet, true));
+                    }
+                    else
+                    {
+                        int handValue = this.playerHands[i].GetValue(out bool _);
+                        if (handValue > dealerValue)
+                        {
+                            // this.bot.SendMessage($"{this.currentPlayerUserName} wins!", this.lastCommand.IsReversed);
+                            messages.Add(await GoofsinoModule.ResolveBetAsync(sqliteConnection, this.currentPlayerUserID, bet, true));
+                        }
+                        else if (handValue == dealerValue)
+                        {
+                            messages.Add($"It's a tie! Bet on this hand returned to {this.currentPlayerUserName}");
+                            await GoofsinoModule.DeleteBetFromTableAsync(sqliteConnection, this.currentPlayerUserID, bet);
+                        }
+                        else
+                        {
+                            // this.bot.SendMessage($"{this.currentPlayerUserName} loses :(", this.lastCommand.IsReversed);
+                            messages.Add(await GoofsinoModule.ResolveBetAsync(sqliteConnection, this.currentPlayerUserID, bet, false));
+                        }
+                    }
+                }
+
+                await transaction.CommitAsync();
+
+                await this.goofsino.SendMessagesAsync(messages, this.lastCommand.IsReversed);
             }
-            else if (dealerBust)
+            catch (SqliteException e)
             {
-                this.bot.SendMessage($"{this.currentPlayerUserName} wins!", this.lastCommand.IsReversed);
-            }
-            else
-            {
-                int handValue = this.playerHands[i].GetValue(out bool _);
-                if (handValue > dealerValue)
-                {
-                    this.bot.SendMessage($"{this.currentPlayerUserName} wins!", this.lastCommand.IsReversed);
-                }
-                else if (handValue == dealerValue)
-                {
-                    this.bot.SendMessage("It's a tie!", this.lastCommand.IsReversed);
-                }
-                else
-                {
-                    this.bot.SendMessage($"{this.currentPlayerUserName} loses :(", this.lastCommand.IsReversed);
-                }
+                this.bot.SendMessage("Hey, Goof, your bot broke (Blackjack)", false);
+                Console.WriteLine($"SQLITE EXCEPTION\n{e}");
+                await transaction.RollbackAsync();
             }
         }
     }
