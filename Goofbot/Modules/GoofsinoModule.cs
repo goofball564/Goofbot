@@ -88,25 +88,6 @@ internal class GoofsinoModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("thehouse", this.HouseRevenueCommand));
     }
 
-    public override async Task InitializeAsync()
-    {
-        using (var sqliteConnection = this.bot.OpenSqliteConnection())
-        using (var transaction = sqliteConnection.BeginTransaction())
-        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
-        {
-            try
-            {
-                await CreateTablesAsync(sqliteConnection);
-                await transaction.CommitAsync();
-            }
-            catch (SqliteException e)
-            {
-                Console.WriteLine($"SQLITE EXCEPTION: {e}");
-                await transaction.RollbackAsync();
-            }
-        }
-    }
-
     public static async Task CreateTablesAsync(SqliteConnection sqliteConnection)
     {
         using var sqliteCommand = sqliteConnection.CreateCommand();
@@ -396,6 +377,25 @@ internal class GoofsinoModule : GoofbotModule
     {
         await Bot.InsertOrUpdateTwitchUserAsync(sqliteConnection, userID, userName);
         await AddUserToGambaPointsTableAsync(sqliteConnection, userID);
+    }
+
+    public override async Task InitializeAsync()
+    {
+        using (var sqliteConnection = this.bot.OpenSqliteConnection())
+        using (var transaction = sqliteConnection.BeginTransaction())
+        using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
+        {
+            try
+            {
+                await CreateTablesAsync(sqliteConnection);
+                await transaction.CommitAsync();
+            }
+            catch (SqliteException e)
+            {
+                Console.WriteLine($"SQLITE EXCEPTION: {e}");
+                await transaction.RollbackAsync();
+            }
+        }
     }
 
     public async Task<bool> BetCommandHelperAsync(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs, Bet bet)
