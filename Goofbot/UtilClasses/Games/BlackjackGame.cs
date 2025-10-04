@@ -344,9 +344,9 @@ internal class BlackjackGame
 
         if (this.currentHandIndex < this.playerHands.Count)
         {
+            this.HitAndAnnounceStatus(this.playerHands[this.currentHandIndex], $"{this.currentPlayerUserName}'s next hand");
             this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
             this.canSplit = this.CanSplit(this.playerHands[this.currentHandIndex]);
-            this.HitAndAnnounceStatus(this.playerHands[this.currentHandIndex], $"{this.currentPlayerUserName}'s next hand");
         }
     }
 
