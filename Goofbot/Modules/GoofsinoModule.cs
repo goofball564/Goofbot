@@ -82,7 +82,6 @@ internal class GoofsinoModule : GoofbotModule
         }
     }
 
-
     public async Task<long> GetBetAmountAsyncFuckIDK(string userID, Bet bet)
     {
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
@@ -171,7 +170,6 @@ internal class GoofsinoModule : GoofbotModule
                         if (amount + existingBet >= minimumBet)
                         {
                             betPlaced = await Goofsino.TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
-                            await transaction.CommitAsync();
 
                             if (betPlaced)
                             {
@@ -191,11 +189,10 @@ internal class GoofsinoModule : GoofbotModule
                         }
                         else
                         {
-                            await transaction.CommitAsync();
                             message = $"@{userName} Minimum bet for this game: {minimumBet}";
                         }
                     }
-
+                    await transaction.CommitAsync();
                     this.bot.SendMessage(message, isReversed);
                 }
                 catch (SqliteException e)
