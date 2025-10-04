@@ -146,7 +146,6 @@ internal class GoofsinoModule : GoofbotModule
                     {
                         existingBet = await Goofsino.GetBetAmountAsync(sqliteConnection, userID, bet);
                         await Goofsino.DeleteBetFromTableAsync(sqliteConnection, userID, bet);
-                        await transaction.CommitAsync();
 
                         if (existingBet > 0)
                         {
@@ -192,6 +191,7 @@ internal class GoofsinoModule : GoofbotModule
                             message = $"@{userName} Minimum bet for this game: {minimumBet}";
                         }
                     }
+
                     await transaction.CommitAsync();
                     this.bot.SendMessage(message, isReversed);
                 }
