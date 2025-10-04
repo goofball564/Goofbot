@@ -250,28 +250,14 @@ internal class BlackjackGame
             this.bot.SendMessage($"The dealer reveals their hole card: {this.DealerHoleCard.RankString()}. Value of their hand: {soft}{value}", this.lastCommand.IsReversed);
         }
 
+        // Dealer doesn't need to hit if every hand busted
         if (this.numBusts < this.playerHands.Count)
         {
             int value;
-            while ((value = this.dealerHand.GetValue(out bool soft)) < 18)
+            while ((value = this.dealerHand.GetValue(out bool soft)) < 17 || (value == 17 && soft && this.hitOnSoft17))
             {
-                if (value == 17)
-                {
-                    if (soft && this.hitOnSoft17)
-                    {
-                        await this.WaitWhileIgnoringAllCommandsAsync(1000);
-                        this.HitAndAnnounceStatus(this.dealerHand, "The dealer");
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    await this.WaitWhileIgnoringAllCommandsAsync(1000);
-                    this.HitAndAnnounceStatus(this.dealerHand, "The dealer");
-                }
+                await this.WaitWhileIgnoringAllCommandsAsync(1000);
+                this.HitAndAnnounceStatus(this.dealerHand, "The dealer");
             }
         }
 
