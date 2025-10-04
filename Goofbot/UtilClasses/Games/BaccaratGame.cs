@@ -149,20 +149,20 @@ internal class BaccaratGame
 
     public void DealFirstCards()
     {
-        this.playerHand[0] = (PlayingCard)this.cards.GetNextCard();
-        this.bankerHand[0] = (PlayingCard)this.cards.GetNextCard();
-        this.playerHand[1] = (PlayingCard)this.cards.GetNextCard();
-        this.bankerHand[1] = (PlayingCard)this.cards.GetNextCard();
+        this.playerHand[0] = this.cards.GetNextCard();
+        this.bankerHand[0] = this.cards.GetNextCard();
+        this.playerHand[1] = this.cards.GetNextCard();
+        this.bankerHand[1] = this.cards.GetNextCard();
     }
 
     public void DealThirdCardToPlayer()
     {
-        this.playerHand[2] = (PlayingCard)this.cards.GetNextCard();
+        this.playerHand[2] = this.cards.GetNextCard();
     }
 
     public void DealThirdCardToBanker()
     {
-        this.bankerHand[2] = (PlayingCard)this.cards.GetNextCard();
+        this.bankerHand[2] = this.cards.GetNextCard();
     }
 
     public void ResetHands()
@@ -173,7 +173,7 @@ internal class BaccaratGame
 
     public PlayingCard BurnCards(out int numBurned)
     {
-        PlayingCard card = (PlayingCard)this.cards.GetNextCard();
+        PlayingCard card = this.cards.GetNextCard();
 
         numBurned = CardValues[card.Rank];
         numBurned = numBurned == 0 ? 10 : numBurned;
