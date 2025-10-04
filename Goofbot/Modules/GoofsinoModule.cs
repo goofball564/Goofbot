@@ -593,64 +593,26 @@ internal class GoofsinoModule : GoofbotModule
         this.bot.SendMessage($"The wheel landed on {this.rouletteTable.LastSpinResult} ({Enum.GetName(color)})", isReversed);
 
         Task delayTask = Task.Delay(2000);
-
-        List<string> messages = [];
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (var transaction = sqliteConnection.BeginTransaction())
         using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
             try
             {
-                if (color == RouletteTable.RouletteColor.Red)
-                {
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteRed, true));
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteBlack, false));
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteGreen, false));
-                }
-                else if (color == RouletteTable.RouletteColor.Black)
-                {
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteRed, false));
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteBlack, true));
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteGreen, false));
-                }
-                else
-                {
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteRed, false));
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteBlack, false));
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteGreen, true));
-                }
+                List<string> messages = [];
+                bool redSuccess = color == RouletteTable.RouletteColor.Red;
+                bool blackSuccess = color == RouletteTable.RouletteColor.Black;
+                bool greenSuccess = color == RouletteTable.RouletteColor.Green;
 
-                if (this.rouletteTable.Even)
-                {
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteEven, true));
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteOdd, false));
-                }
-                else if (this.rouletteTable.Odd)
-                {
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteEven, false));
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteOdd, true));
-                }
-                else
-                {
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteEven, false));
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteOdd, false));
-                }
+                messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteRed, redSuccess));
+                messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteBlack, blackSuccess));
+                messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteGreen, greenSuccess));
 
-                if (this.rouletteTable.High)
-                {
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteHigh, true));
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteLow, false));
-                }
-                else if (this.rouletteTable.Low)
-                {
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteHigh, false));
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteLow, true));
-                }
-                else
-                {
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteHigh, false));
-                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteLow, false));
-                }
+                messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteEven, this.rouletteTable.Even));
+                messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteOdd, this.rouletteTable.Odd));
+
+                messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteHigh, this.rouletteTable.High));
+                messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteLow, this.rouletteTable.Low));
 
                 await transaction.CommitAsync();
 
