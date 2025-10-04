@@ -15,35 +15,12 @@ using TwitchLib.Client.Events;
 
 internal class GoofsinoModule : GoofbotModule
 {
-    public static readonly RouletteBet RouletteColumn1 = new (2, 2, "column 1");
-    public static readonly RouletteBet RouletteColumn2 = new (3, 2, "column 2");
-    public static readonly RouletteBet RouletteColumn3 = new (4, 2, "column 3");
-    public static readonly RouletteBet RouletteDozen1 = new (5, 2, "first dozen");
-    public static readonly RouletteBet RouletteDozen2 = new (6, 2, "second dozen");
-    public static readonly RouletteBet RouletteDozen3 = new (7, 2, "third dozen");
-    public static readonly RouletteBet RouletteHigh = new (8, 1, "high");
-    public static readonly RouletteBet RouletteLow = new (9, 1, "low");
-    public static readonly RouletteBet RouletteEven = new (10, 1, "even");
-    public static readonly RouletteBet RouletteOdd = new (11, 1, "odd");
-    public static readonly RouletteBet RouletteRed = new (12, 1, "red");
-    public static readonly RouletteBet RouletteBlack = new (13, 1, "black");
-    public static readonly RouletteBet RouletteTopLine = new (14, 6, "top line");
-    public static readonly RouletteBet RouletteGreen = new (15, 17, "green");
-
-    public static readonly BaccaratBet BaccaratPlayer = new (16, 1, "player");
-    public static readonly BaccaratBet BaccaratBanker = new (17, 0.95, "banker");
-    public static readonly BaccaratBet BaccaratTie = new (18, 8, "a tie");
-
-    public static readonly BlackjackBet Blackjack = new (19, 1, "blackjack");
-    public static readonly BlackjackBet BlackjackSplit = new (20, 1, "their second hand");
-
     public static readonly List<string> WithdrawAliases = ["withdraw", "w"];
     public static readonly List<string> AllInAliases = ["all in", "all", "allin", "a"];
 
     private const long RouletteMinimumBet = 1;
     private const long BaccaratMinimumBet = 100;
-    private const long BlackjackMinimumBet = 2;
-    private const string TheHouseID = "-1";
+    private const long BlackjackMinimumBet = 0;
 
     private readonly GoofsinoGameBetsOpenStatus rouletteBetsOpenStatus = new ();
     private readonly GoofsinoGameBetsOpenStatus baccaratBetsOpenStatus = new ();
@@ -55,7 +32,7 @@ internal class GoofsinoModule : GoofbotModule
     public GoofsinoModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
-        this.blackjackGame = new (this, bot);
+        this.blackjackGame = new (this, bot, hitOnSoft17: true);
 
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("red", this.RedCommand, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("black", this.BlackCommand, unlisted: true));
@@ -86,255 +63,6 @@ internal class GoofsinoModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("thehouse", this.HouseRevenueCommand));
     }
 
-    public static async Task CreateTablesAsync(SqliteConnection sqliteConnection)
-    {
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText =
-            @"CREATE TABLE IF NOT EXISTS Bets (
-                UserID INTEGER NOT NULL,
-                BetTypeID INTEGER NOT NULL,
-                Amount INTEGER NOT NULL,
-                PRIMARY KEY (UserID, BetTypeID),
-                FOREIGN KEY(UserID) REFERENCES TwitchUsers(UserID)
-            ) WITHOUT ROWID;";
-        await sqliteCommand.ExecuteNonQueryAsync();
-
-        sqliteCommand.CommandText = "CREATE INDEX IF NOT EXISTS BetsIDsIdx ON Bets (BetTypeID);";
-        await sqliteCommand.ExecuteNonQueryAsync();
-
-        sqliteCommand.CommandText =
-            @"CREATE TABLE IF NOT EXISTS GambaPoints (
-                UserID INTEGER PRIMARY KEY,
-                Balance INTEGER NOT NULL,
-                LastUpdateTimestamp REAL NOT NULL,
-                FOREIGN KEY(UserID) REFERENCES TwitchUsers(UserID)
-            );";
-        await sqliteCommand.ExecuteNonQueryAsync();
-
-        sqliteCommand.CommandText = "CREATE INDEX IF NOT EXISTS GambaPointsBalanceIdx ON GambaPoints (Balance DESC, LastUpdateTimestamp ASC);";
-        await sqliteCommand.ExecuteNonQueryAsync();
-
-        sqliteCommand.CommandText =
-            @"CREATE TABLE IF NOT EXISTS Bankruptcies (
-                UserID INTEGER PRIMARY KEY,
-                Count INTEGER NOT NULL,
-                LastUpdateTimestamp REAL NOT NULL,
-                FOREIGN KEY(UserID) REFERENCES TwitchUsers(UserID)
-            );";
-        await sqliteCommand.ExecuteNonQueryAsync();
-
-        sqliteCommand.CommandText = "CREATE INDEX IF NOT EXISTS BankruptcyCountsIdx ON Bankruptcies (Count DESC, LastUpdateTimestamp ASC);";
-        await sqliteCommand.ExecuteNonQueryAsync();
-
-        sqliteCommand.CommandText = $"INSERT INTO TwitchUsers VALUES ({TheHouseID}, 'The House') ON CONFLICT DO NOTHING;";
-        await sqliteCommand.ExecuteNonQueryAsync();
-
-        sqliteCommand.CommandText = $"INSERT INTO GambaPoints VALUES ({TheHouseID}, 0, unixepoch('now','subsec')) ON CONFLICT DO NOTHING;";
-        await sqliteCommand.ExecuteNonQueryAsync();
-    }
-
-    public static async Task<long> GetBankruptcyCountAsync(SqliteConnection sqliteConnection, string userID)
-    {
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "SELECT Count from Bankruptcies WHERE UserID = @UserID";
-        sqliteCommand.Parameters.AddWithValue("@UserID", userID);
-
-        return Convert.ToInt64(await sqliteCommand.ExecuteScalarAsync());
-    }
-
-    public static async Task AddUserToGambaPointsTableAsync(SqliteConnection sqliteConnection, string userID)
-    {
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "INSERT INTO GambaPoints VALUES (@UserID, 1000, unixepoch('now','subsec')) ON CONFLICT DO NOTHING;";
-        sqliteCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-
-        await sqliteCommand.ExecuteNonQueryAsync();
-    }
-
-    public static async Task<long> GetHouseBalance(SqliteConnection sqliteConnection)
-    {
-        return await GetBalanceAsync(sqliteConnection, TheHouseID);
-    }
-
-    public static async Task<List<UserNameAndCount>> GetTopGambaPointsUsersAsync(SqliteConnection sqliteConnection)
-    {
-        List<UserNameAndCount> leaderboardEntries = [];
-
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText =
-            @$"SELECT TwitchUsers.UserName, GambaPoints.Balance
-                    FROM TwitchUsers
-                    INNER JOIN GambaPoints ON TwitchUsers.UserID = GambaPoints.UserID
-                    ORDER BY GambaPoints.Balance DESC, GambaPoints.LastUpdateTimestamp ASC
-                    LIMIT 5;
-            ";
-
-        using var reader = await sqliteCommand.ExecuteReaderAsync();
-
-        while (await reader.ReadAsync())
-        {
-            leaderboardEntries.Add(new UserNameAndCount(reader.GetString(0), reader.GetInt64(1)));
-        }
-
-        return leaderboardEntries;
-    }
-
-    public static async Task<List<string>> ResolveAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet, bool success)
-    {
-        List<string> messages = [];
-
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "SELECT Bets.UserID, TwitchUsers.UserName, Bets.Amount FROM Bets INNER JOIN TwitchUsers ON TwitchUsers.UserID = Bets.UserID WHERE BetTypeID = @BetTypeID;";
-        sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
-
-        using (var reader = await sqliteCommand.ExecuteReaderAsync())
-        {
-            while (await reader.ReadAsync())
-            {
-                string userID = reader.GetInt64(0).ToString();
-                string userName = reader.GetString(1);
-                long amount = reader.GetInt64(2);
-
-                messages.Add(await ResolveBetHelperAsync(sqliteConnection, userID, userName, amount, bet, success));
-            }
-        }
-
-        await DeleteAllBetsByTypeAsync(sqliteConnection, bet);
-
-        return messages;
-    }
-
-    public static async Task ResetUserGambaPointsBalanceAndIncrementBankruptciesAsync(SqliteConnection sqliteConnection, string userID)
-    {
-        using var replaceCommand = sqliteConnection.CreateCommand();
-        replaceCommand.CommandText = "REPLACE INTO GambaPoints VALUES (@UserID, 1000, unixepoch('now','subsec'));";
-        replaceCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-
-        using var updateCommand = sqliteConnection.CreateCommand();
-        updateCommand.CommandText =
-            @"INSERT INTO Bankruptcies VALUES (@UserID, 1, unixepoch('now','subsec'))
-                            ON CONFLICT(UserID) DO UPDATE SET Count = Count + 1, LastUpdateTimestamp = unixepoch('now','subsec');";
-        updateCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-
-        await replaceCommand.ExecuteNonQueryAsync();
-        await updateCommand.ExecuteNonQueryAsync();
-    }
-
-    public static async Task<string> ResolveBetAsync(SqliteConnection sqliteConnection, string userID, Bet bet, bool success)
-    {
-        long amount = await GetBetAmountAsync(sqliteConnection, userID, bet);
-        string userName = await Bot.GetUserNameAsync(sqliteConnection, userID);
-        await DeleteBetFromTableAsync(sqliteConnection, userID, bet);
-
-        return await ResolveBetHelperAsync(sqliteConnection, userID, userName, amount, bet, success);
-    }
-
-    public static async Task DeleteAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet)
-    {
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "DELETE FROM Bets WHERE BetTypeID = @BetTypeID;";
-        sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
-        await sqliteCommand.ExecuteNonQueryAsync();
-    }
-
-    public static async Task<long> GetBalanceAsync(SqliteConnection sqliteConnection, string userID)
-    {
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "SELECT Balance FROM GambaPoints WHERE UserID = @UserID;";
-        sqliteCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-
-        return Convert.ToInt64(await sqliteCommand.ExecuteScalarAsync());
-    }
-
-    public static async Task<long> GetTotalBetsAsync(SqliteConnection sqliteConnection, string userID)
-    {
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "SELECT SUM(Amount) FROM Bets WHERE UserID = @UserID GROUP BY UserID;";
-        sqliteCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-
-        return Convert.ToInt64(await sqliteCommand.ExecuteScalarAsync());
-    }
-
-    public static async Task<long> GetBetAmountAsync(SqliteConnection sqliteConnection, string userID, Bet bet)
-    {
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "SELECT Amount FROM Bets WHERE UserID = @UserID AND BetTypeID = @BetTypeID;";
-        sqliteCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-        sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
-
-        return Convert.ToInt64(await sqliteCommand.ExecuteScalarAsync());
-    }
-
-    private async Task<long> GetBetAmountAsyncFuckIDK(string userID, Bet bet)
-    {
-        using (var sqliteConnection = this.bot.OpenSqliteConnection())
-        using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
-        {
-            return await GetBetAmountAsync(sqliteConnection, userID, bet);
-        }
-    }
-
-    public static async Task AddBetToTableAsync(SqliteConnection sqliteConnection, string userID, Bet bet, long amount)
-    {
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "INSERT INTO Bets VALUES (@UserID, @BetTypeID, @Amount) ON CONFLICT DO UPDATE SET Amount = Amount + @Amount;";
-        sqliteCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-        sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
-        sqliteCommand.Parameters.AddWithValue("@Amount", amount);
-
-        await sqliteCommand.ExecuteNonQueryAsync();
-    }
-
-    public static async Task AddBalanceAsync(SqliteConnection sqliteConnection, string userID, long amount)
-    {
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "UPDATE GambaPoints SET Balance = Balance + @Amount, LastUpdateTimestamp = unixepoch('now','subsec') WHERE UserID = @UserID;";
-        sqliteCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-        sqliteCommand.Parameters.AddWithValue("@Amount", amount);
-
-        await sqliteCommand.ExecuteNonQueryAsync();
-    }
-
-    public static async Task DeleteBetFromTableAsync(SqliteConnection sqliteConnection, string userID, Bet bet)
-    {
-        using var sqliteCommand = sqliteConnection.CreateCommand();
-        sqliteCommand.CommandText = "DELETE FROM Bets WHERE UserID = @UserID AND BetTypeID = @BetTypeID;";
-        sqliteCommand.Parameters.AddWithValue("@UserID", long.Parse(userID));
-        sqliteCommand.Parameters.AddWithValue("@BetTypeID", bet.TypeID);
-
-        await sqliteCommand.ExecuteNonQueryAsync();
-    }
-
-    public static async Task<bool> TryPlaceBetAsync(SqliteConnection sqliteConnection, string userID, Bet bet, long amount)
-    {
-        if (amount < 0)
-        {
-            return false;
-        }
-
-        var balanceTask = GetBalanceAsync(sqliteConnection, userID);
-        var totalBetsTask = GetTotalBetsAsync(sqliteConnection, userID);
-
-        long balance = await balanceTask;
-        long totalBets = await totalBetsTask;
-
-        if (amount + totalBets <= balance)
-        {
-            await AddBetToTableAsync(sqliteConnection, userID, bet, amount);
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    public static async Task SetupUserIfNotSetUpAsync(SqliteConnection sqliteConnection, string userID, string userName)
-    {
-        await Bot.InsertOrUpdateTwitchUserAsync(sqliteConnection, userID, userName);
-        await AddUserToGambaPointsTableAsync(sqliteConnection, userID);
-    }
-
     public override async Task InitializeAsync()
     {
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
@@ -343,7 +71,7 @@ internal class GoofsinoModule : GoofbotModule
         {
             try
             {
-                await CreateTablesAsync(sqliteConnection);
+                await Goofsino.CreateTablesAsync(sqliteConnection);
                 await transaction.CommitAsync();
             }
             catch (SqliteException e)
@@ -351,6 +79,16 @@ internal class GoofsinoModule : GoofbotModule
                 Console.WriteLine($"SQLITE EXCEPTION: {e}");
                 await transaction.RollbackAsync();
             }
+        }
+    }
+
+
+    public async Task<long> GetBetAmountAsyncFuckIDK(string userID, Bet bet)
+    {
+        using (var sqliteConnection = this.bot.OpenSqliteConnection())
+        using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
+        {
+            return await Goofsino.GetBetAmountAsync(sqliteConnection, userID, bet);
         }
     }
 
@@ -401,14 +139,14 @@ internal class GoofsinoModule : GoofbotModule
             {
                 try
                 {
-                    await SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
+                    await Goofsino.SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
 
                     long existingBet;
                     string message;
                     if (withdraw)
                     {
-                        existingBet = await GetBetAmountAsync(sqliteConnection, userID, bet);
-                        await DeleteBetFromTableAsync(sqliteConnection, userID, bet);
+                        existingBet = await Goofsino.GetBetAmountAsync(sqliteConnection, userID, bet);
+                        await Goofsino.DeleteBetFromTableAsync(sqliteConnection, userID, bet);
                         await transaction.CommitAsync();
 
                         if (existingBet > 0)
@@ -424,15 +162,15 @@ internal class GoofsinoModule : GoofbotModule
                     {
                         if (allIn)
                         {
-                            long balance = await GetBalanceAsync(sqliteConnection, userID);
-                            long existingTotalBets = await GetTotalBetsAsync(sqliteConnection, userID);
+                            long balance = await Goofsino.GetBalanceAsync(sqliteConnection, userID);
+                            long existingTotalBets = await Goofsino.GetTotalBetsAsync(sqliteConnection, userID);
                             amount = balance - existingTotalBets;
                         }
 
-                        existingBet = await GetBetAmountAsync(sqliteConnection, userID, bet);
+                        existingBet = await Goofsino.GetBetAmountAsync(sqliteConnection, userID, bet);
                         if (amount + existingBet >= minimumBet)
                         {
-                            betPlaced = await TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
+                            betPlaced = await Goofsino.TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
                             await transaction.CommitAsync();
 
                             if (betPlaced)
@@ -476,39 +214,13 @@ internal class GoofsinoModule : GoofbotModule
         return betPlaced;
     }
 
-    private static async Task<string> ResolveBetHelperAsync(SqliteConnection sqliteConnection, string userID, string userName, long amount, Bet bet, bool success)
-    {
-        string verb;
-        if (success)
-        {
-            verb = "won";
-            amount = Convert.ToInt64(Math.Floor(amount * bet.PayoutRatio));
-        }
-        else
-        {
-            verb = "lost";
-            amount *= -1;
-        }
-
-        long balance = await GetBalanceAsync(sqliteConnection, userID);
-
-        await AddBalanceAsync(sqliteConnection, userID, amount);
-
-        string message = $"{userName} {verb} {Math.Abs(amount)} gamba points for betting on {bet.BetName}. Balance: {balance + amount} gamba points";
-
-        amount *= -1;
-        await AddBalanceAsync(sqliteConnection, TheHouseID, amount);
-
-        return message;
-    }
-
     private async Task HouseRevenueCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         long balance;
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
         {
-            balance = await GetHouseBalance(sqliteConnection);
+            balance = await Goofsino.GetHouseBalance(sqliteConnection);
         }
 
         this.bot.SendMessage($"The House has made {balance} gamba points off you suckers", isReversed);
@@ -521,7 +233,7 @@ internal class GoofsinoModule : GoofbotModule
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (await this.bot.SqliteReaderWriterLock.ReadLockAsync())
         {
-            leaderboardEntries = await GetTopGambaPointsUsersAsync(sqliteConnection);
+            leaderboardEntries = await Goofsino.GetTopGambaPointsUsersAsync(sqliteConnection);
         }
 
         string leaderboardString = Bot.GetLeaderboardString(leaderboardEntries, "Gamba Point");
@@ -538,8 +250,8 @@ internal class GoofsinoModule : GoofbotModule
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (await this.bot.SqliteReaderWriterLock.WriteLockAsync())
         {
-            await SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
-            bankruptcyCount = await GetBankruptcyCountAsync(sqliteConnection, userID);
+            await Goofsino.SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
+            bankruptcyCount = await Goofsino.GetBankruptcyCountAsync(sqliteConnection, userID);
         }
 
         string s = bankruptcyCount == 1 ? string.Empty : "s";
@@ -559,9 +271,9 @@ internal class GoofsinoModule : GoofbotModule
         {
             try
             {
-                await SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
-                balance = await GetBalanceAsync(sqliteConnection, userID);
-                totalBets = await GetTotalBetsAsync(sqliteConnection, userID);
+                await Goofsino.SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
+                balance = await Goofsino.GetBalanceAsync(sqliteConnection, userID);
+                totalBets = await Goofsino.GetTotalBetsAsync(sqliteConnection, userID);
 
                 await transaction.CommitAsync();
 
@@ -594,14 +306,14 @@ internal class GoofsinoModule : GoofbotModule
         {
             try
             {
-                await SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
-                long balance = await GetBalanceAsync(sqliteConnection, userID);
-                long totalBets = await GetTotalBetsAsync(sqliteConnection, userID);
+                await Goofsino.SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
+                long balance = await Goofsino.GetBalanceAsync(sqliteConnection, userID);
+                long totalBets = await Goofsino.GetTotalBetsAsync(sqliteConnection, userID);
 
                 if (totalBets + balance <= 0)
                 {
-                    await ResetUserGambaPointsBalanceAndIncrementBankruptciesAsync(sqliteConnection, userID);
-                    long count = await GetBankruptcyCountAsync(sqliteConnection, userID);
+                    await Goofsino.ResetUserGambaPointsBalanceAndIncrementBankruptciesAsync(sqliteConnection, userID);
+                    long count = await Goofsino.GetBankruptcyCountAsync(sqliteConnection, userID);
 
                     await transaction.CommitAsync();
 
@@ -628,52 +340,52 @@ internal class GoofsinoModule : GoofbotModule
 
     private async Task PlayerCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, BaccaratPlayer);
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Goofsino.BaccaratPlayer);
     }
 
     private async Task BankerCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, BaccaratBanker);
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Goofsino.BaccaratBanker);
     }
 
     private async Task TieCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, BaccaratTie);
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Goofsino.BaccaratTie);
     }
 
     private async Task RedCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, RouletteRed);
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Goofsino.RouletteRed);
     }
 
     private async Task BlackCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, RouletteBlack);
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Goofsino.RouletteBlack);
     }
 
     private async Task GreenCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, RouletteGreen);
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Goofsino.RouletteGreen);
     }
 
     private async Task EvenCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, RouletteEven);
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Goofsino.RouletteEven);
     }
 
     private async Task OddCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, RouletteOdd);
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Goofsino.RouletteOdd);
     }
 
     private async Task HighCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, RouletteHigh);
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Goofsino.RouletteHigh);
     }
 
     private async Task LowCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, RouletteLow);
+        await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Goofsino.RouletteLow);
     }
 
     private async Task BlackjackCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
@@ -814,19 +526,19 @@ internal class GoofsinoModule : GoofbotModule
                 {
                     case BaccaratOutcome.Player:
 
-                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratPlayer, true));
-                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratBanker, false));
-                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratTie, false));
+                        messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.BaccaratPlayer, true));
+                        messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.BaccaratBanker, false));
+                        messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.BaccaratTie, false));
                         break;
                     case BaccaratOutcome.Banker:
-                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratPlayer, false));
-                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratBanker, true));
-                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratTie, false));
+                        messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.BaccaratPlayer, false));
+                        messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.BaccaratBanker, true));
+                        messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.BaccaratTie, false));
                         break;
                     case BaccaratOutcome.Tie:
-                        await DeleteAllBetsByTypeAsync(sqliteConnection, BaccaratPlayer);
-                        await DeleteAllBetsByTypeAsync(sqliteConnection, BaccaratBanker);
-                        messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, BaccaratTie, true));
+                        await Goofsino.DeleteAllBetsByTypeAsync(sqliteConnection, Goofsino.BaccaratPlayer);
+                        await Goofsino.DeleteAllBetsByTypeAsync(sqliteConnection, Goofsino.BaccaratBanker);
+                        messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.BaccaratTie, true));
                         if (messages.Count == 0)
                         {
                             messages.Add("All bets have been returned to the players");
@@ -891,53 +603,53 @@ internal class GoofsinoModule : GoofbotModule
             {
                 if (color == RouletteTable.RouletteColor.Red)
                 {
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteRed, true));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteBlack, false));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteGreen, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteRed, true));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteBlack, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteGreen, false));
                 }
                 else if (color == RouletteTable.RouletteColor.Black)
                 {
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteRed, false));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteBlack, true));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteGreen, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteRed, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteBlack, true));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteGreen, false));
                 }
                 else
                 {
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteRed, false));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteBlack, false));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteGreen, true));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteRed, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteBlack, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteGreen, true));
                 }
 
                 if (this.rouletteTable.Even)
                 {
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteEven, true));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteOdd, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteEven, true));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteOdd, false));
                 }
                 else if (this.rouletteTable.Odd)
                 {
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteEven, false));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteOdd, true));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteEven, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteOdd, true));
                 }
                 else
                 {
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteEven, false));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteOdd, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteEven, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteOdd, false));
                 }
 
                 if (this.rouletteTable.High)
                 {
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteHigh, true));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteLow, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteHigh, true));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteLow, false));
                 }
                 else if (this.rouletteTable.Low)
                 {
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteHigh, false));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteLow, true));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteHigh, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteLow, true));
                 }
                 else
                 {
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteHigh, false));
-                    messages.AddRange(await ResolveAllBetsByTypeAsync(sqliteConnection, RouletteLow, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteHigh, false));
+                    messages.AddRange(await Goofsino.ResolveAllBetsByTypeAsync(sqliteConnection, Goofsino.RouletteLow, false));
                 }
 
                 await transaction.CommitAsync();
