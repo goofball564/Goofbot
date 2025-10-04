@@ -49,12 +49,12 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
         return value;
     }
 
-    public bool CanSplit()
+    public bool HandIsTwoMatchingRanks()
     {
         return (this.Count == 2) && (this[0].Rank == this[1].Rank);
     }
 
-    public bool CanDouble()
+    public bool HandHasTwoCards()
     {
         return this.Count == 2;
     }

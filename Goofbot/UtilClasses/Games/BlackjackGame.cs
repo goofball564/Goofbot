@@ -26,6 +26,8 @@ internal class BlackjackGame
     private readonly int maxPlayerHands;
     private readonly bool hitOnSoft17;
 
+    private readonly Task backgroundTask;
+
     private string currentPlayerUserID;
     private string currentPlayerUserName;
     private bool canDouble;
@@ -44,7 +46,7 @@ internal class BlackjackGame
         this.maxPlayerHands = maxPlayerHands;
         this.hitOnSoft17 = hitOnSoft17;
 
-        Task backgroundTask = Task.Run(async () =>
+        this.backgroundTask = Task.Run(async () =>
         {
             while (true)
             {
@@ -128,14 +130,14 @@ internal class BlackjackGame
             await this.WaitWhileIgnoringAllCommandsAsync(1000);
             this.AnnounceHand(this.playerHands[0], this.currentPlayerUserName);
 
-            this.canDouble = this.playerHands[this.currentHandIndex].CanDouble();
-            this.canSplit = this.playerHands[this.currentHandIndex].CanSplit();
+            this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
+            this.canSplit = this.CanSplit(this.playerHands[this.currentHandIndex]);
 
             // Sets player timeout for Blackjack.
-            // It will proceed without their input automatically.
+            // Game will proceed without player input automatically.
             // Timeout is reset when the player enters a command
             using var timeoutTokenSource = new CancellationTokenSource();
-            using var timer = new System.Timers.Timer(TimeSpan.FromSeconds(30));
+            using var timer = new System.Timers.Timer(TimeSpan.FromSeconds(60));
             timer.Elapsed += (o, e) => timeoutTokenSource.Cancel();
             timer.Start();
 
@@ -342,7 +344,7 @@ internal class BlackjackGame
 
         if (this.currentHandIndex < this.playerHands.Count)
         {
-            this.canDouble = this.playerHands[this.currentHandIndex].CanDouble();
+            this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
             this.canSplit = this.CanSplit(this.playerHands[this.currentHandIndex]);
             this.HitAndAnnounceStatus(this.playerHands[this.currentHandIndex], $"{this.currentPlayerUserName}'s next hand");
         }
@@ -350,7 +352,7 @@ internal class BlackjackGame
 
     private bool CanSplit(BlackjackHand hand)
     {
-        return hand.CanSplit() && this.playerHands.Count < this.maxPlayerHands;
+        return hand.HandIsTwoMatchingRanks() && this.playerHands.Count < this.maxPlayerHands;
     }
 
     private void IgnoreAllCommands(CancellationToken cancellationToken)
