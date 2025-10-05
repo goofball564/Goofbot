@@ -31,7 +31,7 @@ internal partial class SpotifyModule : GoofbotModule
     private bool removedFromPlaylist = false;
     private bool addedToQueue = false;
 
-    private string? currentlyPlayingID;
+    private string currentlyPlayingID;
 
     public SpotifyModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
@@ -101,7 +101,7 @@ internal partial class SpotifyModule : GoofbotModule
         return $"{track.Album.Name} by {string.Join(", ", artistNames)}";
     }
 
-    private static FullTrack? GetCurrentlyPlaying(QueueResponse? queue)
+    private static FullTrack GetCurrentlyPlaying(QueueResponse queue)
     {
         if (queue == null)
         {
@@ -118,7 +118,7 @@ internal partial class SpotifyModule : GoofbotModule
         }
     }
 
-    private static double? GetRemainingDuration(QueueResponse? queue, CurrentlyPlayingContext? context)
+    private static double? GetRemainingDuration(QueueResponse queue, CurrentlyPlayingContext context)
     {
         if (queue == null || context == null)
         {
@@ -137,7 +137,7 @@ internal partial class SpotifyModule : GoofbotModule
         }
     }
 
-    private static FullTrack? GetNextInQueue(QueueResponse? queue)
+    private static FullTrack GetNextInQueue(QueueResponse queue)
     {
         if (queue == null)
         {
@@ -154,7 +154,7 @@ internal partial class SpotifyModule : GoofbotModule
         }
     }
 
-    private static FullTrack? GetFirstInPlaylist(FullPlaylist? playlist)
+    private static FullTrack GetFirstInPlaylist(FullPlaylist playlist)
     {
         if (playlist == null || playlist.Tracks == null || playlist.Tracks.Items == null)
         {
@@ -201,7 +201,7 @@ internal partial class SpotifyModule : GoofbotModule
                 return;
             }
 
-            FullTrack? requestedSong;
+            FullTrack requestedSong;
 
             requestedSong = await this.spotifyAPI.AddSongToQueueAsync(filteredUserInput);
             if (requestedSong == null)
@@ -279,7 +279,7 @@ internal partial class SpotifyModule : GoofbotModule
             // get what's currently playing, see if it's changed
             // from the last time we checked
             var currentlyPlaying = GetCurrentlyPlaying(queue);
-            string? currentlyPlayingID = currentlyPlaying?.Id;
+            string currentlyPlayingID = currentlyPlaying?.Id;
             if (currentlyPlayingID != null && currentlyPlayingID != this.currentlyPlayingID)
             {
                 // IF now playing a different song than before...
@@ -296,7 +296,7 @@ internal partial class SpotifyModule : GoofbotModule
             // get remaining duration of current song, next song in queue
             double? remainingDuration = GetRemainingDuration(queue, context);
             var nextInQueue = GetNextInQueue(queue);
-            string? nextInQueueID = nextInQueue?.Id;
+            string nextInQueueID = nextInQueue?.Id;
 
             // if a certain duration remains in the current song
             if (remainingDuration != null && remainingDuration < QueueModeRemainingDurationThreshold)
@@ -306,8 +306,8 @@ internal partial class SpotifyModule : GoofbotModule
 
                 // get first song in queue playlist
                 var firstInPlaylist = GetFirstInPlaylist(playlist);
-                string? firstInPlaylistID = firstInPlaylist?.Id;
-                string? firstInPlaylistURI = firstInPlaylist?.Uri;
+                string firstInPlaylistID = firstInPlaylist?.Id;
+                string firstInPlaylistURI = firstInPlaylist?.Uri;
 
                 if (!this.removedFromPlaylist && currentlyPlayingID != null && currentlyPlayingID == firstInPlaylistID)
                 {
@@ -374,7 +374,7 @@ internal partial class SpotifyModule : GoofbotModule
             await this.spotifyClientConnected.WaitAsync();
         }
 
-        public async Task<FullTrack?> GetCurrentlyPlayingAsync()
+        public async Task<FullTrack> GetCurrentlyPlayingAsync()
         {
             await this.semaphore.WaitAsync();
             try
@@ -419,12 +419,12 @@ internal partial class SpotifyModule : GoofbotModule
 
         public async Task RemoveFirstSongFromPlaylist(FullPlaylist playlist)
         {
-            IList<int>? indicesToRemove = [0,];
-            string? snapshotId = playlist.SnapshotId;
+            IList<int> indicesToRemove = [0,];
+            string snapshotId = playlist.SnapshotId;
             await this.spotify.Playlists.RemoveItems(playlist.Id, new PlaylistRemoveItemsRequest { Positions = indicesToRemove, SnapshotId = snapshotId });
         }
 
-        public async Task<FullTrack?> AddSongToQueueAsync(string songURI)
+        public async Task<FullTrack> AddSongToQueueAsync(string songURI)
         {
             try
             {
@@ -445,7 +445,7 @@ internal partial class SpotifyModule : GoofbotModule
             }
         }
 
-        public async Task<FullTrack?> AddSongToQueueWithSearchQueryAsync(string query)
+        public async Task<FullTrack> AddSongToQueueWithSearchQueryAsync(string query)
         {
             var searchRequest = new SearchRequest(SearchRequest.Types.Track, query);
             var searchResponse = await this.spotify.Search.Item(searchRequest);
