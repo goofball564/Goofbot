@@ -552,8 +552,6 @@ internal class GoofsinoModule : GoofbotModule
 
                 await delayTask;
                 await this.SendMessagesAsync(messages, isReversed);
-
-                await this.baccaratBetsOpenStatus.SetBetsOpenAsync(true);
             }
             catch (SqliteException e)
             {
@@ -563,7 +561,7 @@ internal class GoofsinoModule : GoofbotModule
             }
         }
 
-
+        await this.baccaratBetsOpenStatus.SetBetsOpenAsync(true);
     }
 
     public async Task SendMessagesAsync(List<string> messages, bool isReversed)
@@ -616,8 +614,6 @@ internal class GoofsinoModule : GoofbotModule
                 await delayTask;
 
                 await this.SendMessagesAsync(messages, isReversed);
-
-                await this.rouletteBetsOpenStatus.SetBetsOpenAsync(true);
             }
             catch (SqliteException e)
             {
@@ -626,5 +622,7 @@ internal class GoofsinoModule : GoofbotModule
                 await transaction.RollbackAsync();
             }
         }
+
+        await this.rouletteBetsOpenStatus.SetBetsOpenAsync(true);
     }
 }
