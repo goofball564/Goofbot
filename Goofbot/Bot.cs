@@ -29,7 +29,7 @@ internal class Bot : IDisposable
     public readonly string TwitchBotUsername;
     public readonly string TwitchChannelUsername;
 
-    public readonly AsyncReaderWriterLock SqliteReaderWriterLock = new ();
+    public readonly AsyncReaderWriterLock SqliteReaderWriterLock = new (new JoinableTaskContext());
     public readonly ChatCommandDictionary CommandDictionary = new ();
 
     private readonly string goofbotAppDataFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Goofbot");

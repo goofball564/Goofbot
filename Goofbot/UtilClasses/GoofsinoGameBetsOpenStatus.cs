@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 internal class GoofsinoGameBetsOpenStatus
 {
-    private readonly AsyncReaderWriterLock betsOpenLock = new ();
+    private readonly AsyncReaderWriterLock betsOpenLock = new (new JoinableTaskContext());
 
     private bool betsOpenBackValue = true;
 
