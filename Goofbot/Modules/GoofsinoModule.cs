@@ -93,7 +93,7 @@ internal class GoofsinoModule : GoofbotModule
 
     public async Task<bool> BetCommandHelperAsync(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs, Bet bet)
     {
-        bool betPlaced = false;
+        bool changeMade = false;
 
         string userID = eventArgs.Command.ChatMessage.UserId;
         string userName = eventArgs.Command.ChatMessage.DisplayName;
@@ -148,6 +148,8 @@ internal class GoofsinoModule : GoofbotModule
                         existingBet = await Goofsino.GetBetAmountAsync(sqliteConnection, userID, bet);
                         await Goofsino.DeleteBetFromTableAsync(sqliteConnection, userID, bet);
 
+                        changeMade = true;
+
                         if (existingBet > 0)
                         {
                             message = $"{userName} withdrew their {existingBet} point bet on {bet.BetName}";
@@ -169,9 +171,9 @@ internal class GoofsinoModule : GoofbotModule
                         existingBet = await Goofsino.GetBetAmountAsync(sqliteConnection, userID, bet);
                         if (amount + existingBet >= minimumBet)
                         {
-                            betPlaced = await Goofsino.TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
+                            changeMade = await Goofsino.TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
 
-                            if (betPlaced)
+                            if (changeMade)
                             {
                                 if (existingBet > 0)
                                 {
@@ -209,7 +211,7 @@ internal class GoofsinoModule : GoofbotModule
             this.bot.SendMessage($"@{userName}, include an amount, \"withdraw\", or \"all in\"", isReversed);
         }
 
-        return betPlaced;
+        return changeMade;
     }
 
     private async Task HouseRevenueCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
