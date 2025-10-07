@@ -126,6 +126,7 @@ internal class GoofsinoModule : GoofbotModule
                 break;
         }
 
+        commandArgs = commandArgs.ToLowerInvariant();
         bool withdraw = WithdrawAliases.Contains(commandArgs);
         bool allIn = AllInAliases.Contains(commandArgs);
         bool amountProvided = long.TryParse(commandArgs, out long amount);
