@@ -469,3 +469,21 @@ internal class BlackjackGame
 
 // In queue:
 // When play begins, dequeue up to MaxPlayers players, add to game
+
+// Queue
+// UserID
+// IsCancelled
+
+// Queue operations that modify elements or dequeue should use a lock I guess
+// adding to queue corresponds to placing bet
+// removing from queue corresponds to withdrawing bet
+
+// Game
+// Game has player hands
+// List of players? (has count, naturally)
+// at start of game after list of players is created, create original hands for each player, deal in order
+// Play in order with similar rules as now
+
+// Hands
+// UserID
+// original hand or split hand
