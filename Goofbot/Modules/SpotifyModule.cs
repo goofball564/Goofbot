@@ -338,7 +338,7 @@ internal partial class SpotifyModule : GoofbotModule
         private readonly string clientID;
         private readonly string clientSecret;
 
-        private readonly SemaphoreSlim semaphore = new (1, 1);
+        private readonly SemaphoreSlim contextAndQueueSemaphore = new (1, 1);
         private readonly AsyncManualResetEvent spotifyClientConnected = new (false, false);
 
         private readonly TimeSpan callAgainTimeout = TimeSpan.FromSeconds(6);
@@ -347,8 +347,8 @@ internal partial class SpotifyModule : GoofbotModule
         private EmbedIOAuthServer server;
         private SpotifyClient spotify;
 
-        private CurrentlyPlayingContext context;
-        private QueueResponse queue;
+        private CurrentlyPlayingContext cachedContext;
+        private QueueResponse cachedQueue;
 
         public SpotifyAPI(string clientID, string clientSecret)
         {
@@ -376,13 +376,11 @@ internal partial class SpotifyModule : GoofbotModule
 
         public async Task<FullTrack> GetCurrentlyPlayingAsync()
         {
-            await this.semaphore.WaitAsync();
             try
             {
-                await this.RefreshCachedApiResponsesAsync();
-
-                var context = this.context;
-                var queue = this.queue;
+                var contextAndQuue = await this.GetCurrentlyPlayingContextAndQueueAsync();
+                var context = contextAndQuue.Context;
+                var queue = contextAndQuue.Queue;
 
                 if (context != null && context.IsPlaying)
                 {
@@ -397,23 +395,30 @@ internal partial class SpotifyModule : GoofbotModule
             {
                 return null;
             }
-            finally
-            {
-                this.semaphore.Release();
-            }
         }
 
         public async Task<ContextAndQueue> GetCurrentlyPlayingContextAndQueueAsync()
         {
-            await this.semaphore.WaitAsync();
+            await this.contextAndQueueSemaphore.WaitAsync();
             try
             {
-                await this.RefreshCachedApiResponsesAsync();
-                return new ContextAndQueue(this.context, this.queue);
+                DateTime now = DateTime.UtcNow;
+                DateTime timeoutTime = this.timeOfLastCall.Add(this.callAgainTimeout);
+                if (timeoutTime.CompareTo(now) < 0)
+                {
+                    this.timeOfLastCall = now;
+                    var getCurrentContextTask = this.spotify.Player.GetCurrentPlayback();
+                    var getQueueTask = this.spotify.Player.GetQueue();
+
+                    this.cachedContext = await getCurrentContextTask;
+                    this.cachedQueue = await getQueueTask;
+                }
+
+                return new ContextAndQueue(this.cachedContext, this.cachedQueue);
             }
             finally
             {
-                this.semaphore.Release();
+                this.contextAndQueueSemaphore.Release();
             }
         }
 
@@ -470,23 +475,8 @@ internal partial class SpotifyModule : GoofbotModule
 
         public void Dispose()
         {
-            this.semaphore.Dispose();
+            this.contextAndQueueSemaphore.Dispose();
             this.server.Dispose();
-        }
-
-        private async Task RefreshCachedApiResponsesAsync()
-        {
-            DateTime now = DateTime.UtcNow;
-            DateTime timeoutTime = this.timeOfLastCall.Add(this.callAgainTimeout);
-            if (timeoutTime.CompareTo(now) < 0)
-            {
-                this.timeOfLastCall = now;
-                var getCurrentContextTask = this.spotify.Player.GetCurrentPlayback();
-                var getQueueTask = this.spotify.Player.GetQueue();
-
-                this.context = await getCurrentContextTask;
-                this.queue = await getQueueTask;
-            }
         }
 
         private async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
