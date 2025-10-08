@@ -33,7 +33,7 @@ internal class Goofsino
     public static readonly BlackjackBet Blackjack = new (19, 1, "blackjack");
     public static readonly BlackjackBet BlackjackSplit = new (20, 1, "their second hand");
 
-    private const string TheHouseID = "-1";
+    public const string TheHouseID = "-1";
 
     public static async Task CreateTablesAsync(SqliteConnection sqliteConnection)
     {

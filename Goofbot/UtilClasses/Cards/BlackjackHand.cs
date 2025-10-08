@@ -24,6 +24,17 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
         { PlayingCardRank.King, 10 },
     };
 
+    public readonly string UserID;
+    public readonly string UserName;
+    public readonly BlackjackHandType Type;
+
+    public BlackjackHand(string userID = Goofsino.TheHouseID, string userName = "The dealer", BlackjackHandType type = BlackjackHandType.Normal)
+    {
+        this.UserID = userID;
+        this.UserName = userName;
+        this.Type = type;
+    }
+
     public override string ToString()
     {
         return string.Join(", ", this.cards.Select(c => Enum.GetName(c.Rank).ToLowerInvariant()));
