@@ -85,7 +85,7 @@ internal class BlackjackGame
         this.players = [];
         this.canDouble = false;
         this.canSplit = false;
-        this.currentHandIndex = 0;
+        this.currentHandIndex = -1;
         this.numBusts = 0;
 
         this.playerHands = [];
@@ -142,21 +142,13 @@ internal class BlackjackGame
         {
             this.bot.SendMessage($"The dealer's face-up card: {this.DealerFaceUpCard.RankString()}. The dealer reveals their hole card: {this.DealerHoleCard.RankString()}. That's a blackjack!", this.lastCommand.IsReversed);
             await this.WaitWhileIgnoringAllCommandsAsync(1000);
-            this.AnnounceHand(this.playerHands[0]);
+            this.MoveToNextHand();
         }
         else
         {
             this.bot.SendMessage($"The dealer's face-up card: {this.DealerFaceUpCard.RankString()}", this.lastCommand.IsReversed);
             await this.WaitWhileIgnoringAllCommandsAsync(1000);
-            this.AnnounceHand(this.playerHands[0]);
-            if (this.playerHands[0].HasBlackjack())
-            {
-                // This won't send any messages to chat
-                this.MoveToNextHand();
-            }
-
-            this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
-            this.canSplit = this.CanSplit(this.playerHands[this.currentHandIndex]);
+            this.MoveToNextHand();
 
             // Sets player timeout for Blackjack.
             // Game will proceed without player input automatically.
@@ -358,15 +350,28 @@ internal class BlackjackGame
 
         if (this.currentHandIndex < this.playerHands.Count)
         {
-            this.HitAndAnnounceStatus(this.playerHands[this.currentHandIndex]);
-            this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
-            this.canSplit = this.CanSplit(this.playerHands[this.currentHandIndex]);
-        }
-    }
+            var hand = this.playerHands[this.currentHandIndex];
 
-    private bool CanSplit(BlackjackHand hand)
-    {
-        return hand.HandIsTwoMatchingRanks() && this.playerHands.Count < this.maxPlayerHands;
+            if (hand.Type == BlackjackHandType.Normal)
+            {
+                this.AnnounceHand(this.playerHands[this.currentHandIndex]);
+                this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
+                this.canSplit = this.playerHands[this.currentHandIndex].HandIsTwoMatchingRanks();
+
+            }
+            else if (hand.Type == BlackjackHandType.Split)
+            {
+                this.HitAndAnnounceStatus(this.playerHands[this.currentHandIndex]);
+                this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
+                this.canSplit = false;
+            }
+
+            if (hand.HasBlackjack())
+            {
+                // RECURSION
+                this.MoveToNextHand();
+            }
+        }
     }
 
     private void IgnoreAllCommands(CancellationToken cancellationToken)
@@ -463,12 +468,14 @@ internal class BlackjackGame
 
     private void Split(int handIndex)
     {
+        BlackjackHand existingHand = this.playerHands[handIndex];
+
         // Take second card from current hand
-        PlayingCard card = this.playerHands[handIndex][1];
-        this.playerHands[handIndex].RemoveAt(1);
+        PlayingCard card = existingHand[1];
+        existingHand.RemoveAt(1);
 
         // Create new hand next to this hand with the card
-        this.playerHands.Insert(handIndex + 1, []);
+        this.playerHands.Insert(handIndex + 1, new BlackjackHand(existingHand.UserID, existingHand.UserName, BlackjackHandType.Split));
         this.playerHands[handIndex + 1].Add(card);
     }
 }
