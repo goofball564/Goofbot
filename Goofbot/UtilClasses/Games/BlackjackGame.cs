@@ -158,7 +158,7 @@ internal class BlackjackGame
             timer.Elapsed += (o, e) => timeoutTokenSource.Cancel();
             timer.Start();
 
-            while (!timeoutTokenSource.Token.IsCancellationRequested)
+            while (!timeoutTokenSource.Token.IsCancellationRequested && this.currentHandIndex < this.playerHands.Count)
             {
                 try
                 {
@@ -243,11 +243,6 @@ internal class BlackjackGame
 
                                 break;
                         }
-                    }
-
-                    if (this.currentHandIndex >= this.playerHands.Count)
-                    {
-                        break;
                     }
                 }
                 catch (OperationCanceledException)
@@ -354,13 +349,18 @@ internal class BlackjackGame
 
             if (hand.Type == BlackjackHandType.Normal)
             {
+                if (this.playerHands.Count > 1)
+                {
+                    this.bot.SendMessage($"@{hand.UserName} it's your turn!", false);
+                }
+
                 this.AnnounceHand(this.playerHands[this.currentHandIndex]);
                 this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
                 this.canSplit = this.playerHands[this.currentHandIndex].HandIsTwoMatchingRanks();
-
             }
             else if (hand.Type == BlackjackHandType.Split)
             {
+                this.bot.SendMessage($"Moving on to {hand.UserName}'s next hand", this.lastCommand.IsReversed);
                 this.HitAndAnnounceStatus(this.playerHands[this.currentHandIndex]);
                 this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
                 this.canSplit = false;
