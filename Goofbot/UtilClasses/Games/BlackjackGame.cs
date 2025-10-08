@@ -18,6 +18,8 @@ internal class BlackjackGame
     public readonly BlockingCollection<BlackjackCommand> CommandQueue = new (new ConcurrentQueue<BlackjackCommand>());
 
     private const double BlackjackPayoutRatio = 1.5;
+    private const int MaximumPlayerHandValue = 30;
+    private const int MaximumDealerHandValue = 26;
 
     private readonly ShoeOfPlayingCards cards;
     private readonly Bot bot;
@@ -120,9 +122,13 @@ internal class BlackjackGame
         PlayingCard p2 = this.cards.Peek(2);
 
         bool playerWillBeAbleToSplit = p1 != null && p2 != null & p1.Rank == p2.Rank;
-        int requiredValue = playerWillBeAbleToSplit ? (30 * this.maxPlayerHands) + 26 : 30 + 26;
+        int requiredValue = (MaximumPlayerHandValue * this.maxPlayerHands) + MaximumDealerHandValue;
+        if (playerWillBeAbleToSplit)
+        {
+            requiredValue -= MaximumPlayerHandValue;
+        }
 
-        if (this.remainingCardsValue < requiredValue) // || this.cards.ReshuffleRequired)
+        if (this.remainingCardsValue < requiredValue)
         {
             this.remainingCardsValue = this.totalCardsValue;
             this.cards.Shuffle();
@@ -339,8 +345,6 @@ internal class BlackjackGame
                 await transaction.RollbackAsync();
             }
         }
-
-        // this.bot.SendMessage($"Remaining value of cards: {this.remainingCardsValue} | Remaining cards: {this.cards.Remaining}", false);
     }
 
     private void MoveToNextHand()
