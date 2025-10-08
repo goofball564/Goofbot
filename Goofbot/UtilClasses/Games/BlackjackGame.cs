@@ -456,3 +456,11 @@ internal class BlackjackGame
         this.playerHands[handIndex + 1].Add(card);
     }
 }
+
+// Blackjack command
+// If not playing and not in queue, place the bet and join the queue
+// If in queue, modify bet or leave queue
+// If playing, can't use this command, can only play
+
+// In queue:
+// When play begins, dequeue up to MaxPlayers players, add to game
