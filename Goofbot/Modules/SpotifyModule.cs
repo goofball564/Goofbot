@@ -144,7 +144,7 @@ internal partial class SpotifyModule : GoofbotModule
             return null;
         }
 
-        if (queue.Queue[0] is FullTrack track)
+        if (queue.Queue.Count > 0 && queue.Queue[0] is FullTrack track)
         {
             return track;
         }
