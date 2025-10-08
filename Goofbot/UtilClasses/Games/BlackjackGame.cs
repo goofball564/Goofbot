@@ -464,6 +464,14 @@ internal class BlackjackGame
 
             this.DealTo(this.dealerHand);
         }
+
+        if (this.playerHands.Count > 1)
+        {
+            foreach (var hand in this.playerHands)
+            {
+                this.AnnounceHand(hand);
+            }
+        }
     }
 
     private void Split(int handIndex)
