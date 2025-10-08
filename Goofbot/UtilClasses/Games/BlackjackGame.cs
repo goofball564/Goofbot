@@ -17,7 +17,7 @@ internal class BlackjackGame
 {
     public readonly BlockingCollection<BlackjackCommand> CommandQueue = new (new ConcurrentQueue<BlackjackCommand>());
 
-    private const double BlackjackPayoutRatio = 1.2;
+    private const double BlackjackPayoutRatio = 1.5;
 
     private readonly ShoeOfPlayingCards cards;
     private readonly Bot bot;
@@ -27,6 +27,9 @@ internal class BlackjackGame
     private readonly bool hitOnSoft17;
 
     private readonly Task backgroundTask;
+
+    private readonly int totalCardsValue;
+    private int remainingCardsValue = 0;
 
     private string currentPlayerUserID;
     private string currentPlayerUserName;
@@ -45,6 +48,11 @@ internal class BlackjackGame
         this.cards = new ShoeOfPlayingCards(numDecks, remainingCardsToRequireReshuffle);
         this.maxPlayerHands = maxPlayerHands;
         this.hitOnSoft17 = hitOnSoft17;
+
+        foreach (PlayingCard card in this.cards)
+        {
+            this.totalCardsValue += BlackjackHand.CardValues[card.Rank];
+        }
 
         this.backgroundTask = Task.Run(async () =>
         {
@@ -108,8 +116,15 @@ internal class BlackjackGame
 
     private async Task StartGameAsync()
     {
-        if (this.cards.ReshuffleRequired)
+        PlayingCard p1 = this.cards.Peek(0);
+        PlayingCard p2 = this.cards.Peek(2);
+
+        bool playerWillBeAbleToSplit = p1 != null && p2 != null & p1.Rank == p2.Rank;
+        int requiredValue = playerWillBeAbleToSplit ? (30 * this.maxPlayerHands) + 26 : 30 + 26;
+
+        if (this.remainingCardsValue < requiredValue) // || this.cards.ReshuffleRequired)
         {
+            this.remainingCardsValue = this.totalCardsValue;
             this.cards.Shuffle();
             this.bot.SendMessage("Reshuffling the deck...", this.lastCommand.IsReversed);
             await this.WaitWhileIgnoringAllCommandsAsync(2000);
@@ -123,6 +138,8 @@ internal class BlackjackGame
         if (this.dealerHand.HasBlackjack())
         {
             this.bot.SendMessage($"The dealer's face-up card: {this.DealerFaceUpCard.RankString()}. The dealer reveals their hole card: {this.DealerHoleCard.RankString()}. That's a blackjack!", this.lastCommand.IsReversed);
+            await this.WaitWhileIgnoringAllCommandsAsync(1000);
+            this.AnnounceHand(this.playerHands[0], this.currentPlayerUserName);
         }
         else
         {
@@ -322,6 +339,8 @@ internal class BlackjackGame
                 await transaction.RollbackAsync();
             }
         }
+
+        // this.bot.SendMessage($"Remaining value of cards: {this.remainingCardsValue} | Remaining cards: {this.cards.Remaining}", false);
     }
 
     private void MoveToNextHand()
@@ -379,7 +398,7 @@ internal class BlackjackGame
     {
         StringBuilder stringBuilder = new ();
 
-        PlayingCard card = this.Hit(hand);
+        PlayingCard card = this.DealTo(hand);
         int handValue = hand.GetValue(out bool handIsSoft);
         string soft = handIsSoft ? "soft " : string.Empty;
 
@@ -406,19 +425,20 @@ internal class BlackjackGame
         await ignoreAllCommandsTask;
     }
 
-    private PlayingCard Hit(BlackjackHand hand)
+    private PlayingCard DealTo(BlackjackHand hand)
     {
         PlayingCard card = this.cards.GetNextCard();
+        this.remainingCardsValue -= BlackjackHand.CardValues[card.Rank];
         hand.Add(card);
         return card;
     }
 
     private void DealFirstCards()
     {
-        this.playerHands[0].Add(this.cards.GetNextCard());
-        this.dealerHand.Add(this.cards.GetNextCard());
-        this.playerHands[0].Add(this.cards.GetNextCard());
-        this.dealerHand.Add(this.cards.GetNextCard());
+        this.DealTo(this.playerHands[0]);
+        this.DealTo(this.dealerHand);
+        this.DealTo(this.playerHands[0]);
+        this.DealTo(this.dealerHand);
     }
 
     private void Split(int handIndex)

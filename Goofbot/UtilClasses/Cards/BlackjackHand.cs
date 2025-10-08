@@ -7,7 +7,7 @@ using System.Linq;
 
 internal class BlackjackHand : HandOfCards<PlayingCard>
 {
-    private static readonly Dictionary<PlayingCardRank, int> CardValues = new ()
+    public static readonly Dictionary<PlayingCardRank, int> CardValues = new ()
     {
         { PlayingCardRank.Ace, 1 },
         { PlayingCardRank.Two, 2 },

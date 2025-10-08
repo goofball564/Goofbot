@@ -1,9 +1,10 @@
 ﻿namespace Goofbot.UtilClasses.Cards;
 
+using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-internal abstract class DeckOfCards<T>
+internal abstract class DeckOfCards<T> : IEnumerable
     where T : Card
 {
     protected readonly List<T> cards = [];
@@ -22,6 +23,20 @@ internal abstract class DeckOfCards<T>
         get
         {
             return this.cards.Count - this.currentIndex;
+        }
+    }
+
+    public T this[int index]
+    {
+        get => this.cards[index];
+        private set => this.cards[index] = value;
+    }
+
+    public IEnumerator GetEnumerator()
+    {
+        foreach (T card in this.cards)
+        {
+            yield return card;
         }
     }
 
@@ -51,6 +66,13 @@ internal abstract class DeckOfCards<T>
 
     public T Peek(int index)
     {
-        return this.cards[index];
+        try
+        {
+            return this.cards[this.currentIndex + index];
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

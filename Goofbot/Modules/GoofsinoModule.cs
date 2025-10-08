@@ -32,7 +32,7 @@ internal class GoofsinoModule : GoofbotModule
     public GoofsinoModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
-        this.blackjackGame = new (this, bot, hitOnSoft17: true);
+        this.blackjackGame = new (this, bot, hitOnSoft17: true, remainingCardsToRequireReshuffle: 13, numDecks: 1);
 
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("red", this.RedCommand, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("black", this.BlackCommand, unlisted: true));
