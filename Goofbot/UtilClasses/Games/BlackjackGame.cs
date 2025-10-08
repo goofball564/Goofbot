@@ -152,6 +152,11 @@ internal class BlackjackGame
             this.bot.SendMessage($"The dealer's face-up card: {this.DealerFaceUpCard.RankString()}", this.lastCommand.IsReversed);
             await this.WaitWhileIgnoringAllCommandsAsync(1000);
             this.AnnounceHand(this.playerHands[0], this.currentPlayerUserName);
+            if (this.playerHands[0].HasBlackjack())
+            {
+                // This won't send any messages to chat
+                this.MoveToNextHand();
+            }
 
             this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
             this.canSplit = this.CanSplit(this.playerHands[this.currentHandIndex]);
