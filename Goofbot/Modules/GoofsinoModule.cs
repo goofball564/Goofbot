@@ -7,7 +7,6 @@ using Goofbot.UtilClasses.Cards;
 using Goofbot.UtilClasses.Enums;
 using Goofbot.UtilClasses.Games;
 using Microsoft.Data.Sqlite;
-using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
