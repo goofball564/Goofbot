@@ -15,12 +15,12 @@ using TwitchLib.Client.Events;
 
 internal class GoofsinoModule : GoofbotModule
 {
-    public static readonly List<string> WithdrawAliases = ["withdraw", "w"];
-    public static readonly List<string> AllInAliases = ["all in", "all", "allin", "a"];
-
     private const long RouletteMinimumBet = 1;
     private const long BaccaratMinimumBet = 100;
-    private const long BlackjackMinimumBet = 0;
+    private const long BlackjackMinimumBet = 1;
+
+    private static readonly List<string> WithdrawAliases = ["withdraw", "w"];
+    private static readonly List<string> AllInAliases = ["all in", "all", "allin", "a"];
 
     private readonly GoofsinoGameBetsOpenStatus rouletteBetsOpenStatus = new ();
     private readonly GoofsinoGameBetsOpenStatus baccaratBetsOpenStatus = new ();
@@ -91,9 +91,9 @@ internal class GoofsinoModule : GoofbotModule
         }
     }
 
-    public async Task<bool> BetCommandHelperAsync(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs, Bet bet)
+    public async Task<BetCommandOutcome> BetCommandHelperAsync(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs, Bet bet, bool allowWithdraw = true, bool allowAdd = true)
     {
-        bool changeMade = false;
+        BetCommandOutcome outcome = BetCommandOutcome.Nothing;
 
         string userID = eventArgs.Command.ChatMessage.UserId;
         string userName = eventArgs.Command.ChatMessage.DisplayName;
@@ -106,7 +106,7 @@ internal class GoofsinoModule : GoofbotModule
                 if (!await this.rouletteBetsOpenStatus.GetBetsOpenAsync())
                 {
                     this.bot.SendMessage($"@{userName}, bets are closed on the Roulette table. Wait for them to open again.", isReversed);
-                    return false;
+                    return BetCommandOutcome.Nothing;
                 }
 
                 break;
@@ -116,7 +116,7 @@ internal class GoofsinoModule : GoofbotModule
                 if (!await this.baccaratBetsOpenStatus.GetBetsOpenAsync())
                 {
                     this.bot.SendMessage($"@{userName}, bets are closed on the Baccarat table. Wait for them to open again.", isReversed);
-                    return false;
+                    return BetCommandOutcome.Nothing;
                 }
 
                 break;
@@ -141,22 +141,32 @@ internal class GoofsinoModule : GoofbotModule
                 {
                     await Goofsino.SetupUserIfNotSetUpAsync(sqliteConnection, userID, userName);
 
-                    long existingBet;
-                    string message;
+                    long existingBet = 0;
                     if (withdraw)
                     {
-                        existingBet = await Goofsino.GetBetAmountAsync(sqliteConnection, userID, bet);
-                        await Goofsino.DeleteBetFromTableAsync(sqliteConnection, userID, bet);
-
-                        changeMade = true;
-
-                        if (existingBet > 0)
+                        if (allowWithdraw)
                         {
-                            message = $"{userName} withdrew their {existingBet} point bet on {bet.BetName}";
+                            existingBet = await Goofsino.GetBetAmountAsync(sqliteConnection, userID, bet);
+                            await Goofsino.DeleteBetFromTableAsync(sqliteConnection, userID, bet);
+                        }
+
+                        await transaction.CommitAsync();
+
+                        if (allowWithdraw)
+                        {
+                            if (existingBet > 0)
+                            {
+                                this.bot.SendMessage($"{userName} withdrew their {existingBet} point bet on {bet.BetName}", isReversed);
+                                outcome = BetCommandOutcome.Withdraw;
+                            }
+                            else
+                            {
+                                this.bot.SendMessage($"@{userName}, you haven't bet anything on {bet.BetName}", isReversed);
+                            }
                         }
                         else
                         {
-                            message = $"@{userName}, you haven't bet anything on {bet.BetName}";
+                            this.bot.SendMessage($"@{userName}, this isn't allowed right now", isReversed);
                         }
                     }
                     else
@@ -171,32 +181,43 @@ internal class GoofsinoModule : GoofbotModule
                         existingBet = await Goofsino.GetBetAmountAsync(sqliteConnection, userID, bet);
                         if (amount + existingBet >= minimumBet)
                         {
-                            changeMade = await Goofsino.TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
-
-                            if (changeMade)
+                            bool betPlaced = false;
+                            bool betAllowed = existingBet == 0 || allowAdd;
+                            if (betAllowed)
                             {
+                                // If adding to an existing bet isn't allowed, only place it if there is no existing bet
+                                betPlaced = await Goofsino.TryPlaceBetAsync(sqliteConnection, userID, bet, amount);
+                            }
+
+                            await transaction.CommitAsync();
+
+                            if (betPlaced)
+                            {
+                                outcome = BetCommandOutcome.PlaceBet;
+
                                 if (existingBet > 0)
                                 {
-                                    message = $"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBet}";
+                                    this.bot.SendMessage($"{userName} bet {amount} more on {bet.BetName} for a total of {amount + existingBet}", isReversed);
                                 }
                                 else
                                 {
-                                    message = $"{userName} bet {amount} on {bet.BetName}";
+                                    this.bot.SendMessage($"{userName} bet {amount} on {bet.BetName}", isReversed);
                                 }
+                            }
+                            else if (!betAllowed)
+                            {
+                                this.bot.SendMessage($"@{userName}, this isn't allowed right now", isReversed);
                             }
                             else
                             {
-                                message = $"@{userName}, you don't have that many points";
+                                this.bot.SendMessage($"@{userName}, you don't have that many points", isReversed);
                             }
                         }
                         else
                         {
-                            message = $"@{userName} Minimum bet for this game: {minimumBet}";
+                            this.bot.SendMessage($"@{userName} Minimum bet for this game: {minimumBet}", isReversed);
                         }
                     }
-
-                    await transaction.CommitAsync();
-                    this.bot.SendMessage(message, isReversed);
                 }
                 catch (SqliteException e)
                 {
@@ -211,7 +232,7 @@ internal class GoofsinoModule : GoofbotModule
             this.bot.SendMessage($"@{userName}, include an amount, \"withdraw\", or \"all in\"", isReversed);
         }
 
-        return changeMade;
+        return outcome;
     }
 
     private async Task HouseRevenueCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
@@ -390,7 +411,14 @@ internal class GoofsinoModule : GoofbotModule
 
     private async Task BlackjackCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        this.blackjackGame.CommandQueue.Add(new BlackjackCommand(BlackjackCommandType.Join, commandArgs, isReversed, eventArgs));
+        var outcome = await this.BetCommandHelperAsync(commandArgs, isReversed, eventArgs, Goofsino.Blackjack, allowAdd: false, allowWithdraw: false);
+        if (outcome == BetCommandOutcome.PlaceBet)
+        {
+            Console.WriteLine("OUTCOME: " + Enum.GetName(outcome));
+            string userID = eventArgs.Command.ChatMessage.UserId;
+            string userName = eventArgs.Command.ChatMessage.DisplayName;
+            this.blackjackGame.PlayerQueue.Add(new (new (userID, userName)));
+        }
     }
 
     private async Task HitCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
