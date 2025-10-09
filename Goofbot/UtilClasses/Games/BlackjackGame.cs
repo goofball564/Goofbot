@@ -17,19 +17,18 @@ using System.Timers;
 internal class BlackjackGame
 {
     public readonly BlockingCollection<BlackjackCommand> CommandQueue = new (new ConcurrentQueue<BlackjackCommand>());
+    public readonly ConcurrentQueue<CancelableQueuedObject<UserIDAndName>> PlayerQueue = [];
 
     private const double BlackjackPayoutRatio = 1.5;
     private const int MaximumPlayerHandValue = 30;
     private const int MaximumDealerHandValue = 26;
+    private const int MaxPlayers = 5;
 
     private readonly ShoeOfPlayingCards cards;
     private readonly Bot bot;
     private readonly GoofsinoModule goofsino;
 
-    private readonly int maxPlayerHands;
     private readonly bool hitOnSoft17;
-
-    private readonly Task backgroundTask;
 
     private readonly int totalCardsValue;
     private int remainingCardsValue = 0;
@@ -43,12 +42,11 @@ internal class BlackjackGame
     private List<BlackjackHand> playerHands;
     private BlackjackHand dealerHand;
 
-    public BlackjackGame(GoofsinoModule goofsino, Bot bot, int numDecks = 1, int remainingCardsToRequireReshuffle = 26, int maxPlayerHands = 2, bool hitOnSoft17 = false)
+    public BlackjackGame(GoofsinoModule goofsino, Bot bot, int numDecks = 1, int remainingCardsToRequireReshuffle = 26, bool hitOnSoft17 = false)
     {
         this.goofsino = goofsino;
         this.bot = bot;
         this.cards = new ShoeOfPlayingCards(numDecks, remainingCardsToRequireReshuffle);
-        this.maxPlayerHands = maxPlayerHands;
         this.hitOnSoft17 = hitOnSoft17;
 
         foreach (PlayingCard card in this.cards)
@@ -56,7 +54,7 @@ internal class BlackjackGame
             this.totalCardsValue += BlackjackHand.CardValues[card.Rank];
         }
 
-        this.backgroundTask = Task.Run(async () =>
+        Task backgroundTask = Task.Run(async () =>
         {
             while (true)
             {
@@ -115,14 +113,16 @@ internal class BlackjackGame
 
     private async Task StartGameAsync()
     {
-        PlayingCard p1 = this.cards.Peek(0);
-        PlayingCard p2 = this.cards.Peek(2);
-
-        bool firstPlayerWillBeAbleToSplit = p1 != null && p2 != null & p1.Rank == p2.Rank;
-        int requiredValue = (MaximumPlayerHandValue * this.maxPlayerHands) + MaximumDealerHandValue;
-        if (firstPlayerWillBeAbleToSplit)
+        int requiredValue = (this.players.Count * MaximumPlayerHandValue) + MaximumDealerHandValue;
+        for (int i = 0; i < this.players.Count; i++)
         {
-            requiredValue -= MaximumPlayerHandValue;
+            PlayingCard p1 = this.cards.Peek(0);
+            PlayingCard p2 = this.cards.Peek(i + this.players.Count + 1);
+
+            if (p1 != null && p2 != null && p1.Rank == p2.Rank)
+            {
+                requiredValue += MaximumPlayerHandValue;
+            }
         }
 
         if (this.remainingCardsValue < requiredValue)
