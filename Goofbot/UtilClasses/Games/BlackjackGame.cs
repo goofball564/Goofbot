@@ -142,20 +142,14 @@ internal class BlackjackGame
     {
         await this.WaitWhileIgnoringAllCommandsAsync(1000);
 
-        if (this.players.Count > 1)
-        {
-            foreach (var hand in this.playerHands)
-            {
-                this.bot.SendMessage(GetHandAndHandValueMessage(hand), this.lastCommandIsReversed);
-            }
-        }
-
         if (this.dealerHand.HasBlackjack())
         {
             this.bot.SendMessage($"{this.GetFaceUpCardMessage()}. {this.GetHoleCardMessage()}. {GetHandValueMessage(this.dealerHand)}", this.lastCommandIsReversed);
-            if (this.players.Count == 1)
+
+            foreach (var hand in this.playerHands)
             {
-                this.bot.SendMessage(GetHandAndHandValueMessage(this.playerHands[0]), this.lastCommandIsReversed);
+                await this.WaitWhileIgnoringAllCommandsAsync(1000);
+                this.bot.SendMessage(GetHandAndHandValueMessage(hand), this.lastCommandIsReversed);
             }
         }
         else
@@ -273,11 +267,9 @@ internal class BlackjackGame
 
         this.lastCommandIsReversed = false;
 
-        // Dealer would have already revealed they have a blackjack, and they don't need to play if they do
+        // Dealer would have already revealed they have a blackjack
         if (!this.dealerHand.HasBlackjack())
         {
-            int value = this.dealerHand.GetValue(out bool handIsSoft);
-            string soft = handIsSoft ? "soft " : string.Empty;
             this.bot.SendMessage($"{this.GetHoleCardMessage()} {GetHandValueMessage(this.dealerHand)}", this.lastCommandIsReversed);
         }
 
