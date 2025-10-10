@@ -59,7 +59,7 @@ internal class BlackjackGame
             while (true)
             {
                 this.ResetGame();
-                this.WaitForPlayersJoin();
+                await this.WaitForPlayersJoinAsync();
                 await this.StartGameAsync();
                 await this.PlayerPlayAsync();
                 await this.DealerPlayAsync();
@@ -91,10 +91,12 @@ internal class BlackjackGame
         this.dealerHand = [];
     }
 
-    private void WaitForPlayersJoin()
+    private async Task WaitForPlayersJoinAsync()
     {
         var player = this.PlayerQueue.Take();
         this.players.Add(player.Value);
+
+        await this.WaitWhileIgnoringAllCommandsAsync(10000);
 
         for (int i = 0; i < MaximumPlayers - 1; i++)
         {
