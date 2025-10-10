@@ -144,16 +144,16 @@ internal class BlackjackGame
         {
             foreach (var hand in this.playerHands)
             {
-                this.bot.SendMessage(this.GetHandMessage(hand), this.lastCommandIsReversed);
+                this.bot.SendMessage(GetHandAndHandValueMessage(hand), this.lastCommandIsReversed);
             }
         }
 
         if (this.dealerHand.HasBlackjack())
         {
-            this.bot.SendMessage($"The dealer's face-up card: {this.DealerFaceUpCard.RankString()}. The dealer reveals their hole card: {this.DealerHoleCard.RankString()}. That's a blackjack!", this.lastCommandIsReversed);
+            this.bot.SendMessage($"{this.GetFaceUpCardMessage()}. {this.GetHoleCardMessage()}. {GetHandValueMessage(this.dealerHand)}", this.lastCommandIsReversed);
             if (this.players.Count == 1)
             {
-                await this.MoveToNextHandAsync();
+                this.bot.SendMessage(GetHandAndHandValueMessage(this.playerHands[0]), this.lastCommandIsReversed);
             }
         }
         else
@@ -182,9 +182,11 @@ internal class BlackjackGame
                             case BlackjackCommandType.Hit:
                                 timer.Stop();
 
-                                this.bot.SendMessage(this.GetHitMessage(this.playerHands[this.currentHandIndex]), this.lastCommandIsReversed);
                                 this.canDouble = false;
                                 this.canSplit = false;
+
+                                this.DealTo(this.playerHands[this.currentHandIndex]);
+                                this.bot.SendMessage(this.GetUserPromptMessage(this.playerHands[this.currentHandIndex]), this.lastCommandIsReversed);
 
                                 if (this.playerHands[this.currentHandIndex].HasBust())
                                 {
@@ -214,7 +216,8 @@ internal class BlackjackGame
                                     var outcome = await this.goofsino.BetCommandHelperAsync(amount.ToString(), this.lastCommandIsReversed, this.lastCommand.EventArgs, Goofsino.Blackjack);
                                     if (outcome == BetCommandOutcome.PlaceBet)
                                     {
-                                        this.bot.SendMessage(this.GetHitMessage(this.playerHands[this.currentHandIndex]), this.lastCommandIsReversed);
+                                        this.DealTo(this.playerHands[this.currentHandIndex]);
+                                        this.bot.SendMessage(GetHandAndHandValueMessage(this.playerHands[this.currentHandIndex]), this.lastCommandIsReversed);
 
                                         if (this.playerHands[this.currentHandIndex].HasBust())
                                         {
@@ -242,8 +245,10 @@ internal class BlackjackGame
 
                                         string rank = Enum.GetName(this.playerHands[this.currentHandIndex][0].Rank).ToLowerInvariant();
                                         this.bot.SendMessage($"{this.playerHands[this.currentHandIndex].UserName} splits their second {rank} off into a second hand", this.lastCommandIsReversed);
+
                                         await this.WaitWhileIgnoringAllCommandsAsync(1000);
-                                        this.bot.SendMessage(this.GetHitMessage(this.playerHands[this.currentHandIndex]), this.lastCommandIsReversed);
+                                        this.DealTo(this.playerHands[this.currentHandIndex]);
+                                        this.bot.SendMessage(this.GetUserPromptMessage(this.playerHands[this.currentHandIndex]), this.lastCommandIsReversed);
                                     }
                                 }
 
@@ -271,7 +276,7 @@ internal class BlackjackGame
         {
             int value = this.dealerHand.GetValue(out bool handIsSoft);
             string soft = handIsSoft ? "soft " : string.Empty;
-            this.bot.SendMessage($"The dealer reveals their hole card: {this.DealerHoleCard.RankString()}. Value of their hand: {soft}{value}", this.lastCommandIsReversed);
+            this.bot.SendMessage($"{this.GetHoleCardMessage()} {GetHandValueMessage(this.dealerHand)}", this.lastCommandIsReversed);
         }
 
         // Dealer doesn't need to hit if every hand busted
@@ -361,25 +366,28 @@ internal class BlackjackGame
 
             var hand = this.playerHands[this.currentHandIndex];
 
-            StringBuilder stringBuilder = new ();
-            stringBuilder.Append($"{this.GetFaceUpCardMessage()}. ");
+            string message;
 
-
-            if (hand.Type == BlackjackHandType.Normal)
+            switch (hand.Type)
             {
-                stringBuilder.Append(this.GetHandMessage(this.playerHands[this.currentHandIndex]));
-                this.lastCommandIsReversed = false;
-                this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
-                this.canSplit = this.playerHands[this.currentHandIndex].HandIsTwoMatchingRanks();
-            }
-            else if (hand.Type == BlackjackHandType.Split)
-            {
-                stringBuilder.Append(this.GetHitMessage(this.playerHands[this.currentHandIndex]));
-                this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
-                this.canSplit = false;
+                case BlackjackHandType.Normal:
+                    this.lastCommandIsReversed = false;
+                    this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
+                    this.canSplit = this.playerHands[this.currentHandIndex].HandIsTwoMatchingRanks();
+                    message = this.GetUserPromptMessage(this.playerHands[this.currentHandIndex]);
+                    break;
+                case BlackjackHandType.Split:
+                    this.DealTo(this.playerHands[this.currentHandIndex]);
+                    this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
+                    this.canSplit = false;
+                    message = this.GetUserPromptMessage(this.playerHands[this.currentHandIndex]);
+                    break;
+                default:
+                    message = "GOOF YOUR BOT BROKE";
+                    break;
             }
 
-            this.bot.SendMessage(stringBuilder.ToString(), this.lastCommandIsReversed);
+            this.bot.SendMessage(message, this.lastCommandIsReversed);
 
             if (hand.HasBlackjack())
             {
@@ -405,15 +413,37 @@ internal class BlackjackGame
 
     private string GetFaceUpCardMessage()
     {
-        return $"The dealer's face-up card: {this.DealerFaceUpCard.RankString()}";
+        return $"Dealer's face-up card: {this.DealerFaceUpCard.ToShortformString()}";
     }
 
-    private string GetHandMessage(BlackjackHand hand)
+    private string GetHoleCardMessage()
+    {
+        return $"Dealer's hole card: {this.DealerHoleCard.ToShortformString()}";
+    }
+
+    private string GetUserPromptMessage(BlackjackHand hand)
+    {
+        StringBuilder stringBuilder = new ();
+        stringBuilder.Append(GetHandAndHandValueMessage(hand));
+
+        if (hand.CanHit())
+        {
+            stringBuilder.Append($". {this.GetFaceUpCardMessage()} | {this.GetCommandsMessage()}");
+        }
+
+        return stringBuilder.ToString();
+    }
+
+    private static string GetHandAndHandValueMessage(BlackjackHand hand)
+    {
+        return $"{GetHandMessage(hand)} {GetHandValueMessage(hand)}";
+    }
+
+    private static string GetHandMessage(BlackjackHand hand)
     {
         StringBuilder stringBuilder = new ();
         string other = hand.Type == BlackjackHandType.Split ? " other" : string.Empty;
-        stringBuilder.Append($"{hand.UserName}'s{other} hand: {hand}. ");
-        stringBuilder.Append(GetHandValueMessage(hand));
+        stringBuilder.Append($"{hand.UserName}'s{other} hand: {hand}");
 
         return stringBuilder.ToString();
     }
@@ -424,7 +454,7 @@ internal class BlackjackGame
         string soft = handIsSoft ? "soft " : string.Empty;
 
         StringBuilder stringBuilder = new ();
-        stringBuilder.Append($"Value: {soft}{handValue}");
+        stringBuilder.Append($"(Value: {soft}{handValue})");
 
         if (hand.HasBust())
         {
@@ -438,14 +468,23 @@ internal class BlackjackGame
         return stringBuilder.ToString();
     }
 
-    private string GetHitMessage(BlackjackHand hand)
+    private string GetCommandsMessage()
     {
-        StringBuilder stringBuilder = new ();
+        List<string> commands = ["!hit", "!stay"];
+        if (this.canDouble)
+        {
+            commands.Add("!double");
+        }
 
-        PlayingCard card = this.DealTo(hand);
-        string otherHand = hand.Type == BlackjackHandType.Split ? "'s other hand" : string.Empty;
-        stringBuilder.Append($"{hand.UserName}{otherHand} is dealt {card.RankString()}. ");
-        stringBuilder.Append(GetHandValueMessage(hand));
+        if (this.canSplit)
+        {
+            commands.Add("!split");
+        }
+
+        StringBuilder stringBuilder = new ();
+        stringBuilder.Append(string.Join(", ", commands.GetRange(0, commands.Count - 1)));
+        stringBuilder.Append(" or ");
+        stringBuilder.Append(commands[commands.Count - 1]);
 
         return stringBuilder.ToString();
     }
@@ -457,6 +496,17 @@ internal class BlackjackGame
         await Task.Delay(delay);
         await cancellationTokenSource.CancelAsync();
         await ignoreAllCommandsTask;
+    }
+
+    private string GetHitMessage(BlackjackHand hand)
+    {
+        StringBuilder stringBuilder = new ();
+
+        PlayingCard card = this.DealTo(hand);
+        stringBuilder.Append($"{hand.UserName} hits: {card.ToShortformString()} ");
+        stringBuilder.Append(GetHandValueMessage(hand));
+
+        return stringBuilder.ToString();
     }
 
     private PlayingCard DealTo(BlackjackHand hand)
@@ -484,14 +534,6 @@ internal class BlackjackGame
 
             this.DealTo(this.dealerHand);
         }
-
-        /*if (this.playerHands.Count > 1)
-        {
-            foreach (var hand in this.playerHands)
-            {
-                this.GetHandMessage(hand);
-            }
-        }*/
     }
 
     private void Split(int handIndex)
@@ -507,29 +549,3 @@ internal class BlackjackGame
         this.playerHands[handIndex + 1].Add(card);
     }
 }
-
-// Blackjack command
-// If not playing and not in queue, place the bet and join the queue
-// If in queue, modify bet or leave queue
-// If playing, can't use this command, can only play
-
-// In queue:
-// When play begins, dequeue up to MaxPlayers players, add to game
-
-// Queue
-// UserID
-// IsCancelled
-
-// Queue operations that modify elements or dequeue should use a lock I guess
-// adding to queue corresponds to placing bet
-// removing from queue corresponds to withdrawing bet
-
-// Game
-// Game has player hands
-// List of players? (has count, naturally)
-// at start of game after list of players is created, create original hands for each player, deal in order
-// Play in order with similar rules as now
-
-// Hands
-// UserID
-// original hand or split hand

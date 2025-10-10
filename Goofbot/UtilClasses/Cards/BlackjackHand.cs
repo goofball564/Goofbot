@@ -1,7 +1,6 @@
 ﻿namespace Goofbot.UtilClasses.Cards;
 
 using Goofbot.UtilClasses.Enums;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -28,7 +27,7 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
     public readonly string UserName;
     public readonly BlackjackHandType Type;
 
-    public BlackjackHand(string userID = Goofsino.TheHouseID, string userName = "The dealer", BlackjackHandType type = BlackjackHandType.Normal)
+    public BlackjackHand(string userID = Goofsino.TheHouseID, string userName = "Dealer", BlackjackHandType type = BlackjackHandType.Normal)
     {
         this.UserID = userID;
         this.UserName = userName;
@@ -37,7 +36,7 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
 
     public override string ToString()
     {
-        return string.Join(", ", this.cards.Select(c => Enum.GetName(c.Rank).ToLowerInvariant()));
+        return string.Join(", ", this.cards.Select(c => c.ToShortformString()));
     }
 
     public int GetValue(out bool soft)
@@ -68,6 +67,11 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
     public bool HandHasTwoCards()
     {
         return this.Count == 2;
+    }
+
+    public bool CanHit()
+    {
+        return this.GetValue(out bool _) < 21;
     }
 
     public bool HasBlackjack()

@@ -1,4 +1,6 @@
 ﻿namespace Goofbot;
+
+using Goofbot.UtilClasses.Enums;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -80,5 +82,22 @@ internal class Program
     public static string RemoveSpaces(string str)
     {
         return str.Replace(" ", string.Empty);
+    }
+
+    public static string GetSuitEmoji(PlayingCardSuit suit)
+    {
+        switch (suit)
+        {
+            case PlayingCardSuit.Spades:
+                return "♠️";
+            case PlayingCardSuit.Hearts:
+                return "♥️";
+            case PlayingCardSuit.Diamonds:
+                return "♦️";
+            case PlayingCardSuit.Clubs:
+                return "♣️";
+            default:
+                throw new NotImplementedException();
+        }
     }
 }
