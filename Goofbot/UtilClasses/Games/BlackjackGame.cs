@@ -293,7 +293,7 @@ internal class BlackjackGame
                 this.bot.SendMessage(this.GetHitMessage(this.dealerHand), this.lastCommandIsReversed);
             }
 
-            if (!this.dealerHand.HasBust())
+            if (this.dealerHand.CanHit())
             {
                 await this.WaitWhileIgnoringAllCommandsAsync(1000);
                 this.bot.SendMessage("Dealer stays", this.lastCommandIsReversed);
