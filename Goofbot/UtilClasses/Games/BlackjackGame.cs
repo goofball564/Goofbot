@@ -183,7 +183,7 @@ internal class BlackjackGame
         {
             this.remainingCardsValue = this.totalCardsValue;
             this.cards.Shuffle();
-            this.bot.SendMessage("Reshuffling the deck...", this.lastCommandIsReversed);
+            this.bot.SendMessage("Shuffling the deck...", this.lastCommandIsReversed);
             await this.WaitWhileIgnoringAllCommandsAsync(1000);
         }
 
