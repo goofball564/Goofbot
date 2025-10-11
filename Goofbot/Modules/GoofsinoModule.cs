@@ -81,6 +81,12 @@ internal class GoofsinoModule : GoofbotModule
         }
     }
 
+    public override void Dispose()
+    {
+        this.blackjackGame.Dispose();
+        base.Dispose();
+    }
+
     public async Task<long> GetBetAmountAsyncFuckIDK(string userID, Bet bet)
     {
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
