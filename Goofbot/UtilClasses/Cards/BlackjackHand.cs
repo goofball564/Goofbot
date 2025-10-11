@@ -34,6 +34,8 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
         this.Type = type;
     }
 
+    public bool HasBeenSplit { get; private set; } = false;
+
     public override string ToString()
     {
         return string.Join(", ", this.cards.Select(c => c.ToShortformString()));
@@ -59,12 +61,12 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
         return value;
     }
 
-    public bool HandIsTwoMatchingRanks()
+    public bool IsTwoMatchingRanks()
     {
         return (this.Count == 2) && (this[0].Rank == this[1].Rank);
     }
 
-    public bool HandHasTwoCards()
+    public bool HasTwoCards()
     {
         return this.Count == 2;
     }
@@ -74,14 +76,19 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
         return this.GetValue(out bool _) < 21;
     }
 
-    public bool IsNatural()
-    {
-        return this.HasBlackjack() && this.HandHasTwoCards();
-    }
-
     public bool HasBlackjack()
     {
-        return this.GetValue(out bool _) == 21;
+        return this.GetValue(out bool _) == 21 && this.HasTwoCards() && this.Type == BlackjackHandType.Normal && !this.HasBeenSplit;
+    }
+
+    public PlayingCard TakeSecondCard()
+    {
+        this.HasBeenSplit = true;
+
+        PlayingCard card = this[1];
+        this.RemoveAt(1);
+
+        return card;
     }
 
     public bool HasBust()
