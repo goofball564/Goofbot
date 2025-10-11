@@ -257,8 +257,9 @@ internal class BlackjackGame
                         case BlackjackCommandType.Double:
                             if (this.canDouble)
                             {
-                                long amount = await this.goofsino.GetBetAmountAsyncFuckIDK(this.lastCommand.UserID, Goofsino.Blackjack);
-                                var outcome = await this.goofsino.BetCommandHelperAsync(amount.ToString(), this.lastCommandIsReversed, this.lastCommand.EventArgs, Goofsino.Blackjack);
+                                var bet = this.playerHands[this.currentHandIndex].Type == BlackjackHandType.Normal ? Goofsino.Blackjack : Goofsino.BlackjackSplit;
+                                long amount = await this.goofsino.GetBetAmountAsyncFuckIDK(this.lastCommand.UserID, bet);
+                                var outcome = await this.goofsino.BetCommandHelperAsync(amount.ToString(), this.lastCommandIsReversed, this.lastCommand.EventArgs, bet);
                                 if (outcome == BetCommandOutcome.PlaceBet)
                                 {
                                     this.DealTo(this.playerHands[this.currentHandIndex]);
