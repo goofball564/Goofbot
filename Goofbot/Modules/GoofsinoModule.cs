@@ -16,7 +16,7 @@ internal class GoofsinoModule : GoofbotModule
 {
     private const long RouletteMinimumBet = 1;
     private const long BaccaratMinimumBet = 100;
-    private const long BlackjackMinimumBet = 1;
+    private const long BlackjackMinimumBet = 2;
 
     private static readonly List<string> WithdrawAliases = ["withdraw", "w"];
     private static readonly List<string> AllInAliases = ["all in", "all", "allin", "a"];
@@ -97,10 +97,12 @@ internal class GoofsinoModule : GoofbotModule
         string userID = eventArgs.Command.ChatMessage.UserId;
         string userName = eventArgs.Command.ChatMessage.DisplayName;
         long minimumBet = 0;
+        string gameName = string.Empty;
 
         switch (bet)
         {
             case RouletteBet:
+                gameName = "Roulette";
                 minimumBet = RouletteMinimumBet;
                 if (!await this.rouletteBetsOpenStatus.GetBetsOpenAsync())
                 {
@@ -111,6 +113,7 @@ internal class GoofsinoModule : GoofbotModule
                 break;
 
             case BaccaratBet:
+                gameName = "Baccarat";
                 minimumBet = BaccaratMinimumBet;
                 if (!await this.baccaratBetsOpenStatus.GetBetsOpenAsync())
                 {
@@ -121,6 +124,7 @@ internal class GoofsinoModule : GoofbotModule
                 break;
 
             case BlackjackBet:
+                gameName = "Blackjack";
                 minimumBet = BlackjackMinimumBet;
                 break;
         }
@@ -214,7 +218,7 @@ internal class GoofsinoModule : GoofbotModule
                         }
                         else
                         {
-                            this.bot.SendMessage($"@{userName} Minimum bet for this game: {minimumBet}", isReversed);
+                            this.bot.SendMessage($"@{userName} Minimum bet for {gameName} is: {minimumBet}", isReversed);
                         }
                     }
                 }
