@@ -387,8 +387,6 @@ internal class BlackjackGame : IDisposable
 
                     if (this.playerHands[i].HasBlackjack())
                     {
-                        bet = new BlackjackBet(bet.TypeID, BlackjackPayoutRatio, bet.BetName);
-
                         if (dealerBlackjack)
                         {
                             messages.Add($"It's a tie! Bet on this hand returned to {userName}");
@@ -396,7 +394,7 @@ internal class BlackjackGame : IDisposable
                         }
                         else
                         {
-                            messages.Add(await Goofsino.ResolveBetAsync(sqliteConnection, userID, bet, true));
+                            messages.Add(await Goofsino.ResolveBetAsync(sqliteConnection, userID, bet, true, payoutMultiplier: BlackjackPayoutRatio));
                         }
                     }
                     else if (this.playerHands[i].HasBust())

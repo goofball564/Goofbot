@@ -126,7 +126,7 @@ internal class Goofsino
         return leaderboardEntries;
     }
 
-    public static async Task<List<string>> ResolveAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet, bool success)
+    public static async Task<List<string>> ResolveAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet, bool success, double? payoutMultiplier = null)
     {
         List<string> messages = [];
 
@@ -142,7 +142,7 @@ internal class Goofsino
                 string userName = reader.GetString(1);
                 long amount = reader.GetInt64(2);
 
-                messages.Add(await ResolveBetHelperAsync(sqliteConnection, userID, userName, amount, bet, success));
+                messages.Add(await ResolveBetHelperAsync(sqliteConnection, userID, userName, amount, bet, success, payoutMultiplier));
             }
         }
 
@@ -167,13 +167,13 @@ internal class Goofsino
         await updateCommand.ExecuteNonQueryAsync();
     }
 
-    public static async Task<string> ResolveBetAsync(SqliteConnection sqliteConnection, string userID, Bet bet, bool success)
+    public static async Task<string> ResolveBetAsync(SqliteConnection sqliteConnection, string userID, Bet bet, bool success, double? payoutMultiplier = null)
     {
         long amount = await GetBetAmountAsync(sqliteConnection, userID, bet);
         string userName = await Bot.GetUserNameAsync(sqliteConnection, userID);
         await DeleteBetFromTableAsync(sqliteConnection, userID, bet);
 
-        return await ResolveBetHelperAsync(sqliteConnection, userID, userName, amount, bet, success);
+        return await ResolveBetHelperAsync(sqliteConnection, userID, userName, amount, bet, success, payoutMultiplier);
     }
 
     public static async Task DeleteAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet)
@@ -273,18 +273,30 @@ internal class Goofsino
         await AddUserToGambaPointsTableAsync(sqliteConnection, userID);
     }
 
-    private static async Task<string> ResolveBetHelperAsync(SqliteConnection sqliteConnection, string userID, string userName, long amount, Bet bet, bool success)
+    private static async Task<string> ResolveBetHelperAsync(SqliteConnection sqliteConnection, string userID, string userName, long amount, Bet bet, bool success, double? payoutMultiplier = null)
     {
         string verb;
         if (success)
         {
             verb = "won";
-            amount = Convert.ToInt64(Math.Floor(amount * bet.PayoutRatio));
+            double multiplier = bet.PayoutRatio;
+            if (payoutMultiplier != null && payoutMultiplier > 1)
+            {
+                multiplier *= (double)payoutMultiplier;
+            }
+
+            amount = Convert.ToInt64(Math.Floor(amount * multiplier));
         }
         else
         {
             verb = "lost";
-            amount *= -1;
+            double multiplier = -1;
+            if (payoutMultiplier != null && payoutMultiplier < 1)
+            {
+                multiplier *= (double)payoutMultiplier;
+            }
+
+            amount = Convert.ToInt64(Math.Ceiling(amount * multiplier));
         }
 
         long balance = await GetBalanceAsync(sqliteConnection, userID);
