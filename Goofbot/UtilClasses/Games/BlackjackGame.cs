@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 
 internal class BlackjackGame
 {
@@ -36,11 +37,14 @@ internal class BlackjackGame
     private bool canDouble;
     private bool canSplit;
     private int currentHandIndex;
-    private int numBusts;
+    private int numBustsAndNaturals;
     private BlackjackCommand lastCommand;
     private bool lastCommandIsReversed;
     private List<BlackjackHand> playerHands;
     private BlackjackHand dealerHand;
+
+    private CancellationTokenSource playerTimeoutCancellationTokenSource;
+    private System.Timers.Timer playerTimeoutTimer;
 
     public BlackjackGame(GoofsinoModule goofsino, Bot bot, int numDecks = 1, int remainingCardsToRequireReshuffle = 26, bool hitOnSoft17 = false)
     {
@@ -53,6 +57,9 @@ internal class BlackjackGame
         {
             this.totalCardsValue += BlackjackHand.CardValues[card.Rank];
         }
+
+        this.playerTimeoutTimer = new (TimeSpan.FromSeconds(60));
+        this.playerTimeoutTimer.Elapsed += this.TimerCallback;
 
         Task backgroundTask = Task.Run(async () =>
         {
@@ -78,6 +85,17 @@ internal class BlackjackGame
         get { return this.dealerHand[1]; }
     }
 
+    private void TimerCallback(object o, ElapsedEventArgs e)
+    {
+        try
+        {
+            this.playerTimeoutCancellationTokenSource.Cancel();
+        }
+        catch
+        {
+        }
+    }
+
     private void ResetGame()
     {
         this.players = [];
@@ -85,7 +103,7 @@ internal class BlackjackGame
         this.canSplit = false;
         this.lastCommandIsReversed = false;
         this.currentHandIndex = -1;
-        this.numBusts = 0;
+        this.numBustsAndNaturals = 0;
 
         this.playerHands = [];
         this.dealerHand = [];
@@ -151,113 +169,105 @@ internal class BlackjackGame
                 await this.WaitWhileIgnoringAllCommandsAsync(1000);
                 this.bot.SendMessage(GetHandAndHandValueMessage(hand), this.lastCommandIsReversed);
             }
+
+            this.numBustsAndNaturals = int.MaxValue;
         }
         else
         {
             await this.MoveToNextHandAsync();
 
-            // Sets player timeout for Blackjack.
-            // Game will proceed without player input automatically.
-            // Timeout is reset when the player enters a command
-            using var timeoutTokenSource = new CancellationTokenSource();
-            using var timer = new System.Timers.Timer(TimeSpan.FromSeconds(60));
-            timer.Elapsed += (o, e) => timeoutTokenSource.Cancel();
-            timer.Start();
+            this.playerTimeoutTimer.Start();
 
-            while (!timeoutTokenSource.Token.IsCancellationRequested && this.currentHandIndex < this.playerHands.Count)
+            while (this.currentHandIndex < this.playerHands.Count)
             {
                 try
                 {
-                    this.lastCommand = this.CommandQueue.Take(timeoutTokenSource.Token);
+                    this.lastCommand = this.CommandQueue.Take(this.playerTimeoutCancellationTokenSource.Token);
                     this.lastCommandIsReversed = this.lastCommand.IsReversed;
-
-                    if (this.lastCommand.UserID.Equals(this.playerHands[this.currentHandIndex].UserID))
-                    {
-                        switch (this.lastCommand.CommandType)
-                        {
-                            case BlackjackCommandType.Hit:
-                                timer.Stop();
-
-                                this.canDouble = false;
-                                this.canSplit = false;
-
-                                this.DealTo(this.playerHands[this.currentHandIndex]);
-                                this.bot.SendMessage(this.GetUserPromptMessage(this.playerHands[this.currentHandIndex]), this.lastCommandIsReversed);
-
-                                if (this.playerHands[this.currentHandIndex].HasBust())
-                                {
-                                    this.numBusts++;
-                                    await this.MoveToNextHandAsync();
-                                }
-                                else if (this.playerHands[this.currentHandIndex].HasBlackjack())
-                                {
-                                    await this.MoveToNextHandAsync();
-                                }
-
-                                timer.Start();
-
-                                break;
-
-                            case BlackjackCommandType.Stay:
-                                timer.Stop();
-                                await this.MoveToNextHandAsync();
-                                timer.Start();
-                                break;
-
-                            case BlackjackCommandType.Double:
-                                timer.Stop();
-                                if (this.canDouble)
-                                {
-                                    long amount = await this.goofsino.GetBetAmountAsyncFuckIDK(this.lastCommand.UserID, Goofsino.Blackjack);
-                                    var outcome = await this.goofsino.BetCommandHelperAsync(amount.ToString(), this.lastCommandIsReversed, this.lastCommand.EventArgs, Goofsino.Blackjack);
-                                    if (outcome == BetCommandOutcome.PlaceBet)
-                                    {
-                                        this.DealTo(this.playerHands[this.currentHandIndex]);
-                                        this.bot.SendMessage(GetHandAndHandValueMessage(this.playerHands[this.currentHandIndex]), this.lastCommandIsReversed);
-
-                                        if (this.playerHands[this.currentHandIndex].HasBust())
-                                        {
-                                            this.numBusts++;
-                                        }
-
-                                        await this.MoveToNextHandAsync();
-                                    }
-                                }
-
-                                timer.Start();
-
-                                break;
-
-                            case BlackjackCommandType.Split:
-                                timer.Stop();
-                                if (this.canSplit)
-                                {
-                                    var outcome = await this.goofsino.BetCommandHelperAsync(this.lastCommand.CommandArgs, this.lastCommandIsReversed, this.lastCommand.EventArgs, Goofsino.BlackjackSplit, allowWithdraw: false);
-
-                                    if (outcome == BetCommandOutcome.PlaceBet)
-                                    {
-                                        this.Split(this.currentHandIndex);
-                                        this.canSplit = false;
-
-                                        string rank = Enum.GetName(this.playerHands[this.currentHandIndex][0].Rank).ToLowerInvariant();
-                                        this.bot.SendMessage($"{this.playerHands[this.currentHandIndex].UserName} splits their second {rank} off into a second hand", this.lastCommandIsReversed);
-
-                                        await this.WaitWhileIgnoringAllCommandsAsync(1000);
-                                        this.DealTo(this.playerHands[this.currentHandIndex]);
-                                        this.bot.SendMessage(this.GetUserPromptMessage(this.playerHands[this.currentHandIndex]), this.lastCommandIsReversed);
-                                    }
-                                }
-
-                                timer.Start();
-
-                                break;
-                        }
-                    }
                 }
-                catch (OperationCanceledException)
+                catch
                 {
+                    await this.MoveToNextHandAsync();
+                    continue;
+                }
+
+                if (this.lastCommand.UserID.Equals(this.playerHands[this.currentHandIndex].UserID))
+                {
+                    this.playerTimeoutTimer.Stop();
+
+                    switch (this.lastCommand.CommandType)
+                    {
+                        case BlackjackCommandType.Hit:
+                            this.canDouble = false;
+                            this.canSplit = false;
+
+                            this.DealTo(this.playerHands[this.currentHandIndex]);
+                            this.bot.SendMessage(this.GetUserPromptMessage(this.playerHands[this.currentHandIndex]), this.lastCommandIsReversed);
+
+                            if (this.playerHands[this.currentHandIndex].HasBust())
+                            {
+                                this.numBustsAndNaturals++;
+                                await this.MoveToNextHandAsync();
+                            }
+                            else if (this.playerHands[this.currentHandIndex].HasBlackjack())
+                            {
+                                await this.MoveToNextHandAsync();
+                            }
+
+                            break;
+
+                        case BlackjackCommandType.Stay:
+                            await this.MoveToNextHandAsync();
+                            break;
+
+                        case BlackjackCommandType.Double:
+                            if (this.canDouble)
+                            {
+                                long amount = await this.goofsino.GetBetAmountAsyncFuckIDK(this.lastCommand.UserID, Goofsino.Blackjack);
+                                var outcome = await this.goofsino.BetCommandHelperAsync(amount.ToString(), this.lastCommandIsReversed, this.lastCommand.EventArgs, Goofsino.Blackjack);
+                                if (outcome == BetCommandOutcome.PlaceBet)
+                                {
+                                    this.DealTo(this.playerHands[this.currentHandIndex]);
+                                    this.bot.SendMessage(GetHandAndHandValueMessage(this.playerHands[this.currentHandIndex]), this.lastCommandIsReversed);
+
+                                    if (this.playerHands[this.currentHandIndex].HasBust())
+                                    {
+                                        this.numBustsAndNaturals++;
+                                    }
+
+                                    await this.MoveToNextHandAsync();
+                                }
+                            }
+
+                            break;
+
+                        case BlackjackCommandType.Split:
+                            if (this.canSplit)
+                            {
+                                var outcome = await this.goofsino.BetCommandHelperAsync(this.lastCommand.CommandArgs, this.lastCommandIsReversed, this.lastCommand.EventArgs, Goofsino.BlackjackSplit, allowWithdraw: false);
+
+                                if (outcome == BetCommandOutcome.PlaceBet)
+                                {
+                                    this.Split(this.currentHandIndex);
+                                    this.canSplit = false;
+
+                                    string rank = Enum.GetName(this.playerHands[this.currentHandIndex][0].Rank).ToLowerInvariant();
+                                    this.bot.SendMessage($"{this.playerHands[this.currentHandIndex].UserName} splits their second {rank} off into a second hand", this.lastCommandIsReversed);
+
+                                    await this.WaitWhileIgnoringAllCommandsAsync(1000);
+                                    this.DealTo(this.playerHands[this.currentHandIndex]);
+                                    this.bot.SendMessage(this.GetUserPromptMessage(this.playerHands[this.currentHandIndex]), this.lastCommandIsReversed);
+                                }
+                            }
+
+                            break;
+                    }
+
+                    this.playerTimeoutTimer.Start();
                 }
             }
+
+            this.playerTimeoutTimer.Stop();
         }
     }
 
@@ -273,14 +283,20 @@ internal class BlackjackGame
             this.bot.SendMessage($"{this.GetHoleCardMessage()} {GetHandValueMessage(this.dealerHand)}", this.lastCommandIsReversed);
         }
 
-        // Dealer doesn't need to hit if every hand busted
-        if (this.numBusts < this.playerHands.Count)
+        // Dealer doesn't need to hit if every hand busted or is a natural
+        if (this.numBustsAndNaturals < this.playerHands.Count)
         {
             int value;
             while ((value = this.dealerHand.GetValue(out bool soft)) < 17 || (value == 17 && soft && this.hitOnSoft17))
             {
                 await this.WaitWhileIgnoringAllCommandsAsync(1000);
                 this.bot.SendMessage(this.GetHitMessage(this.dealerHand), this.lastCommandIsReversed);
+            }
+
+            if (!this.dealerHand.HasBust())
+            {
+                await this.WaitWhileIgnoringAllCommandsAsync(1000);
+                this.bot.SendMessage("Dealer stays", this.lastCommandIsReversed);
             }
         }
     }
@@ -291,6 +307,7 @@ internal class BlackjackGame
 
         int dealerValue = this.dealerHand.GetValue(out bool _);
         bool dealerBust = this.dealerHand.HasBust();
+        bool dealerNatural = this.dealerHand.IsNatural();
 
         using (var sqliteConnection = this.bot.OpenSqliteConnection())
         using (var transaction = sqliteConnection.BeginTransaction())
@@ -310,7 +327,19 @@ internal class BlackjackGame
                         bet = new BlackjackBet(bet.TypeID, BlackjackPayoutRatio, bet.BetName);
                     }
 
-                    if (this.playerHands[i].HasBust())
+                    if (this.playerHands[i].IsNatural())
+                    {
+                        if (dealerNatural)
+                        {
+                            messages.Add($"It's a tie! Bet on this hand returned to {userName}");
+                            await Goofsino.DeleteBetFromTableAsync(sqliteConnection, userID, bet);
+                        }
+                        else
+                        {
+                            messages.Add(await Goofsino.ResolveBetAsync(sqliteConnection, userID, bet, true));
+                        }
+                    }
+                    else if (this.playerHands[i].HasBust())
                     {
                         messages.Add(await Goofsino.ResolveBetAsync(sqliteConnection, userID, bet, false));
                     }
@@ -365,6 +394,16 @@ internal class BlackjackGame
             switch (hand.Type)
             {
                 case BlackjackHandType.Normal:
+                    try
+                    {
+                        this.playerTimeoutCancellationTokenSource.Dispose();
+                    }
+                    catch
+                    {
+                    }
+
+                    this.playerTimeoutCancellationTokenSource = new ();
+
                     this.lastCommandIsReversed = false;
                     this.canDouble = this.playerHands[this.currentHandIndex].HandHasTwoCards();
                     this.canSplit = this.playerHands[this.currentHandIndex].HandIsTwoMatchingRanks();
@@ -386,6 +425,7 @@ internal class BlackjackGame
             if (hand.HasBlackjack())
             {
                 // RECURSION
+                this.numBustsAndNaturals++;
                 await this.MoveToNextHandAsync();
             }
         }

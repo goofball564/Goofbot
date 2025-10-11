@@ -74,6 +74,11 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
         return this.GetValue(out bool _) < 21;
     }
 
+    public bool IsNatural()
+    {
+        return this.HasBlackjack() && this.HandHasTwoCards();
+    }
+
     public bool HasBlackjack()
     {
         return this.GetValue(out bool _) == 21;
