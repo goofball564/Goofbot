@@ -314,8 +314,7 @@ internal class BlackjackGame : IDisposable
                                     this.canSurrender = false;
 
                                     await this.WaitWhileRejectingAllCommandsAsync(1000);
-                                    string rank = Enum.GetName(currentHand[0].Rank).ToLowerInvariant();
-                                    this.bot.SendMessage($"{currentHand.UserName} splits their second {rank} off into a second hand", this.lastCommandIsReversed);
+                                    this.bot.SendMessage($"{currentHand.UserName} splits their second card off into a second hand", this.lastCommandIsReversed);
 
                                     await this.WaitWhileRejectingAllCommandsAsync(1000);
                                     this.DealTo(currentHand);
