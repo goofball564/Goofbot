@@ -63,9 +63,9 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
         return value;
     }
 
-    public bool IsTwoMatchingRanks()
+    public bool IsTwoMatchingValues()
     {
-        return (this.Count == 2) && (this[0].Rank == this[1].Rank);
+        return (this.Count == 2) && (CardValues[this[0].Rank] == CardValues[this[1].Rank]);
     }
 
     public bool HasTwoCards()

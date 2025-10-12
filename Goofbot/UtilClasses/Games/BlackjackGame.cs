@@ -489,7 +489,7 @@ internal class BlackjackGame : IDisposable
 
                     // User prompt depends on this.canDouble, this.canSplit, and this.canSurrender's values, so set first
                     this.canDouble = true;
-                    this.canSplit = this.playerHands[this.currentHandIndex].IsTwoMatchingRanks();
+                    this.canSplit = this.playerHands[this.currentHandIndex].IsTwoMatchingValues();
                     this.canSurrender = true;
                     message = this.GetUserPromptMessage(this.playerHands[this.currentHandIndex]);
                     break;
