@@ -315,9 +315,6 @@ internal class Goofsino
             await AddBalanceAsync(sqliteConnection, TheHouseID, amount);
         }
 
-        amount *= -1;
-        await AddBalanceAsync(sqliteConnection, TheHouseID, amount);
-
         return message;
     }
 }
