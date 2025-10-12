@@ -275,6 +275,11 @@ internal class Goofsino
 
     private static async Task<string> ResolveBetHelperAsync(SqliteConnection sqliteConnection, string userID, string userName, long amount, Bet bet, bool success, double? payoutMultiplier = null)
     {
+        if (payoutMultiplier != null)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan((double)payoutMultiplier, 0);
+        }
+
         string verb;
         if (success)
         {
