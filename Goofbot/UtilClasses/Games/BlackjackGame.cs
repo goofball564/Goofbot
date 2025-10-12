@@ -403,7 +403,7 @@ internal class BlackjackGame : IDisposable
                     {
                         if (dealerBlackjack)
                         {
-                            messages.Add($"It's a tie! Bet on this hand returned to {userName}");
+                            messages.Add($"Bet on this hand returned to {userName}");
                             await Goofsino.DeleteBetFromTableAsync(sqliteConnection, userID, bet);
                         }
                         else
@@ -432,7 +432,7 @@ internal class BlackjackGame : IDisposable
                         }
                         else if (handValue == dealerValue)
                         {
-                            messages.Add($"It's a tie! Bet on this hand returned to {userName}");
+                            messages.Add($"Bet on this hand returned to {userName}");
                             await Goofsino.DeleteBetFromTableAsync(sqliteConnection, userID, bet);
                         }
                         else
