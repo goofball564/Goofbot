@@ -287,6 +287,7 @@ internal class BlackjackGame : IDisposable
 
                                 if (outcome == BetCommandOutcome.PlaceBet)
                                 {
+                                    await this.WaitWhileRejectingAllCommandsAsync(1000);
                                     this.DealTo(currentHand);
                                     this.bot.SendMessage(GetHandAndHandValueMessage(currentHand), this.lastCommandIsReversed);
 
