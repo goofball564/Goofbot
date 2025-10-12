@@ -70,7 +70,7 @@ internal class BlackjackGame : IDisposable
                 await this.StartGameAsync();
                 await this.PlayerPlayAsync();
                 await this.DealerPlayAsync();
-                await this.ResolveBets();
+                await this.ResolveBetsAsync();
             }
         });
     }
@@ -377,7 +377,7 @@ internal class BlackjackGame : IDisposable
         }
     }
 
-    private async Task ResolveBets()
+    private async Task ResolveBetsAsync()
     {
         await this.WaitWhileRejectingAllCommandsAsync(1000);
 
