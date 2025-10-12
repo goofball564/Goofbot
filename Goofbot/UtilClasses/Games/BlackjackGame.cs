@@ -39,7 +39,7 @@ internal class BlackjackGame : IDisposable
     private bool canSplit;
     private bool canSurrender;
     private int currentHandIndex;
-    private int numBustsAndBlackjacks;
+    private int numBustsBlackjacksAndSurrenders;
     private BlackjackCommand lastCommand;
     private bool lastCommandIsReversed;
     private List<BlackjackHand> playerHands;
@@ -152,7 +152,7 @@ internal class BlackjackGame : IDisposable
         this.canSurrender = false;
         this.lastCommandIsReversed = false;
         this.currentHandIndex = -1;
-        this.numBustsAndBlackjacks = 0;
+        this.numBustsBlackjacksAndSurrenders = 0;
 
         this.playerHands = [];
         this.dealerHand = [];
@@ -268,7 +268,7 @@ internal class BlackjackGame : IDisposable
 
                             if (currentHand.HasBust())
                             {
-                                this.numBustsAndBlackjacks++;
+                                this.numBustsBlackjacksAndSurrenders++;
                             }
 
                             if (!currentHand.CanHit())
@@ -296,7 +296,7 @@ internal class BlackjackGame : IDisposable
 
                                     if (currentHand.HasBust())
                                     {
-                                        this.numBustsAndBlackjacks++;
+                                        this.numBustsBlackjacksAndSurrenders++;
                                     }
 
                                     await this.MoveToNextHandAsync();
@@ -330,6 +330,7 @@ internal class BlackjackGame : IDisposable
                         case BlackjackCommandType.Surrender:
                             if (this.canSurrender)
                             {
+                                this.numBustsBlackjacksAndSurrenders++;
                                 currentHand.Surrender();
                                 await this.MoveToNextHandAsync();
                             }
@@ -362,7 +363,7 @@ internal class BlackjackGame : IDisposable
         }
 
         // Dealer doesn't need to hit if every player hand busted or is a blackjack
-        if (this.numBustsAndBlackjacks < this.playerHands.Count)
+        if (this.numBustsBlackjacksAndSurrenders < this.playerHands.Count)
         {
             int value;
             while ((value = this.dealerHand.GetValue(out bool soft)) < 17 || (value == 17 && soft && this.hitOnSoft17))
@@ -516,7 +517,7 @@ internal class BlackjackGame : IDisposable
             // Hands can't bust from two cards
             if (currentHand.HasBlackjack())
             {
-                this.numBustsAndBlackjacks++;
+                this.numBustsBlackjacksAndSurrenders++;
             }
 
             // Not all 21s are blackjacks
