@@ -6,4 +6,5 @@ public enum BlackjackCommandType
     Stay,
     Double,
     Split,
+    Surrender,
 }

@@ -34,7 +34,9 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
         this.Type = type;
     }
 
-    public bool HasBeenSplit { get; private set; } = false;
+    public bool HasSplit { get; private set; } = false;
+
+    public bool HasSurrendered { get; private set; } = false;
 
     public override string ToString()
     {
@@ -78,17 +80,22 @@ internal class BlackjackHand : HandOfCards<PlayingCard>
 
     public bool HasBlackjack()
     {
-        return this.GetValue(out bool _) == 21 && this.HasTwoCards() && this.Type == BlackjackHandType.Normal && !this.HasBeenSplit;
+        return this.GetValue(out bool _) == 21 && this.HasTwoCards() && this.Type == BlackjackHandType.Normal && !this.HasSplit;
     }
 
     public PlayingCard TakeSecondCard()
     {
-        this.HasBeenSplit = true;
+        this.HasSplit = true;
 
         PlayingCard card = this[1];
         this.RemoveAt(1);
 
         return card;
+    }
+
+    public void Surrender()
+    {
+        this.HasSurrendered = true;
     }
 
     public bool HasBust()

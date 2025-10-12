@@ -50,6 +50,7 @@ internal class GoofsinoModule : GoofbotModule
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("stay", this.StayCommand, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("double", this.DoubleCommand, unlisted: true));
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("split", this.SplitCommand, unlisted: true));
+        this.bot.CommandDictionary.TryAddCommand(new ChatCommand("surrender", this.SurrenderCommand, unlisted: true));
 
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("declarebankruptcy", this.DeclareBankruptcyCommand));
 
@@ -448,6 +449,11 @@ internal class GoofsinoModule : GoofbotModule
     private async Task SplitCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
         this.blackjackGame.CommandQueue.Add(new BlackjackCommand(BlackjackCommandType.Split, commandArgs, isReversed, eventArgs));
+    }
+
+    private async Task SurrenderCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
+    {
+        this.blackjackGame.CommandQueue.Add(new BlackjackCommand(BlackjackCommandType.Surrender, commandArgs, isReversed, eventArgs));
     }
 
     private async Task DealCommand(string commandArgs = "", bool isReversed = false, OnChatCommandReceivedArgs eventArgs = null)
