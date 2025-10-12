@@ -2,7 +2,6 @@
 
 using Goofbot.Modules;
 using Goofbot.Structs;
-using Goofbot.UtilClasses.Bets;
 using Goofbot.UtilClasses.Cards;
 using Goofbot.UtilClasses.Enums;
 using Microsoft.Data.Sqlite;
@@ -305,7 +304,8 @@ internal class BlackjackGame : IDisposable
                         case BlackjackCommandType.Split:
                             if (this.canSplit)
                             {
-                                var outcome = await this.goofsino.BetCommandHelperAsync(this.lastCommand.CommandArgs, this.lastCommandIsReversed, this.lastCommand.EventArgs, Goofsino.BlackjackSplit, allowWithdraw: false, allowAdd: false);
+                                long amount = await this.goofsino.GetBetAmountAsyncFuckIDK(this.lastCommand.UserID, Goofsino.Blackjack);
+                                var outcome = await this.goofsino.BetCommandHelperAsync(amount.ToString(), this.lastCommandIsReversed, this.lastCommand.EventArgs, Goofsino.BlackjackSplit, allowWithdraw: false, allowAdd: false);
 
                                 if (outcome == BetCommandOutcome.PlaceBet)
                                 {
