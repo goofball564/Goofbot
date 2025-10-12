@@ -359,7 +359,7 @@ internal class BlackjackGame : IDisposable
             this.bot.SendMessage($"{this.GetHoleCardMessage()} {GetHandValueMessage(this.dealerHand)}", this.lastCommandIsReversed);
         }
 
-        // Dealer doesn't need to hit if every player hand busted or is a blackjack
+        // Dealer doesn't need to hit if every player hand busted, has a blackjack, or surrendered
         if (this.numBustsBlackjacksAndSurrenders < this.playerHands.Count)
         {
             int value;
