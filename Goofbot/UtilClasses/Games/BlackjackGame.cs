@@ -395,16 +395,22 @@ internal class BlackjackGame : IDisposable
                 List<string> messages = [];
                 for (int i = 0; i < this.playerHands.Count; i++)
                 {
-                    var bet = this.playerHands[i].Type == BlackjackHandType.Normal ? Goofsino.Blackjack : Goofsino.BlackjackSplit;
+                    var handType = this.playerHands[i].Type;
+                    var bet = handType == BlackjackHandType.Normal ? Goofsino.Blackjack : Goofsino.BlackjackSplit;
                     string userID = this.playerHands[i].UserID;
                     string userName = this.playerHands[i].UserName;
+
+                    long splitBet = await Goofsino.GetBetAmountAsync(sqliteConnection, userID, Goofsino.BlackjackSplit);
+                    if (handType == BlackjackHandType.Normal && splitBet > 0)
+                    {
+                        bet = new Bets.BlackjackBet(bet.TypeID, bet.PayoutRatio, "their first hand");
+                    }
 
                     if (this.playerHands[i].HasBlackjack())
                     {
                         if (dealerBlackjack)
                         {
-                            messages.Add($"Bet on this hand returned to {userName}");
-                            await Goofsino.DeleteBetFromTableAsync(sqliteConnection, userID, bet);
+                            messages.Add(await Goofsino.ResolveBetAsync(sqliteConnection, userID, bet, false, payoutMultiplier: 0));
                         }
                         else
                         {
@@ -432,8 +438,7 @@ internal class BlackjackGame : IDisposable
                         }
                         else if (handValue == dealerValue)
                         {
-                            messages.Add($"Bet on this hand returned to {userName}");
-                            await Goofsino.DeleteBetFromTableAsync(sqliteConnection, userID, bet);
+                            messages.Add(await Goofsino.ResolveBetAsync(sqliteConnection, userID, bet, false, payoutMultiplier: 0));
                         }
                         else
                         {

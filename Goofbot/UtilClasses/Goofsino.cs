@@ -28,7 +28,7 @@ internal class Goofsino
     public static readonly BaccaratBet BaccaratBanker = new (17, 0.95, "banker");
     public static readonly BaccaratBet BaccaratTie = new (18, 8, "a tie");
 
-    public static readonly BlackjackBet Blackjack = new (19, 1, "blackjack");
+    public static readonly BlackjackBet Blackjack = new (19, 1, "their blackjack hand");
     public static readonly BlackjackBet BlackjackSplit = new (20, 1, "their second hand");
 
     public const string TheHouseID = "-1";
@@ -301,9 +301,19 @@ internal class Goofsino
 
         long balance = await GetBalanceAsync(sqliteConnection, userID);
 
-        await AddBalanceAsync(sqliteConnection, userID, amount);
+        string message;
+        if (amount == 0)
+        {
+            message = $"Bet on {bet.BetName} returned to {userName}. Balance: {balance}";
+        }
+        else
+        {
+            await AddBalanceAsync(sqliteConnection, userID, amount);
+            message = $"{userName} {verb} {Math.Abs(amount)} gamba points on {bet.BetName}. Balance: {balance + amount} gamba points";
 
-        string message = $"{userName} {verb} {Math.Abs(amount)} gamba points for betting on {bet.BetName}. Balance: {balance + amount} gamba points";
+            amount *= -1;
+            await AddBalanceAsync(sqliteConnection, TheHouseID, amount);
+        }
 
         amount *= -1;
         await AddBalanceAsync(sqliteConnection, TheHouseID, amount);
