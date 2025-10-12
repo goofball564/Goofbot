@@ -106,11 +106,8 @@ internal class BlackjackGame : IDisposable
 
     private static string GetHandMessage(BlackjackHand hand)
     {
-        StringBuilder stringBuilder = new ();
         string other = hand.Type == BlackjackHandType.Split ? " other" : string.Empty;
-        stringBuilder.Append($"{hand.UserName}'s{other} hand: {hand}");
-
-        return stringBuilder.ToString();
+        return $"{hand.UserName}'s{other} hand: {hand}";
     }
 
     private static string GetHandValueMessage(BlackjackHand hand)
