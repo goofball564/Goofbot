@@ -1,4 +1,6 @@
-﻿namespace Goofbot;
+﻿// Best viewers on streamboo .com (remove the space) @ECuUvl0e
+
+namespace Goofbot;
 
 using Goofbot.Structs;
 using Goofbot.UtilClasses;
