@@ -259,7 +259,14 @@ internal partial class SpotifyModule : GoofbotModule
     {
         if (int.TryParse(commandArgs, out int newVolume))
         {
-            this.spotifyVolume.Volume = newVolume;
+            try
+            {
+                this.spotifyVolume.Volume = newVolume;
+            }
+            catch
+            {
+                this.bot.SendMessage("Sorry, Goof, I broke", isReversed);
+            }
         }
         else
         {
