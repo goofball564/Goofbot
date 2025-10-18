@@ -81,7 +81,7 @@ internal partial class RandomModule : GoofbotModule
                     string jsonString = await this.httpClient.GetStringAsync("https://en.wikipedia.org/api/rest_v1/page/random/summary");
                     dynamic jsonObject = JsonConvert.DeserializeObject(jsonString);
                     string url = (string)jsonObject.content_urls.desktop.page;
-                    this.bot.SendMessage(url, isReversed);
+                    this.bot.SendMessage($"{url} @{displayName}", isReversed);
                 }
                 catch (Exception e)
                 {
