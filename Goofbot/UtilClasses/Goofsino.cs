@@ -28,7 +28,7 @@ internal class Goofsino
     public static readonly BaccaratBet BaccaratBanker = new (17, 0.95, "banker");
     public static readonly BaccaratBet BaccaratTie = new (18, 8, "a tie");
 
-    public static readonly BlackjackBet Blackjack = new (19, 1, "blackjack");
+    public static readonly BlackjackBet Blackjack = new (19, 1, "their blackjack hand");
     public static readonly BlackjackBet BlackjackSplit = new (20, 1, "their second hand");
 
     public const string TheHouseID = "-1";
@@ -126,7 +126,7 @@ internal class Goofsino
         return leaderboardEntries;
     }
 
-    public static async Task<List<string>> ResolveAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet, bool success)
+    public static async Task<List<string>> ResolveAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet, bool success, double? payoutMultiplier = null)
     {
         List<string> messages = [];
 
@@ -142,7 +142,7 @@ internal class Goofsino
                 string userName = reader.GetString(1);
                 long amount = reader.GetInt64(2);
 
-                messages.Add(await ResolveBetHelperAsync(sqliteConnection, userID, userName, amount, bet, success));
+                messages.Add(await ResolveBetHelperAsync(sqliteConnection, userID, userName, amount, bet, success, payoutMultiplier));
             }
         }
 
@@ -167,13 +167,13 @@ internal class Goofsino
         await updateCommand.ExecuteNonQueryAsync();
     }
 
-    public static async Task<string> ResolveBetAsync(SqliteConnection sqliteConnection, string userID, Bet bet, bool success)
+    public static async Task<string> ResolveBetAsync(SqliteConnection sqliteConnection, string userID, Bet bet, bool success, double? payoutMultiplier = null)
     {
         long amount = await GetBetAmountAsync(sqliteConnection, userID, bet);
         string userName = await Bot.GetUserNameAsync(sqliteConnection, userID);
         await DeleteBetFromTableAsync(sqliteConnection, userID, bet);
 
-        return await ResolveBetHelperAsync(sqliteConnection, userID, userName, amount, bet, success);
+        return await ResolveBetHelperAsync(sqliteConnection, userID, userName, amount, bet, success, payoutMultiplier);
     }
 
     public static async Task DeleteAllBetsByTypeAsync(SqliteConnection sqliteConnection, Bet bet)
@@ -273,28 +273,52 @@ internal class Goofsino
         await AddUserToGambaPointsTableAsync(sqliteConnection, userID);
     }
 
-    private static async Task<string> ResolveBetHelperAsync(SqliteConnection sqliteConnection, string userID, string userName, long amount, Bet bet, bool success)
+    private static async Task<string> ResolveBetHelperAsync(SqliteConnection sqliteConnection, string userID, string userName, long amount, Bet bet, bool success, double? payoutMultiplier = null)
     {
+        if (payoutMultiplier != null)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan((double)payoutMultiplier, 0);
+        }
+
         string verb;
         if (success)
         {
             verb = "won";
-            amount = Convert.ToInt64(Math.Floor(amount * bet.PayoutRatio));
+            double multiplier = bet.PayoutRatio;
+            if (payoutMultiplier != null && payoutMultiplier > 1)
+            {
+                multiplier *= (double)payoutMultiplier;
+            }
+
+            amount = Convert.ToInt64(Math.Floor(amount * multiplier));
         }
         else
         {
             verb = "lost";
-            amount *= -1;
+            double multiplier = -1;
+            if (payoutMultiplier != null && payoutMultiplier < 1)
+            {
+                multiplier *= (double)payoutMultiplier;
+            }
+
+            amount = Convert.ToInt64(Math.Ceiling(amount * multiplier));
         }
 
         long balance = await GetBalanceAsync(sqliteConnection, userID);
 
-        await AddBalanceAsync(sqliteConnection, userID, amount);
+        string message;
+        if (amount == 0)
+        {
+            message = $"Bet on {bet.BetName} returned to {userName}. Balance: {balance}";
+        }
+        else
+        {
+            await AddBalanceAsync(sqliteConnection, userID, amount);
+            message = $"{userName} {verb} {Math.Abs(amount)} gamba points on {bet.BetName}. Balance: {balance + amount} gamba points";
 
-        string message = $"{userName} {verb} {Math.Abs(amount)} gamba points for betting on {bet.BetName}. Balance: {balance + amount} gamba points";
-
-        amount *= -1;
-        await AddBalanceAsync(sqliteConnection, TheHouseID, amount);
+            amount *= -1;
+            await AddBalanceAsync(sqliteConnection, TheHouseID, amount);
+        }
 
         return message;
     }
