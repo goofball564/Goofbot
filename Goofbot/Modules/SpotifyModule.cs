@@ -28,6 +28,8 @@ internal partial class SpotifyModule : GoofbotModule
 
     private readonly List<string> queuedSongIDs = [];
 
+    private int queueModePercentage;
+
     private bool queueModeBackingValue;
 
     private bool removedFromPlaylist = false;
@@ -253,8 +255,33 @@ internal partial class SpotifyModule : GoofbotModule
 
     private async Task QueueModeCommand(string commandArgs, bool isReversed, OnChatCommandReceivedArgs eventArgs)
     {
-        this.QueueMode = !this.QueueMode;
-        string chatMessage = this.QueueMode ? "Queue Mode has been enabled" : "Queue mode has been disabled";
+        commandArgs = commandArgs.ToLowerInvariant();
+
+        if (int.TryParse(commandArgs, out int percent))
+        {
+            percent = percent > 100 ? 100 : percent;
+            percent = percent < 1 ? 1 : percent;
+            this.queueModePercentage = percent;
+
+            this.QueueMode = true;
+
+        }
+        else if (commandArgs.Equals("on"))
+        {
+            this.queueModePercentage = 100;
+
+            this.QueueMode = true;
+        }
+        else if (commandArgs.Equals("off"))
+        {
+            this.QueueMode = false;
+        }
+        else
+        {
+            this.QueueMode = !this.QueueMode;
+        }
+
+        string chatMessage = this.QueueMode ? "Queue Mode is on" : "Queue mode is off";
         this.bot.SendMessage(chatMessage, isReversed);
     }
 
@@ -324,16 +351,22 @@ internal partial class SpotifyModule : GoofbotModule
                     // if first song in queue playlist is currently playing, remove it from head of playlist
                     // (do this only once until currently playing song changes)
                     this.removedFromPlaylist = true;
+
                     await this.spotifyAPI.RemoveFirstSongFromPlaylist(playlist);
                     this.queuedSongIDs.Remove(firstInPlaylistID);
                 }
                 else if (!this.queuedSongIDs.Contains(firstInPlaylistID) && !this.addedToQueue && nextInQueueID != null && firstInPlaylistURI != null && nextInQueueID != firstInPlaylistID)
                 {
-                    // if first song in queue playlist is NOT currently playing, add first song in queue playlist to queue
-                    // (do this only once until currently playing song changes)
+                    // (do the below once until currently playing song changes)
                     this.addedToQueue = true;
-                    await this.spotifyAPI.AddSongToQueueAsync(firstInPlaylistURI);
-                    this.queuedSongIDs.Add(firstInPlaylistID);
+
+                    // Only *actually* add the song if the correct random number is generated -- PROBABILITY
+                    if (Random.Shared.NextDouble() < this.queueModePercentage / 100.0)
+                    {
+                        // if first song in queue playlist is NOT currently playing, add first song in queue playlist to queue
+                        await this.spotifyAPI.AddSongToQueueAsync(firstInPlaylistURI);
+                        this.queuedSongIDs.Add(firstInPlaylistID);
+                    }
                 }
             }
         }
