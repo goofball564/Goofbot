@@ -26,6 +26,8 @@ internal partial class SpotifyModule : GoofbotModule
     private readonly SpotifyAPI spotifyAPI;
     private readonly AudioSessionControl spotifyVolume;
 
+    private readonly List<string> queuedSongIDs = [];
+
     private bool queueModeBackingValue;
 
     private bool removedFromPlaylist = false;
@@ -72,6 +74,7 @@ internal partial class SpotifyModule : GoofbotModule
             else
             {
                 this.timer.Stop();
+                this.queuedSongIDs.Clear();
             }
 
             this.queueModeBackingValue = value;
@@ -316,19 +319,21 @@ internal partial class SpotifyModule : GoofbotModule
                 string firstInPlaylistID = firstInPlaylist?.Id;
                 string firstInPlaylistURI = firstInPlaylist?.Uri;
 
-                if (!this.removedFromPlaylist && currentlyPlayingID != null && currentlyPlayingID == firstInPlaylistID)
+                if (this.queuedSongIDs.Contains(firstInPlaylistID) && !this.removedFromPlaylist && currentlyPlayingID != null && currentlyPlayingID == firstInPlaylistID)
                 {
                     // if first song in queue playlist is currently playing, remove it from head of playlist
                     // (do this only once until currently playing song changes)
                     this.removedFromPlaylist = true;
                     await this.spotifyAPI.RemoveFirstSongFromPlaylist(playlist);
+                    this.queuedSongIDs.Remove(firstInPlaylistID);
                 }
-                else if (!this.addedToQueue && nextInQueueID != null && firstInPlaylistURI != null && nextInQueueID != firstInPlaylistID)
+                else if (!this.queuedSongIDs.Contains(firstInPlaylistID) && !this.addedToQueue && nextInQueueID != null && firstInPlaylistURI != null && nextInQueueID != firstInPlaylistID)
                 {
                     // if first song in queue playlist is NOT currently playing, add first song in queue playlist to queue
                     // (do this only once until currently playing song changes)
                     this.addedToQueue = true;
                     await this.spotifyAPI.AddSongToQueueAsync(firstInPlaylistURI);
+                    this.queuedSongIDs.Add(firstInPlaylistID);
                 }
             }
         }
