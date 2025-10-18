@@ -1,15 +1,17 @@
 ﻿namespace Goofbot.Modules;
 
 using Goofbot.UtilClasses;
+using Goofbot.UtilClasses.Cards;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TwitchLib.Client.Events;
-using Goofbot.UtilClasses.Cards;
-using static Goofbot.UtilClasses.ColorDictionary;
 using static Goofbot.UtilClasses.Cards.DeckOfTarotCards;
+using static Goofbot.UtilClasses.ColorDictionary;
 
 internal partial class RandomModule : GoofbotModule
 {
@@ -19,12 +21,22 @@ internal partial class RandomModule : GoofbotModule
     private readonly DeckOfPlayingCards cards = new (0);
     private readonly DeckOfTarotCards tarotCards = new ();
 
+    private readonly HttpClient httpClient = new ();
+
     public RandomModule(Bot bot, string moduleDataFolder)
         : base(bot, moduleDataFolder)
     {
+        this.httpClient.DefaultRequestHeaders.Add("User-Agent", "GoofbotTheBot");
+
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("flip", this.FlipCommand));
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("roll", this.RollCommand));
         this.bot.CommandDictionary.TryAddCommand(new ChatCommand("random", this.RandomCommand));
+    }
+
+    public override void Dispose()
+    {
+        httpClient.Dispose();
+        base.Dispose();
     }
 
     [GeneratedRegex("^[d|D][1-9]{1}[0-9]{0,}$")]
@@ -63,6 +75,24 @@ internal partial class RandomModule : GoofbotModule
                 break;
             case "colour":
                 goto case "color";
+            case "wikipedia":
+                try
+                {
+                    string jsonString = await this.httpClient.GetStringAsync("https://en.wikipedia.org/api/rest_v1/page/random/summary");
+                    dynamic jsonObject = JsonConvert.DeserializeObject(jsonString);
+                    string url = (string)jsonObject.content_urls.desktop.page;
+                    this.bot.SendMessage(url, isReversed);
+                }
+                catch (Exception e)
+                {
+                    this.bot.SendMessage("SOMETHING BROKE GOOF", false);
+                    Console.WriteLine($"WIKIPEDIA EXCEPTION:\n{e}");
+                    Console.WriteLine(this.httpClient.DefaultRequestHeaders.UserAgent);
+                }
+
+                break;
+            case "wiki":
+                goto case "wikipedia";
             default:
                 break;
         }
